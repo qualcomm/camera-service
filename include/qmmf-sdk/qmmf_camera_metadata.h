@@ -21,9 +21,10 @@
 #ifndef QMMF_CLIENT_CAMERA2_CAMERAMETADATA_CPP
 #define QMMF_CLIENT_CAMERA2_CAMERAMETADATA_CPP
 
-#include "system/camera_metadata.h"
 #include <string>
 #include <vector>
+
+#include <system/camera_metadata.h>
 
 typedef int32_t status_t;
 

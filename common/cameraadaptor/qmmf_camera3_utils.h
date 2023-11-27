@@ -42,8 +42,6 @@ void cond_init(pthread_cond_t *cond);
 int32_t cond_wait_relative(pthread_cond_t *cond, pthread_mutex_t *mutex,
                            uint64_t reltime);
 
-int compare(const int32_t *left, const int32_t *right);
-
 }  // namespace cameraadaptor ends here
 
 }  // namespace qmmf ends here

@@ -34,15 +34,18 @@ target_include_directories(qmmf_recorder_client
 install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
 target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata)
 if(HAVE_ANDROID_UTILS)
-target_link_libraries(qmmf_recorder_client log binder utils cutils)
+target_link_libraries(qmmf_recorder_client log binder utils cutils ion)
+else()
+target_link_libraries(qmmf_recorder_client ${PROTOBUF_LIBRARIES})
 endif()
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_client camera_client)
 endif()
 
-# TODO remove this hack when camx issue with propagating c and cpp glags is solved
-target_link_libraries(qmmf_recorder_client ion)
-
 if(TARGET_USES_GBM)
 target_link_libraries(qmmf_recorder_client gbm)
+endif()
+
+if(NOT HAVE_BINDER_H)
+target_link_libraries(qmmf_recorder_client qmmf_proto)
 endif()

@@ -27,6 +27,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef CAMERA3GTEST_H_
 #define CAMERA3GTEST_H_
 
@@ -56,7 +62,7 @@ class DualCamera3Gtest : public ::testing::Test {
   void ResultCb(const CaptureResult &result);
 
   typedef struct CameraContext_t {
-    sp<Camera3DeviceClient> device;
+    std::shared_ptr<Camera3DeviceClient> device;
     int32_t requestId;
     uint32_t cameraIdx;
   } CameraContext;
@@ -66,7 +72,7 @@ class DualCamera3Gtest : public ::testing::Test {
 
   uint32_t number_of_cameras_;
   CameraClientCallbacks client_cb_;
-  sp<Camera3DeviceClient> device_client_;
+  std::unique_ptr<Camera3DeviceClient> device_client_;
   CameraContext ctx1_, ctx2_, ctx3_;
   bool camera_error_;
 };

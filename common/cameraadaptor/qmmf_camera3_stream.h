@@ -26,10 +26,6 @@
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
 
-#include <utils/String8.h>
-#include <utils/Vector.h>
-#include <utils/KeyedVector.h>
-
 #include "qmmf_camera3_types.h"
 #include "qmmf_memory_interface.h"
 
@@ -128,7 +124,7 @@ class Camera3Stream : public camera3_stream {
   pthread_cond_t idle_signal_;
   static const int64_t BUFFER_WAIT_TIMEOUT = 1e9;  // 1 sec.
 
-  KeyedVector<IBufferHandle , bool> mem_alloc_buffers_;
+  std::map<IBufferHandle , bool> mem_alloc_buffers_;
   IBufferHandle *mem_alloc_slots_;
   uint32_t hw_buffer_allocated_;
 

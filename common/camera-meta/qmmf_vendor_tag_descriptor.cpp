@@ -374,7 +374,7 @@ void VendorTagDescriptor::dump(int fd, int verbosity, int indentation) const {
 
 int32_t VendorTagDescriptor::setAsGlobalVendorTagDescriptor(
     const std::shared_ptr<VendorTagDescriptor>& desc) {
-    status_t res = OK;
+    status_t res = 0;
     std::unique_lock<std::mutex> unl{sLock};
     sGlobalVendorTagDescriptor = desc;
 
@@ -387,7 +387,7 @@ int32_t VendorTagDescriptor::setAsGlobalVendorTagDescriptor(
         opsPtr->get_tag_name = vendor_tag_descriptor_get_tag_name;
         opsPtr->get_tag_type = vendor_tag_descriptor_get_tag_type;
     }
-    if((res = set_camera_metadata_vendor_ops(opsPtr)) != OK) {
+    if((res = set_camera_metadata_vendor_ops(opsPtr)) != 0) {
         QMMF_ERROR("%s: Could not set vendor tag descriptor, received error %s (%d)."
                 , __FUNCTION__, strerror(-res), res);
     }

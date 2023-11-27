@@ -72,7 +72,9 @@
 #define MMM_COLOR_FMT_UV_META_SCANLINES VENUS_UV_META_SCANLINES
 #endif
 
+#ifdef HAVE_ANDROID_UTILS
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif // HAVE_ANDROID_UTILS
 
 #define LOG_TAG "Camera3Stream"
 
@@ -448,8 +450,8 @@ int32_t Camera3Stream::TearDown() {
 
   if (0 < hw_buffer_allocated_) {
     assert(nullptr != mem_alloc_interface_);
-    for (uint32_t i = 0; i < mem_alloc_buffers_.size(); i++) {
-      mem_alloc_interface_->FreeBuffer(mem_alloc_buffers_.keyAt(i));
+    for (auto it = mem_alloc_buffers_.begin(); it != mem_alloc_buffers_.end(); ++it) {
+      mem_alloc_interface_->FreeBuffer(it->first);
     }
     mem_alloc_buffers_.clear();
     hw_buffer_allocated_ = 0;
@@ -813,15 +815,14 @@ int32_t Camera3Stream::ReturnBufferLocked(const StreamBuffer &buffer) {
     return -ENOSYS;
   }
 
-  int32_t idx = mem_alloc_buffers_.indexOfKey(buffer.handle);
-  if (-ENOENT == idx) {
+  if (mem_alloc_buffers_.count(buffer.handle) == 0) {
     QMMF_ERROR(
         "%s: Buffer %p returned that wasn't allocated by this"
         " stream!\n",
         __func__, buffer.handle);
     return -EINVAL;
   } else {
-    mem_alloc_buffers_.replaceValueFor(buffer.handle, true);
+    mem_alloc_buffers_[buffer.handle] = true;
   }
 
   pending_buffer_count_--;
@@ -880,10 +881,10 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
   //Only pre-allocate buffers in case no valid streamBuffer
   //is passed as an argument.
   if (NULL != streamBuffer) {
-    for (uint32_t i = 0; i < mem_alloc_buffers_.size(); i++) {
-      if (mem_alloc_buffers_.valueAt(i)) {
-        handle = mem_alloc_buffers_.keyAt(i);
-        mem_alloc_buffers_.replaceValueAt(i, false);
+    for (auto it = mem_alloc_buffers_.begin(); it != mem_alloc_buffers_.end(); ++it) {
+      if (it->second) {
+        handle = it->first;
+        it->second = false;
         break;
       }
     }
@@ -930,7 +931,7 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     }
     idx = hw_buffer_allocated_;
     mem_alloc_slots_[idx] = handle;
-    mem_alloc_buffers_.add(mem_alloc_slots_[idx], (NULL == streamBuffer));
+    mem_alloc_buffers_.emplace(mem_alloc_slots_[idx], (NULL == streamBuffer));
     hw_buffer_allocated_++;
     QMMF_INFO("%s: Allocated new buffer, total buffers allocated = %d",
         __func__, hw_buffer_allocated_);
@@ -994,10 +995,10 @@ int32_t Camera3Stream::ConfigureLocked() {
     delete[] mem_alloc_slots_;
   }
 
-  if (!mem_alloc_buffers_.isEmpty()) {
+  if (!mem_alloc_buffers_.empty()) {
     assert(nullptr != mem_alloc_interface_);
-    for (uint32_t i = 0; i < mem_alloc_buffers_.size(); i++) {
-      mem_alloc_interface_->FreeBuffer(mem_alloc_buffers_.keyAt(i));
+    for (auto it = mem_alloc_buffers_.begin(); it != mem_alloc_buffers_.end(); ++it) {
+      mem_alloc_interface_->FreeBuffer(it->first);
     }
     mem_alloc_buffers_.clear();
   }
@@ -1025,17 +1026,21 @@ int32_t Camera3Stream::CloseLocked() {
   if (pending_buffer_count_ > 0) {
     QMMF_ERROR("%s: Can't disconnect with %zu buffers still dequeued!\n",
                __func__, pending_buffer_count_);
-    for (uint32_t i = 0; i < mem_alloc_buffers_.size(); i++) {
+    auto it = mem_alloc_buffers_.begin();
+    int32_t i = 0;
+    while (it != mem_alloc_buffers_.end()) {
       QMMF_ERROR("%s: buffer[%d] = %p status: %d\n", __func__, i,
-                 mem_alloc_buffers_.keyAt(i), mem_alloc_buffers_.valueAt(i));
+                 it->first, it->second);
+      ++it;
+      ++i;
     }
     PrintBuffersInfoLocked();
     return -ENOSYS;
   }
 
   assert(nullptr != mem_alloc_interface_);
-  for (uint32_t i = 0; i < mem_alloc_buffers_.size(); i++) {
-    mem_alloc_interface_->FreeBuffer(mem_alloc_buffers_.keyAt(i));
+  for (auto it = mem_alloc_buffers_.begin(); it != mem_alloc_buffers_.end(); ++it) {
+    mem_alloc_interface_->FreeBuffer(it->first);
   }
   mem_alloc_buffers_.clear();
 

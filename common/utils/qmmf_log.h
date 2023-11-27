@@ -49,7 +49,7 @@
   } \
 } while (0)
 
-#define LOG_LEVEL_KPI
+// #define LOG_LEVEL_KPI
 
 // INFO, ERROR and WARN logs are enabled by default
 #define QMMF_INFO(fmt, args...)  ALOGI(fmt, ##args)
@@ -62,15 +62,31 @@ extern uint32_t qmmf_log_level;
 
 #define QMMF_GET_LOG_LEVEL()                               \
   ({                                                       \
-    char prop[PROPERTY_VALUE_MAX];                         \
+    char prop[PROP_VALUE_MAX];                         \
     property_get("persist.qmmf.sdk.log.level", prop, "0"); \
     qmmf_log_level = atoi(prop);                           \
   })
 
-#define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
-#define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 
 #ifdef HAVE_ANDROID_UTILS
+#define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
+#define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
+#else
+#define QMMF_DEBUG(fmt, args...)                \
+  ({                                            \
+     if (qmmf_log_level > 0) {                  \
+       syslog (LOG_DEBUG, LOG_TAG fmt, ##args); \
+     }                                          \
+  })
+#define QMMF_VERBOSE(fmt, args...)               \
+  ({                                             \
+     if (qmmf_log_level > 1) {                   \
+       syslog (LOG_NOTICE, LOG_TAG fmt, ##args); \
+     }                                           \
+  })
+#endif // HAVE_ANDROID_UTILS
+
+
 #ifdef LOG_LEVEL_KPI
 #include <cutils/trace.h>
 
@@ -80,7 +96,7 @@ extern uint32_t qmmf_log_level;
 extern volatile uint32_t kpi_debug_level;
 
 #define QMMF_KPI_GET_MASK() ({\
-char prop[PROPERTY_VALUE_MAX];\
+char prop[PROP_VALUE_MAX];\
 property_get("persist.qmmf.kpi.debug", prop, std::to_string(BASE_KPI_FLAG).c_str()); \
 kpi_debug_level = atoi (prop);})
 
@@ -132,12 +148,10 @@ public:
 #define QMMF_KPI_DETAIL() ({\
 DetailKpiObject a(__func__);\
 })
-#endif
-
 #else
-#define QMMF_KPI_GET_MASK   ()             do {} while (0)
-#define QMMF_KPI_BASE       ()             do {} while (0)
-#define QMMF_KPI_DETAIL     ()             do {} while (0)
+#define QMMF_KPI_GET_MASK()                do {} while (0)
+#define QMMF_KPI_BASE()                    do {} while (0)
+#define QMMF_KPI_DETAIL()                  do {} while (0)
 #define QMMF_KPI_ASYNC_BEGIN(name, cookie) do {} while (0)
-#define QMMF_KPI_ASYNC_END  (name, cookie) do {} while (0)
-#endif
+#define QMMF_KPI_ASYNC_END(name, cookie)   do {} while (0)
+#endif // LOG_LEVEL_KPI

@@ -27,6 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_TAG "RecorderFRC"
 
 #include "recorder/src/service/qmmf_camera_frc.h"
@@ -71,13 +77,9 @@ FrameRateController::FrameRateController(const std::string& name)
 
   QMMF_INFO("%s: %s: Enter", __func__, name_.c_str());
 
-  BufferProducerImpl<FrameRateController> *producer_impl;
-  producer_impl = new BufferProducerImpl<FrameRateController>(this);
-  buffer_producer_ = producer_impl;
+  buffer_producer_ = std::make_shared<BufferProducerImpl<FrameRateController>>(this);
 
-  BufferConsumerImpl<FrameRateController> *consumer_impl;
-  consumer_impl = new BufferConsumerImpl<FrameRateController>(this);
-  buffer_consumer_ = consumer_impl;
+  buffer_consumer_ = std::make_shared<BufferConsumerImpl<FrameRateController>>(this);
 
   debug_flags_ = Property::Get("persist.qmmf.rec.frc.debug", 0);
 
@@ -162,7 +164,7 @@ status_t FrameRateController::Stop() {
   return 0;
 }
 
-status_t FrameRateController::AddConsumer(sp<IBufferConsumer>& consumer) {
+status_t FrameRateController::AddConsumer(std::shared_ptr<IBufferConsumer>& consumer) {
   {
     std::lock_guard<std::mutex> lock(lock_);
     if (active_) {
@@ -191,7 +193,7 @@ status_t FrameRateController::AddConsumer(sp<IBufferConsumer>& consumer) {
   return 0;
 }
 
-status_t FrameRateController::RemoveConsumer(sp<IBufferConsumer>& consumer) {
+status_t FrameRateController::RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer) {
   {
     std::lock_guard<std::mutex> lock(lock_);
     if (active_) {

@@ -65,6 +65,22 @@
 
 #include <atomic>
 
+#ifndef HAVE_BINDER
+#include <future>
+#include <queue>
+#include <thread>
+#include <unistd.h>
+#include <vector>
+#include <cstring>
+#include <fcntl.h>
+#include <functional>
+#include <iostream>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#endif // !HAVE_BINDER
+
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
@@ -74,8 +90,8 @@ namespace qmmf {
 
 namespace recorder {
 
+#ifdef HAVE_BINDER
 using namespace android;
-
 class RecorderService : public BnInterface<IRecorderService> {
  public:
   RecorderService();
@@ -99,8 +115,6 @@ class RecorderService : public BnInterface<IRecorderService> {
     NotifyClientDeath notify_client_death_;
   };
 
-  friend class DeathNotifier;
-
   // Method of BnInterface<IRecorderService>.
   // This method would get call to handle incoming messages from clients.
   status_t onTransact(uint32_t code, const Parcel& data,
@@ -108,6 +122,147 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t Connect(const sp<IRecorderServiceCallback>& service_cb,
                    uint32_t* client_id) override;
+#else
+
+enum class TASK_PRIORITY { LOW, NORMAL, HIGH };
+class ThreadPool {
+ public:
+  ThreadPool();
+  ~ThreadPool() {
+    QMMF_INFO("%s", __func__);
+    stop_ = true;
+    condition_.notify_all();
+    for (std::thread &worker : workers_) {
+      worker.join();
+    }
+  }
+
+  template <typename Func>
+  auto Enqueue(Func &&func, TASK_PRIORITY priority)
+      -> std::future<decltype(func())>;
+  void CancelAllTasks();
+
+  std::pair<size_t, size_t> GetTaskStats() const {
+    std::unique_lock<std::mutex> lock(executed_mutex_);
+    return {total_tasks_executed_, total_tasks_cancelled_};
+  }
+
+  // Set the cancellation flag for the specified thread.
+  void SetTaskCancelled(size_t thread_id);
+
+  // Check if the task for the specified thread is canceled.
+  bool IsTaskCancelled(size_t thread_id) const;
+
+ private:
+  struct TaskPriorityWrapper {
+    TASK_PRIORITY priority;
+    std::function<void()> task;
+
+    TaskPriorityWrapper(TASK_PRIORITY p, std::function<void()> t)
+        : priority(p), task(std::move(t)) {}
+
+    bool operator<(const TaskPriorityWrapper &other) const {
+      return priority < other.priority;
+    }
+  };
+
+  std::vector<std::thread> workers_;
+  std::vector<bool> worker_states_; // Per-thread cancellation state.
+  std::priority_queue<TaskPriorityWrapper> tasks_;
+  std::mutex queue_mutex_;
+  mutable std::mutex executed_mutex_;
+  mutable std::mutex thread_state_mutex_;
+  std::condition_variable condition_;
+  std::atomic<bool> stop_;
+  std::atomic<size_t> total_tasks_executed_;
+  std::atomic<size_t> total_tasks_cancelled_;
+
+  bool HasTasks() const { return !tasks_.empty(); }
+
+  std::function<void()> GetHighestPriorityTask() {
+    auto task = tasks_.top();
+    tasks_.pop();
+    return task.task;
+  }
+};
+
+class RecorderServiceCallbackProxy: public IRecorderServiceCallback {
+ public:
+  RecorderServiceCallbackProxy() {
+    QMMF_INFO("%s: Enter ", __func__);
+    QMMF_INFO("%s: Exit ", __func__);
+  }
+
+  ~RecorderServiceCallbackProxy() {
+    QMMF_INFO("%s: Enter ", __func__);
+    close(callback_socket_);
+    QMMF_INFO("%s: Exit ", __func__);
+  }
+
+  status_t Init(uint32_t client_id, uint32_t server_pid) override;
+
+  void NotifyRecorderEvent(EventType event_type, void *event_data,
+                                   size_t event_data_size) override;
+
+  void NotifySessionEvent(EventType event_type, void *event_data,
+                                  size_t event_data_size) override;
+
+  void NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
+                                  BnBuffer& buffer, BufferMeta& meta) override;
+
+  void NotifyOfflineJpegData(int32_t buf_fd,
+                                     uint32_t encoded_size) override;
+
+  void NotifyVideoTrackData(uint32_t session_id, uint32_t track_id,
+                                    std::vector<BnBuffer>& buffers,
+                                    std::vector<BufferMeta>& metas) override;
+
+  void NotifyVideoTrackEvent(uint32_t session_id, uint32_t track_id,
+                                     EventType event_type,
+                                     void *event_data,
+                                     size_t event_data_size) override;
+
+  void NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result) override;
+
+  // This method is not exposed to client as a callback, it is just to update
+  // Internal data structure, ServiceCallbackHandler is not forced to implement
+  // this method.
+  void NotifyDeleteVideoTrack(uint32_t track_id) override;
+
+ private:
+  uint32_t client_id_;
+  int32_t callback_socket_;
+};
+
+class RecorderService : public IRecorderService {
+ public:
+  RecorderService();
+
+  ~RecorderService();
+
+  void MainLoop();
+ private:
+  typedef std::function <void(void)> NotifyClientDeath;
+  class DeathNotifier {
+   public:
+    DeathNotifier() {}
+
+    void SetDeathNotifyCB(NotifyClientDeath& cb) {
+      notify_client_death_ = cb;
+    }
+    void ClientDied () {
+      QMMF_WARN("RecorderSerive:%s: Client Exited or Died!", __func__);
+      notify_client_death_();
+    }
+    NotifyClientDeath notify_client_death_;
+  };
+
+  status_t Connect (const std::shared_ptr<IRecorderServiceCallback>&
+                    service_cb,
+                    uint32_t* client_id) override;
+#endif // HAVE_BINDER
+
+  friend class DeathNotifier;
 
   status_t Disconnect(const uint32_t client_id) override;
 
@@ -226,10 +381,29 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   std::unique_ptr<RecorderImpl>           recorder_;
 
+#ifdef HAVE_BINDER
   // Map of client ids and their death notifiers.
   std::map<uint32_t, sp<DeathNotifier> >  death_notifier_list_;
   // Map of client ids and their callback handlers.
   std::map<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
+#else
+  status_t SetupSocket ();
+  void ProcessRequest(int client_socket, RecorderClientReqMsg msg);
+  status_t SetupRemoteCallback(const uint32_t client_id);
+  status_t ReadData (int client_socket, void *buffer, size_t size);
+  status_t SendResponse (int client_socket, void *buffer, size_t size);
+  // TODO: Check if unique_ptr can be used instead
+  // Map of client ids and their death notifiers.
+  std::map<uint32_t, std::shared_ptr<DeathNotifier>> death_notifier_list_;
+  // Map of client ids and their callback handlers.
+  std::map<uint32_t, std::shared_ptr<RemoteCallBack>> remote_cb_list_;
+  int socket_;
+  std::string socket_path_;
+  ThreadPool thread_pool_;
+  // TODO: check how to stop server properly
+  bool run_;
+  std::vector<int> client_sockets_;
+#endif // HAVE_BINDER
 
   std::mutex                   lock_;
 };

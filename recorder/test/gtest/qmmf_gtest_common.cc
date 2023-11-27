@@ -72,15 +72,13 @@
 #include "recorder/test/gtest/qmmf_gtest_common.h"
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 
-#ifndef CAMERA_HAL1_SUPPORT
 using namespace qcamera;
-#endif
 
 using ::std::ios;
 using ::std::ofstream;
 using ::std::streampos;
 
-const std::string GtestCommon::kQmmfFolderPath = "/data/misc/qmmf/";
+const std::string GtestCommon::kQmmfFolderPath = "/var/tmp/qmmf/";
 
 void FrameTrace::SetUp(uint32_t session_id, uint32_t track_id, float fps) {
   std::lock_guard<std::mutex> lk(lock_);
@@ -132,150 +130,6 @@ void FrameTrace::BufferAvailableCb(BufferDescriptor buffer) {
   previous_timestamp_ = buffer.timestamp;
 }
 
-#ifdef USE_SURFACEFLINGER
-float GetFormatBpp(int32_t format) {
-  //formats taken from graphics.h
-  switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
-      return 4;
-    case HAL_PIXEL_FORMAT_RGB_565:
-    case HAL_PIXEL_FORMAT_RGBA_5551:
-    case HAL_PIXEL_FORMAT_RGBA_4444:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
-    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
-      return 2;
-    case HAL_PIXEL_FORMAT_YV12:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      return 1.5;
-    default:
-      return -1;
-  }
-}
-
-SFDisplaySink::SFDisplaySink(uint32_t width, uint32_t height) {
-  TEST_INFO("%s: Enter 0x%p",__func__, this);
-
-  auto ret = CreatePreviewSurface(width, height);
-  if (ret != 0) {
-    TEST_ERROR("%s: CreatePreviewSurface failed!",__func__);
-  }
-
-  TEST_INFO("%s: Exit",__func__);
-}
-
-SFDisplaySink::~SFDisplaySink() {
-  TEST_INFO("%s: Enter 0x%p",__func__, this);
-
-  DestroyPreviewSurface();
-
-  TEST_INFO("%s: Exit",__func__);
-}
-
-int32_t SFDisplaySink::CreatePreviewSurface(uint32_t width, uint32_t height) {
-  TEST_INFO("%s: Enter ",__func__);
-
-  DisplayInfo dinfo;
-  auto ret = NO_ERROR;
-  sp<IBinder> display(SurfaceComposerClient::getBuiltInDisplay(
-      ISurfaceComposer::eDisplayIdMain));
-  SurfaceComposerClient::getDisplayInfo(display, &dinfo);
-
-  surface_client_ = new SurfaceComposerClient();
-
-  if(surface_client_.get() == nullptr) {
-    TEST_ERROR("%s:Connection to Surface Composer failed!", __func__);
-    return -1;
-  }
-  surface_control_ = surface_client_->createSurface(
-      String8("QMMFRecorderService"),
-      width, height, HAL_PIXEL_FORMAT_YCrCb_420_SP, 0);
-
-  if (surface_control_.get() == nullptr) {
-    TEST_ERROR("%s: Preview surface creation failed!",__func__);
-    return -1;
-  }
-
-  preview_surface_ = surface_control_->getSurface();
-  if (preview_surface_.get() == nullptr) {
-    TEST_ERROR("%s: Preview surface creation failed!",__func__);
-  }
-
-  surface_client_->openGlobalTransaction();
-
-  surface_control_->setLayer(0x7fffffff);
-  surface_control_->setPosition(0, 0);
-  surface_control_->setSize(width, height);
-  surface_control_->show();
-
-  surface_client_->closeGlobalTransaction();
-
-  TEST_INFO("%s: Exit ",__func__);
-  return ret;
-}
-
-void SFDisplaySink::DestroyPreviewSurface() {
-  TEST_INFO("%s: Enter ",__func__);
-  if(preview_surface_.get() != nullptr) {
-    preview_surface_.clear();
-  }
-  if(surface_control_.get () != nullptr) {
-    surface_control_->clear();
-    surface_control_.clear();
-  }
-  if(surface_client_.get() != nullptr) {
-    surface_client_->dispose();
-    surface_client_.clear();
-  }
-  TEST_INFO("%s: Exit ",__func__);
-}
-
-void SFDisplaySink::HandlePreviewBuffer(BufferDescriptor &buffer,
-                                        BufferMeta &meta) {
-  TEST_INFO("%s: Enter ",__func__);
-
-  if (buffer.data == nullptr) {
-    TEST_ERROR("%s: No buffer!!", __func__);
-    return;
-  }
-
-  ANativeWindow_Buffer info;
-  preview_surface_->lock(&info, nullptr);
-
-  char* img = reinterpret_cast<char *>(info.bits);
-  if (img == nullptr) {
-    TEST_ERROR("%s: No Surface flinger buffer!!", __func__);
-    return;
-  }
-  uint32_t dst_offset = 0;
-  uint32_t src_offset = 0;
-
-  for ( int32_t i = 0; i < info.height; i++ ) {
-    memcpy(img + dst_offset,
-        reinterpret_cast<unsigned char *>(buffer.data) + src_offset,
-        info.width);
-    src_offset += info.width;
-    dst_offset += info.stride;
-  }
-
-  src_offset += info.width * (info.height % 32);
-
-  for ( int32_t i = 0; i < info.height/2; i++ ) {
-    memcpy(img + dst_offset,
-        reinterpret_cast<unsigned char *>(buffer.data) + src_offset,
-        info.width);
-    src_offset += info.width;
-    dst_offset += info.stride;
-  }
-
-  preview_surface_->unlockAndPost();
-
-  TEST_INFO("%s: Exit ",__func__);
-}
-#endif
-
 void GtestCommon::SetUp() {
 
   TEST_INFO("%s Enter ", __func__);
@@ -286,7 +140,7 @@ void GtestCommon::SetUp() {
                                          size_t event_data_size) -> void
       { RecorderCallbackHandler(event_type, event_data, event_data_size); };
 
-  char prop_val[PROPERTY_VALUE_MAX];
+  char prop_val[PROP_VALUE_MAX];
   property_get(PROP_DUMP_JPEG, prop_val, "0");
   is_dump_jpeg_enabled_ = (atoi(prop_val) == 0) ? false : true;
   property_get(PROP_DUMP_RAW, prop_val, "0");
@@ -642,7 +496,7 @@ void GtestCommon::TearDown() {
 
 int32_t GtestCommon::Init() {
   auto ret = recorder_.Connect(recorder_status_cb_);
-  EXPECT_TRUE(ret == NO_ERROR);
+  EXPECT_TRUE(ret == 0);
   return ret;
 }
 
@@ -650,12 +504,11 @@ int32_t GtestCommon::DeInit() {
 
   auto ret = recorder_.Disconnect();
   track_frame_count_map_.clear();
-  EXPECT_TRUE(ret == NO_ERROR);
+  EXPECT_TRUE(ret == 0);
   return ret;
 }
 
 void GtestCommon::InitSupportedVHDRModes() {
-#ifndef CAMERA_HAL1_SUPPORT
   camera_metadata_entry_t entry;
   if (static_info_.exists(QCAMERA3_AVAILABLE_VIDEO_HDR_MODES)) {
     entry = static_info_.find(QCAMERA3_AVAILABLE_VIDEO_HDR_MODES);
@@ -663,19 +516,18 @@ void GtestCommon::InitSupportedVHDRModes() {
       supported_hdr_modes_.push_back(entry.data.i32[i]);
     }
   }
-#endif
 }
 
 bool GtestCommon::IsVHDRSupported() {
   bool is_supported = false;
-#ifndef CAMERA_HAL1_SUPPORT
+
   for (const auto& mode : supported_hdr_modes_) {
     if (QCAMERA3_VIDEO_HDR_MODE_ON == mode) {
       is_supported = true;
       break;
     }
   }
-#endif
+
   return is_supported;
 }
 
@@ -773,7 +625,7 @@ void GtestCommon::VideoTrackYUVDataCb(uint32_t session_id, uint32_t track_id,
   if (is_dump_yuv_enabled_) {
     track_frame_count_map_[track_id]++;
     if (!(track_frame_count_map_[track_id] % dump_yuv_freq_)) {
-      std::string file_path("/data/misc/qmmf/gtest_track_");
+      std::string file_path("/var/tmp/qmmf/gtest_track_");
       size_t written_len;
       file_path += std::to_string(track_id) + "_";
       file_path += std::to_string(buffers[0].timestamp);
@@ -804,7 +656,7 @@ void GtestCommon::VideoTrackYUVDataCb(uint32_t session_id, uint32_t track_id,
 
 
   auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
 }
@@ -826,7 +678,7 @@ void GtestCommon::VideoTrackRawDataCb(uint32_t session_id, uint32_t track_id,
     ++fcounter;
 
     if (fcounter == dump_yuv_freq_) {
-      std::string file_path("/data/misc/qmmf/gtest_track_");
+      std::string file_path("/var/tmp/qmmf/gtest_track_");
       std::string ext_str;
       file_path += std::to_string(track_id) + "_";
       file_path += std::to_string(buffers[0].timestamp);
@@ -878,7 +730,7 @@ void GtestCommon::VideoTrackRawDataCb(uint32_t session_id, uint32_t track_id,
     }
   }
   auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
 }
@@ -941,7 +793,7 @@ void GtestCommon::SnapshotCb(uint32_t camera_id, uint32_t imgcount,
     struct timeval tv;
     gettimeofday(&tv, NULL);
     uint64_t tv_ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-    std::string file_path("/data/misc/qmmf/snapshot_");
+    std::string file_path("/var/tmp/qmmf/snapshot_");
     file_path += std::to_string(imgcount) + "_";
     file_path += std::to_string(tv_ms) + ".";
     file_path += ext_str;
@@ -964,7 +816,7 @@ void GtestCommon::SnapshotCb(uint32_t camera_id, uint32_t imgcount,
 
     if (dump_thumbnail) {
       auto ret = DumpThumbnail(buffer, meta, imgcount, tv_ms);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         TEST_INFO("%s: Dump thumbnail faile failed!\n", __func__);
       }
     }
@@ -988,7 +840,7 @@ void GtestCommon::VideoTrackRGBDataCb(uint32_t session_id, uint32_t track_id,
     ++fcounter;
 
     if (fcounter == dump_yuv_freq_) {
-      std::string file_path("/data/misc/qmmf/gtest_track_");
+      std::string file_path("/var/tmp/qmmf/gtest_track_");
       size_t written_len;
       file_path += std::to_string(track_id) + "_";
       file_path += std::to_string(buffers[0].timestamp);
@@ -1020,7 +872,7 @@ void GtestCommon::VideoTrackRGBDataCb(uint32_t session_id, uint32_t track_id,
   }
 
   auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
 }
@@ -1065,7 +917,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
     buffers.push_back(std::get<0>(tuple));
     auto ret = recorder_.ReturnTrackBuffer(std::get<2>(tuple),
         std::get<3>(tuple), buffers);
-    ASSERT_TRUE(ret == NO_ERROR);
+    ASSERT_TRUE(ret == 0);
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);
     TEST_INFO("%s size of the map=%d", __func__,
@@ -1108,7 +960,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
     // application can take appropriate actions. this test app is doing
     // nothing it is just returning buffer back to service on match.
     auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
-    ASSERT_TRUE(ret == NO_ERROR);
+    ASSERT_TRUE(ret == 0);
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);
 
@@ -1178,11 +1030,7 @@ bool GtestCommon::ValidateResFromStreamConfigs(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1201,11 +1049,7 @@ bool GtestCommon::ValidateResFromStreamConfigs(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1247,15 +1091,9 @@ bool GtestCommon::GetMinResFromStreamConfigs(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
-#endif
         if (width > static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height > static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1270,15 +1108,9 @@ bool GtestCommon::GetMinResFromStreamConfigs(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
-#endif
         if (width > static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height > static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1349,11 +1181,7 @@ bool GtestCommon::ValidateResFromJpegSizes(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_BLOB == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1372,11 +1200,7 @@ bool GtestCommon::ValidateResFromJpegSizes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_BLOB == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1419,11 +1243,7 @@ bool GtestCommon::ValidateResFromRawSizes(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_RAW10 == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1442,11 +1262,7 @@ bool GtestCommon::ValidateResFromRawSizes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_RAW10 == entry.data.i32[i]) {
-#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i]) {
-#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1507,15 +1323,9 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
     entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_RAW10 == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
-#endif
         if (width < static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height < static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1531,15 +1341,9 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0; i < entry.count; i += 4) {
-#ifdef __LIBGBM__
-      if (GBM_FORMAT_RAW10 == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
-#endif
         if (width < static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height < static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1555,12 +1359,8 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
     return false;
   }
 #else
-#ifdef __LIBGBM__
-  if (GBM_FORMAT_RAW10 == format || GBM_FORMAT_RAW16 == format) {
-#else
   if (HAL_PIXEL_FORMAT_RAW8  == format || HAL_PIXEL_FORMAT_RAW10 == format ||
       HAL_PIXEL_FORMAT_RAW12 == format || HAL_PIXEL_FORMAT_RAW16 == format) {
-#endif
     if (!meta.exists(ANDROID_SCALER_AVAILABLE_RAW_SIZES)) {
       QMMF_ERROR("%s: Metadata ANDROID_SCALER_AVAILABLE_RAW_SIZES"
                   " not available", __func__);
@@ -1626,7 +1426,7 @@ bool GtestCommon::GetMinSupportedCameraRes(const CameraMetadata& meta,
 status_t GtestCommon::SetCameraFocalLength(const float focal_length) {
   CameraMetadata meta;
   auto ret = recorder_.GetDefaultCaptureParam(camera_id_, meta);
-  EXPECT_TRUE(ret == NO_ERROR);
+  EXPECT_TRUE(ret == 0);
 
   if (meta.exists(ANDROID_LENS_INFO_AVAILABLE_FOCAL_LENGTHS)) {
     camera_metadata_entry_t entry;
@@ -1634,21 +1434,21 @@ status_t GtestCommon::SetCameraFocalLength(const float focal_length) {
     for (uint32_t i = 0 ; i < entry.count; i++) {
       if (entry.data.f[i] == focal_length) {
         ret = recorder_.GetCameraParam(camera_id_, meta);
-        EXPECT_TRUE(ret == NO_ERROR);
+        EXPECT_TRUE(ret == 0);
         meta.update(ANDROID_LENS_FOCAL_LENGTH, &focal_length, 1);
         ret = recorder_.SetCameraParam(camera_id_, meta);
-        EXPECT_TRUE(ret == NO_ERROR);
+        EXPECT_TRUE(ret == 0);
         break;
       }
     }
   }
-  return NO_ERROR;
+  return 0;
 }
 
 status_t GtestCommon::SetCameraZoom(const float zoom) {
   CameraMetadata meta;
   auto ret = recorder_.GetCameraParam(camera_id_, meta);
-  EXPECT_TRUE(ret == NO_ERROR);
+  EXPECT_TRUE(ret == 0);
 
   if (meta.exists(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE)) {
     auto active_array_size = meta.find(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE);
@@ -1667,12 +1467,12 @@ status_t GtestCommon::SetCameraZoom(const float zoom) {
         __func__, zoom, crop[0], crop[1], crop[2], crop[3]);
 
     auto ret = meta.update(ANDROID_SCALER_CROP_REGION, crop, 4);
-    EXPECT_TRUE(ret == NO_ERROR);
+    EXPECT_TRUE(ret == 0);
 
     ret = recorder_.SetCameraParam(camera_id_, meta);
-    EXPECT_TRUE(ret == NO_ERROR);
+    EXPECT_TRUE(ret == 0);
   }
-  return NO_ERROR;
+  return 0;
 }
 
 /*
@@ -1728,7 +1528,7 @@ status_t GtestCommon::ListFilesFromDir(std::string dir_path,
       files_list.push_back(fileName);
     }
   }
-  return NO_ERROR;
+  return 0;
 }
 
 /*
@@ -1853,7 +1653,7 @@ status_t GtestCommon::PopulateDeFogTables(
     }
     defog_tables.push_back(defog_table);
   }
-  return NO_ERROR;
+  return 0;
 }
 
 /*
@@ -1932,7 +1732,7 @@ status_t GtestCommon::PopulateExpTables(
     }
     exp_tables.push_back(exp_table);
   }
-  return NO_ERROR;
+  return 0;
 }
 
 #ifdef CAM_ARCH_V2
@@ -2010,13 +1810,13 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
   if (meta.format != BufferFormat::kBLOB) {
     TEST_INFO("%s: Skip Thumbnail bump. In_fmt: %d \n",
         __func__, (int32_t) meta.format);
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (meta.n_planes > 2) {
 
     //Main image
-    std::string main_image_path = "/data/misc/qmmf/snapshot_" +
+    std::string main_image_path = "/var/tmp/qmmf/snapshot_" +
                                   std::to_string(imgcount) + "_" +
                                   std::to_string(tv_ms) + "_main.jpg";
 
@@ -2024,7 +1824,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     if (!thumb_file) {
       TEST_ERROR("%s: Unable to open thumb_file(%s)", __func__,
           main_image_path.c_str());
-      return BAD_VALUE;
+      return -EINVAL;
     }
     //Add SOI marker
     auto len = fwrite(&in_img[0], sizeof(uint8_t), 2, thumb_file);
@@ -2032,7 +1832,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
       TEST_ERROR("%s: Fail to main image (%s)", __func__,
           main_image_path.c_str());
       fclose(thumb_file);
-      return BAD_VALUE;
+      return -EINVAL;
     }
     len = fwrite(&in_img[meta.planes[0].offset], sizeof(uint8_t),
                  meta.planes[0].size, thumb_file);
@@ -2040,7 +1840,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
       TEST_ERROR("%s: Fail to store main image (%s)", __func__,
           main_image_path.c_str());
       fclose(thumb_file);
-      return BAD_VALUE;
+      return -EINVAL;
     }
     TEST_INFO("%s: Main image Size(%u) Stored@(%s)\n",
         __func__, meta.planes[0].size, main_image_path.c_str());
@@ -2048,7 +1848,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     thumb_file = nullptr;
 
     // First thumbnail
-    std::string thumb_path = "/data/misc/qmmf/snapshot_" +
+    std::string thumb_path = "/var/tmp/qmmf/snapshot_" +
                              std::to_string(imgcount) + "_" +
                              std::to_string(tv_ms) + "_thumb_" +
                              std::to_string(thumb_num) + ".jpg";
@@ -2058,7 +1858,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     if (!thumb_file) {
       TEST_ERROR("%s: Unable to open thumb_file(%s)", __func__,
           thumb_path.c_str());
-      return BAD_VALUE;
+      return -EINVAL;
     }
 
     len = fwrite(&in_img[meta.planes[1].offset], sizeof(uint8_t),
@@ -2067,7 +1867,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
       TEST_ERROR("%s: Fail to store thumbnail (%s)", __func__,
           thumb_path.c_str());
       fclose(thumb_file);
-      return BAD_VALUE;
+      return -EINVAL;
     }
     TEST_INFO("%s: Thumb (%d) Size(%u) Stored@(%s)\n",
         __func__, thumb_num, meta.planes[1].size, thumb_path.c_str());
@@ -2076,7 +1876,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     thumb_num++;
 
     // Second thumbnail
-    thumb_path = "/data/misc/qmmf/snapshot_" +
+    thumb_path = "/var/tmp/qmmf/snapshot_" +
                              std::to_string(imgcount) + "_" +
                              std::to_string(tv_ms) + "_thumb_" +
                              std::to_string(thumb_num) + ".jpg";
@@ -2085,7 +1885,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     if (!thumb_file) {
       TEST_ERROR("%s: Unable to open thumb_file(%s)", __func__,
           thumb_path.c_str());
-      return BAD_VALUE;
+      return -EINVAL;
     }
 
     uint32_t thumbnail_size = 0;
@@ -2096,7 +1896,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
         TEST_ERROR("%s: Fail to store thumbnail (%s)", __func__,
             thumb_path.c_str());
         fclose(thumb_file);
-        return BAD_VALUE;
+        return -EINVAL;
       }
       thumbnail_size += len;
     }
@@ -2106,7 +1906,7 @@ status_t GtestCommon::DumpThumbnail(BufferDescriptor buffer,
     thumb_file = nullptr;
   }
 
-  return NO_ERROR;
+  return 0;
 }
 
 void GtestCommon::ExtractColorValues(uint32_t hex_color, RGBAValues* color) {
@@ -2125,14 +1925,14 @@ status_t GtestCommon::FillCropMetadata(CameraMetadata& meta,
 
   CameraMetadata static_meta;
   auto ret = recorder_.GetCameraCharacteristics(camera_id_, static_meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     TEST_ERROR("%s: GetCameraCharacteristics failed!", __func__);
     return ret;
   }
   auto active_array_size = static_meta.find(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE);
   if (!active_array_size.count) {
     TEST_ERROR("%s: Active sensor array size is missing!", __func__);
-    return NAME_NOT_FOUND;
+    return -ENOENT;
   }
   // Take the active pixel array width and height as base on which to
   // recalculate the actual crop region dimensions.
@@ -2154,12 +1954,12 @@ status_t GtestCommon::FillCropMetadata(CameraMetadata& meta,
       static_cast<int32_t>(round(height)),
   };
   ret = meta.update(ANDROID_SCALER_CROP_REGION, crop_region, 4);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     TEST_ERROR("%s: Failed to set crop region metadata!", __func__);
     return ret;
   }
 
-  return NO_ERROR;
+  return 0;
 }
 
 void GtestCommon::ConfigureImageParam(uint32_t img_id) {
@@ -2168,7 +1968,7 @@ void GtestCommon::ConfigureImageParam(uint32_t img_id) {
   CameraMetadata static_meta;
 
   auto ret = recorder_.GetCameraCharacteristics(camera_id_, static_meta);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   // useless for Non-ZSL
   ImageExtraParam xtraparam;
@@ -2206,7 +2006,7 @@ void GtestCommon::ConfigureImageParam(uint32_t img_id) {
   }
 
   ret = recorder_.ConfigImageCapture(camera_id_, img_id, image_param, xtraparam);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
   img_id_list_.push_back(img_id);
 }
 
@@ -2215,7 +2015,7 @@ void GtestCommon::TakeSnapshot() {
   CameraMetadata meta;
 
   auto ret = recorder_.GetDefaultCaptureParam(camera_id_, meta);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   meta_array.push_back(meta);
 
@@ -2225,7 +2025,7 @@ void GtestCommon::TakeSnapshot() {
   };
 
   ret = recorder_.CaptureImage(camera_id_, snap_type_, snap_count_, meta_array, cb);
-  ASSERT_TRUE(ret == NO_ERROR);
+  ASSERT_TRUE(ret == 0);
 
   // Wait time depending on whether it is continous snapshot or not.
   uint32_t time = (snap_count_ == 0) ? (record_duration_ / 2) : 5;
@@ -2235,7 +2035,7 @@ void GtestCommon::TakeSnapshot() {
   id_list_::iterator it;
   for (it = img_id_list_.begin(); it != img_id_list_.end(); it++) {
     ret = recorder_.CancelCaptureImage(camera_id_, *it);
-    ASSERT_TRUE(ret == NO_ERROR);
+    ASSERT_TRUE(ret == 0);
   }
   img_id_list_.clear();
 

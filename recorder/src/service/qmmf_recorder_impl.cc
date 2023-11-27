@@ -138,7 +138,7 @@ status_t RecorderImpl::Init(const RemoteCallbackHandle& remote_cb_handle) {
   camera_source_ = CameraSource::CreateCameraSource();
   if (!camera_source_) {
     QMMF_ERROR("%s: Can't Create CameraSource Instance!", __func__);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
   QMMF_INFO("%s: CameraSource Instance Created Successfully!",
       __func__);
@@ -147,11 +147,11 @@ status_t RecorderImpl::Init(const RemoteCallbackHandle& remote_cb_handle) {
   offline_jpeg_encoder_ = new OfflineJpegEncoder;
   if (!offline_jpeg_encoder_) {
     QMMF_ERROR("%s: Can't Create OfflineJpegEncoder Instance!", __func__);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
   status_t ret = offline_jpeg_encoder_->Init(remote_cb_handle);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s: Offline JPEG lib initialization failed!", __func__);
     delete offline_jpeg_encoder_;
     offline_jpeg_encoder_ = nullptr;
@@ -160,7 +160,7 @@ status_t RecorderImpl::Init(const RemoteCallbackHandle& remote_cb_handle) {
 #endif
 
   QMMF_INFO("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::DeInit() {
@@ -182,7 +182,7 @@ status_t RecorderImpl::DeInit() {
 #endif
 
   QMMF_INFO("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::RegisterClient(const uint32_t client_id) {
@@ -192,7 +192,7 @@ status_t RecorderImpl::RegisterClient(const uint32_t client_id) {
   std::lock_guard<std::mutex> session_lock(client_session_lock_);
   if (client_session_map_.count(client_id) != 0) {
     QMMF_WARN("%s: Client is already connected !!", __func__);
-    return NO_ERROR;
+    return 0;
   }
   client_session_map_.emplace(client_id, SessionTrackMap());
   QMMF_INFO("%s: client_session_map_.size(%lu)", __func__,
@@ -229,7 +229,7 @@ status_t RecorderImpl::RegisterClient(const uint32_t client_id) {
 #endif
 
   QMMF_INFO("%s: Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
@@ -237,10 +237,10 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
 
   QMMF_INFO("%s: Enter client_id(%u)", __func__, client_id);
 
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
 
@@ -251,7 +251,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     if (client_cameraid_map_[client_id].empty()) {
       client_cameraid_map_.erase(client_id);
     }
-    return NO_ERROR;
+    return 0;
   }
 
 #ifdef ENABLE_OFFLINE_JPEG
@@ -275,7 +275,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
 
   // Try to release buffer which are held by dead client.
   ret = ForceReturnBuffers(client_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_WARN("%s: Client(%u): Buffers clean up failed!", __func__, client_id);
     // Carry-on even return buffers fails.
   }
@@ -290,7 +290,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
       auto session_id = session.first;
 
       ret = StopSession(client_id, session_id, false, true);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         QMMF_WARN("%s: Client(%u): Session(%u) internal stop failed!,",
             __func__, client_id, session_id);
         // Carry-on even stop session fails.
@@ -310,7 +310,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
         ++track;
       }
       ret = DeleteSession(client_id, session_id);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         QMMF_WARN("%s: Internal delete session is failed! client_id(%u):"
             "session_id(%u)", __func__, client_id, session_id);
       }
@@ -334,7 +334,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     for (auto camera : cameras) {
       auto camera_id = camera.first;
       ret = StopCamera(client_id, camera_id);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         QMMF_INFO("%s: Client(%u): Camera ID(%d) close failed!", __func__,
             client_id, camera_id);
         // Go ahead with removing camera id from map.
@@ -349,7 +349,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
   client_state_.erase(client_id);
 
   QMMF_INFO("%s: Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::StartCamera(const uint32_t client_id,
@@ -363,7 +363,7 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   bool owned = IsCameraOwned(client_id, camera_id);
@@ -379,23 +379,23 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
   if ((camera_slave_mode.mode == SlaveMode::kSlave) && !owned) {
     QMMF_WARN("%s Client(%u): Camera(%u) hasn't been opened yet,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return NAME_NOT_FOUND;
+    return -ENOENT;
   } else if ((camera_slave_mode.mode == SlaveMode::kSlave) && owned) {
     QMMF_INFO("%s Client(%u): Camera(%u) is already owned by another client,"
         " using camera in slave mode!", __func__, client_id, camera_id);
     std::lock_guard<std::mutex> lock(camera_map_lock_);
     client_cameraid_map_[client_id].emplace(camera_id, false);
-    return NO_ERROR;
+    return 0;
   } else if (owned) {
     QMMF_WARN("%s Client(%u): Camera(%u) is already owned by another client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   if (IsCameraValid(client_id, camera_id)) {
     QMMF_WARN("%s Client(%u): Camera(%u) has been already started,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
@@ -409,9 +409,9 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
   auto ret = camera_source_->StartCamera(camera_id, framerate, extra_param,
                                          enable_result_cb ? cb : nullptr,
                                          errcb);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: StartCamera Failed!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   std::lock_guard<std::mutex> lock(camera_map_lock_);
@@ -444,7 +444,7 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
     }
   }
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::StopCamera(const uint32_t client_id,
@@ -457,7 +457,7 @@ status_t RecorderImpl::StopCamera(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (IsCameraOwned(client_id, camera_id)) {
@@ -466,13 +466,13 @@ status_t RecorderImpl::StopCamera(const uint32_t client_id,
     std::lock_guard<std::mutex> lock(camera_map_lock_);
     client_cameraid_map_[client_id].erase(camera_id);
     slave_camera_closed_.SignalAll();
-    return NO_ERROR;
+    return 0;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
   assert(camera_source_ != nullptr);
 
@@ -503,14 +503,14 @@ status_t RecorderImpl::StopCamera(const uint32_t client_id,
     });
     if (ret != 0) {
       QMMF_ERROR("%s: Failed, slave camera clients still active!!", __func__);
-      return TIMED_OUT;
+      return -ETIMEDOUT;
     }
   }
 
   auto ret = camera_source_->StopCamera(camera_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: StopCamera Failed!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   std::lock_guard<std::mutex> lock(camera_map_lock_);
@@ -531,7 +531,7 @@ status_t RecorderImpl::StopCamera(const uint32_t client_id,
       client_id, client_cameraid_map_[client_id].size());
 
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::CreateSession(const uint32_t client_id,
@@ -542,20 +542,20 @@ status_t RecorderImpl::CreateSession(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!camera_source_) {
     QMMF_ERROR("%s: Can't Create Session! Connect Should be called before"
         " Calling CreateSession", __func__);
-    return NO_INIT;
+    return -ENODEV;
   }
   std::lock_guard<std::mutex> lock(client_session_lock_);
 
-  if (GetUniqueSessionID(client_id, session_id) != NO_ERROR) {
+  if (GetUniqueSessionID(client_id, session_id) != 0) {
     QMMF_ERROR("%s: Active sessions limit reached for Client(%u), 255!",
         __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto& session_track_map = client_session_map_[client_id];
   session_track_map.emplace(*session_id, TrackMap());
@@ -573,7 +573,7 @@ status_t RecorderImpl::CreateSession(const uint32_t client_id,
 
 
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::DeleteSession(const uint32_t client_id,
@@ -582,16 +582,16 @@ status_t RecorderImpl::DeleteSession(const uint32_t client_id,
   QMMF_DEBUG("%s: Enter", __func__);
   QMMF_KPI_DETAIL();
 
-  int32_t ret = NO_ERROR;
+  int32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   std::lock_guard<std::mutex> lock(client_session_lock_);
@@ -604,7 +604,7 @@ status_t RecorderImpl::DeleteSession(const uint32_t client_id,
     QMMF_ERROR("%s: Client(%u): Session(%u) Can't be deleted until all"
         " tracks(%lu) within this session are stopped & deleted!", __func__,
         client_id, session_id, tracks.size());
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   session_track_map.erase(session_id);
@@ -637,31 +637,31 @@ status_t RecorderImpl::StartSession(const uint32_t client_id,
   client_session_lock_.unlock();
   std::lock_guard<std::mutex> lock(*session_lock);
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (IsSessionPaused(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) is paused, resuming!", __func__,
         client_id, session_id);
     ResumeSession(client_id, session_id);
-    return NO_ERROR;
+    return 0;
   } else if (IsSessionActive(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) is already started!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   } else if (!IsSessionIdle(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) hasn't been stopped!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   }
 
   // all of the video tracks associated to one session starts together
@@ -675,7 +675,7 @@ status_t RecorderImpl::StartSession(const uint32_t client_id,
 
     assert(camera_source_ != nullptr);
     ret = camera_source_->StartTrackSource(service_track_id);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u):session_id(%u), StartTrackSource"
           " failed for client_track_id(%u):service_track_id(%x)",
           __func__, client_id, session_id, client_track_id, service_track_id);
@@ -686,7 +686,7 @@ status_t RecorderImpl::StartSession(const uint32_t client_id,
         "client_track_id(%u):service_track_id(%x) Started Successfully!",
         __func__, client_id, session_id, client_track_id, service_track_id);
   }
-  if (ret == NO_ERROR) {
+  if (ret == 0) {
     QMMF_INFO("%s: client_id(%u):session_id(%u) with num tracks(%lu) Started"
         " Successfully!", __func__, client_id, session_id,
         tracks_in_session.size());
@@ -715,22 +715,22 @@ status_t RecorderImpl::StopSession(const uint32_t client_id,
   client_session_lock_.unlock();
   std::lock_guard<std::mutex> lock(*session_lock);
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (IsSessionIdle(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) not yet started!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   }
 
   QMMF_INFO("%s: client_id(%u):session_id(%u), number of tracks(%lu) to stop",
@@ -749,7 +749,7 @@ status_t RecorderImpl::StopSession(const uint32_t client_id,
     // Stop TrackSource
     assert(camera_source_ != nullptr);
     ret = camera_source_->StopTrackSource(service_track_id);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u):session_id(%u), StopTrackSource"
           " failed for client_track_id(%u):service_track_id(%x)",
           __func__, client_id, session_id, client_track_id,
@@ -763,7 +763,7 @@ status_t RecorderImpl::StopSession(const uint32_t client_id,
     ++track;
   } // tracks loop ends.
 
-   if (ret == NO_ERROR) {
+   if (ret == 0) {
     QMMF_INFO("%s: client_id(%u):session_id(%u) with num tracks(%lu) Stoped"
         " Successfully!", __func__, client_id, session_id,
         tracks_in_session.size());
@@ -782,26 +782,26 @@ status_t RecorderImpl::PauseSession(const uint32_t client_id,
       client_id, session_id);
   QMMF_KPI_DETAIL();
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (IsSessionPaused(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) already paused!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   } else if (IsSessionIdle(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) hasn't been started!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   }
 
   client_session_lock_.lock();
@@ -824,7 +824,7 @@ status_t RecorderImpl::PauseSession(const uint32_t client_id,
 
     assert(camera_source_ != nullptr);
     ret = camera_source_->PauseTrackSource(service_track_id);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u):session_id(%u), PauseTrackSource"
           " failed for client_track_id(%u):service_track_id(%x)",
           __func__, client_id, session_id, client_track_id,
@@ -834,7 +834,7 @@ status_t RecorderImpl::PauseSession(const uint32_t client_id,
 
     ++track;
   }
-  if (ret == NO_ERROR) {
+  if (ret == 0) {
     QMMF_INFO("%s: client_id(%u):session_id(%u) with num tracks(%lu) Paused"
         " Successfully!", __func__, client_id, session_id,
         tracks_in_session.size());
@@ -853,22 +853,22 @@ status_t RecorderImpl::ResumeSession(const uint32_t client_id,
       client_id, session_id);
   QMMF_KPI_DETAIL();
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionPaused(client_id, session_id)) {
     QMMF_WARN("%s: Client(%u): Session(%u) hasn't been paused!", __func__,
         client_id, session_id);
-    return NO_ERROR;
+    return 0;
   }
 
   client_session_lock_.lock();
@@ -889,7 +889,7 @@ status_t RecorderImpl::ResumeSession(const uint32_t client_id,
 
     assert(camera_source_ != nullptr);
     ret = camera_source_->ResumeTrackSource(service_track_id);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u):session_id(%u), ResumeTrackSource"
           " failed for client_track_id(%u):service_track_id(%x)",
           __func__, client_id, session_id, client_track_id,
@@ -897,7 +897,7 @@ status_t RecorderImpl::ResumeSession(const uint32_t client_id,
       break;
     }
   }
-  if (ret == NO_ERROR) {
+  if (ret == 0) {
     QMMF_INFO("%s: client_id(%u):session_id(%u) with num tracks(%lu) Resumed"
         " Successfully!", __func__, client_id, session_id,
         tracks_in_session.size());
@@ -974,19 +974,19 @@ status_t RecorderImpl::CreateVideoTrack(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (IsTrackValid(client_id, session_id, track_id)) {
     QMMF_ERROR("%s: Client(%d):Session(%d): Track(%d) already exists!",
         __func__, client_id, session_id, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   uint32_t service_track_id = GetUniqueServiceTrackId(client_id, session_id,
@@ -1027,7 +1027,7 @@ status_t RecorderImpl::CreateVideoTrack(const uint32_t client_id,
         extraparams.Update(QMMF_SOURCE_VIDEO_TRACK_ID, source_track);
       } else {
         QMMF_ERROR("%s: No suitable track found for linked stream!", __func__);
-        return BAD_VALUE;
+        return -EINVAL;
       }
     }
   }
@@ -1036,10 +1036,10 @@ status_t RecorderImpl::CreateVideoTrack(const uint32_t client_id,
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->CreateTrackSource(service_track_id, params,
                                                extraparams, cb);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: CreateTrackSource track_id(%u):service_track_id(%x) "
         " failed!", __func__, track_id, service_track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   QMMF_INFO("%s: client_id(%u):session_id(%u), TrackSource for "
       "client_track_id(%u):service_track_id(%x) Added Successfully in "
@@ -1061,7 +1061,7 @@ status_t RecorderImpl::CreateVideoTrack(const uint32_t client_id,
 
   QMMF_DEBUG("%s: Exit client_id(%u):session_id(%u)", __func__,
       client_id, session_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::DeleteVideoTrack(const uint32_t client_id,
@@ -1074,19 +1074,19 @@ status_t RecorderImpl::DeleteVideoTrack(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsTrackValid(client_id, session_id, track_id)) {
     QMMF_ERROR("%s: Client(%d):Session(%d): Track(%d) does not exist!",
         __func__, client_id, session_id, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   client_session_lock_.lock();
@@ -1099,7 +1099,7 @@ status_t RecorderImpl::DeleteVideoTrack(const uint32_t client_id,
   assert(camera_source_ != nullptr);
   assert(service_track_id > 0);
   auto ret = camera_source_->DeleteTrackSource(service_track_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: service_track_id(%x) DeleteTrackSource failed!",
         __func__, service_track_id);
     return ret;
@@ -1121,7 +1121,7 @@ status_t RecorderImpl::DeleteVideoTrack(const uint32_t client_id,
 
   QMMF_DEBUG("%s: Exit client_id(%u):session_id(%u)", __func__,
       client_id, session_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::ReturnTrackBuffer(const uint32_t client_id,
@@ -1135,33 +1135,33 @@ status_t RecorderImpl::ReturnTrackBuffer(const uint32_t client_id,
     QMMF_VERBOSE("%s INPARAM: buffers[%s]", __func__,
                  buffer.ToString().c_str());
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsTrackValid(client_id, session_id, track_id)) {
     QMMF_ERROR("%s: Client(%d):Session(%d): Track(%d) does not exist!",
         __func__, client_id, session_id, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   uint32_t service_track_id = GetServiceTrackId(client_id, session_id, track_id);
 
   assert(camera_source_ != nullptr);
   ret = camera_source_->ReturnTrackBuffer(service_track_id, buffers);
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_VERBOSE("%s: Exit client_id(%u):session_id(%u)", __func__,
       client_id, session_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
@@ -1175,19 +1175,19 @@ status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsSessionValid(client_id, session_id)) {
     QMMF_ERROR("%s: Client(%u): Session(%u) is not valid!", __func__,
         client_id, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsTrackValid(client_id, session_id, track_id)) {
     QMMF_ERROR("%s: Client(%d):Session(%d): Track(%d) does not exist!",
         __func__, client_id, session_id, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   uint32_t service_track_id = GetServiceTrackId(client_id, session_id, track_id);
@@ -1196,7 +1196,7 @@ status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
   if (type == VideoParam::kFrameRate) {
     float fps = *(static_cast<float*>(param));
     ret = camera_source_->UpdateTrackFrameRate(service_track_id, fps);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u) Failed to set FrameRate to TrackSource",
           __func__, client_id);
       return ret;
@@ -1206,7 +1206,7 @@ status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
   if (type == VideoParam::kEnableFrameRepeat) {
     bool enable = *(static_cast<bool*>(param));
     ret = camera_source_->EnableFrameRepeat(service_track_id, enable);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: client_id(%u) Failed to set FrameRepeat to TrackSource!",
           __func__, client_id);
       return ret;
@@ -1214,7 +1214,7 @@ status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
   }
   QMMF_DEBUG("%s: Exit client_id(%u):session_id(%u)", __func__,
       client_id, session_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::CaptureImage(const uint32_t client_id,
@@ -1228,13 +1228,13 @@ status_t RecorderImpl::CaptureImage(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
@@ -1244,14 +1244,14 @@ status_t RecorderImpl::CaptureImage(const uint32_t client_id,
       };
 
   auto ret = camera_source_->CaptureImage(camera_id, type, n_images, meta, cb);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: client_id(%u):camera_id(%d) CaptureImage failed!",
         __func__, client_id, camera_id);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);;
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::ConfigImageCapture(const uint32_t client_id,
@@ -1265,26 +1265,26 @@ status_t RecorderImpl::ConfigImageCapture(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->ConfigImageCapture(camera_id, image_id, param,
                                                 xtraparam);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: client_id(%u):camera_id(%d) ConfigImageCapture failed!",
         __func__, client_id, camera_id);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);;
-  return NO_ERROR;
+  return 0;
 }
 
 
@@ -1298,24 +1298,24 @@ status_t RecorderImpl::CancelCaptureImage(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->CancelCaptureImage(camera_id, image_id, cache);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: CancelCaptureImage failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d):image_id(%d)", __func__,
       client_id, camera_id, image_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::ReturnImageCaptureBuffer(const uint32_t client_id,
@@ -1326,13 +1326,13 @@ status_t RecorderImpl::ReturnImageCaptureBuffer(const uint32_t client_id,
       client_id, camera_id);
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->ReturnImageCaptureBuffer(camera_id, buffer_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: ReturnImageCaptureBuffer failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 
@@ -1345,24 +1345,24 @@ status_t RecorderImpl::SetCameraParam(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->SetCameraParam(camera_id, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: SetCameraParam failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Enter client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::GetCameraParam(const uint32_t client_id,
@@ -1374,24 +1374,24 @@ status_t RecorderImpl::GetCameraParam(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->GetCameraParam(camera_id, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: GetCameraParam failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::SetCameraSessionParam(const uint32_t client_id,
@@ -1403,24 +1403,24 @@ status_t RecorderImpl::SetCameraSessionParam(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->SetCameraSessionParam(camera_id, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: SetCameraSessionParam failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Enter client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::SetSHDR(const uint32_t client_id,
@@ -1431,18 +1431,18 @@ status_t RecorderImpl::SetSHDR(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->SetSHDR(camera_id, enable);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: client_id(%u) Failed to set SHDR to TrackSource!",
         __func__, client_id);
     return ret;
@@ -1450,7 +1450,7 @@ status_t RecorderImpl::SetSHDR(const uint32_t client_id,
 
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::GetDefaultCaptureParam(const uint32_t client_id,
@@ -1462,24 +1462,24 @@ status_t RecorderImpl::GetDefaultCaptureParam(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->GetDefaultCaptureParam(camera_id, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: GetDefaultCaptureParam failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,
@@ -1491,24 +1491,24 @@ status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,
 
   if (!IsClientValid(client_id)) {
     QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (!IsCameraValid(client_id, camera_id)) {
     QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
         " operation not allowed!", __func__, client_id, camera_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   assert(camera_source_ != nullptr);
   auto ret = camera_source_->GetCameraCharacteristics(camera_id, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: GetCameraCharacteristics failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::CreateOfflineJPEG(const uint32_t client_id,
@@ -1520,20 +1520,20 @@ status_t RecorderImpl::CreateOfflineJPEG(const uint32_t client_id,
   assert(offline_jpeg_encoder_ != nullptr);
   if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto ret = offline_jpeg_encoder_->Create(client_id, params);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Offline JPEG encoder create failed!", __func__);
     return ret;
   }
 #else
   QMMF_ERROR("Offline JPEG not supported on this platform");
-  return INVALID_OPERATION;
+  return -ENOSYS;
 #endif
 
   QMMF_DEBUG("%s Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::EncodeOfflineJPEG(const uint32_t client_id,
@@ -1547,20 +1547,20 @@ status_t RecorderImpl::EncodeOfflineJPEG(const uint32_t client_id,
   assert(offline_jpeg_encoder_ != nullptr);
   if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto ret = offline_jpeg_encoder_->Process(client_id, in_buf, out_buf, meta);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Offline JPEG encoder process failed!", __func__);
     return ret;
   }
 #else
   QMMF_ERROR("Offline JPEG not supported on this platform");
-  return INVALID_OPERATION;
+  return -ENOSYS;
 #endif
 
   QMMF_DEBUG("%s Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t RecorderImpl::DestroyOfflineJPEG(const uint32_t client_id) {
@@ -1571,20 +1571,20 @@ status_t RecorderImpl::DestroyOfflineJPEG(const uint32_t client_id) {
   assert(offline_jpeg_encoder_ != nullptr);
   if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto ret = offline_jpeg_encoder_->Destroy(client_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Offline JPEG encoder destroy failed!", __func__);
     return ret;
   }
 #else
   QMMF_ERROR("Offline JPEG not supported on this platform");
-  return INVALID_OPERATION;
+  return -ENOSYS;
 #endif
 
   QMMF_DEBUG("%s Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 // Data callback handlers.
@@ -1810,7 +1810,7 @@ uint32_t RecorderImpl::GetServiceTrackId(const uint32_t& client_id,
       return tracks_in_session[track_id];
     }
   }
-  return NO_ERROR;
+  return 0;
 }
 
 std::vector<uint32_t> RecorderImpl::GetCameraClients(const uint32_t& camera_id) {
@@ -1833,14 +1833,14 @@ status_t RecorderImpl::ForceReturnBuffers(const uint32_t client_id) {
 
   assert(camera_source_ != nullptr);
 
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
 
   // Return all image capture buffers
   auto const& cameras = client_cameraid_map_[client_id];
   for (auto camera : cameras) {
     auto camera_id = camera.first;
     ret = camera_source_->ReturnAllImageCaptureBuffers(camera_id);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_WARN("%s: ReturnAllImageCaptureBuffers failed for camera_id %d",
           __func__, camera_id);
     }
@@ -1870,7 +1870,7 @@ status_t RecorderImpl::ForceReturnBuffers(const uint32_t client_id) {
           session_id, client_track_id, service_track_id);
 
       ret = camera_source_->FlushTrackSource(service_track_id);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         QMMF_WARN("%s: FlushTrackSource failed for track_id %d", __func__,
             service_track_id);
       }
@@ -1885,10 +1885,10 @@ status_t RecorderImpl::GetUniqueSessionID(const uint32_t& client_id,
   for (uint32_t id = 1; id <= 0xFF; id++) {
     if (client_sessions_state_[client_id].count(id) == 0) {
       *session_id = id;
-      return NO_ERROR;
+      return 0;
     }
   }
-  return BAD_VALUE;
+  return -EINVAL;
 }
 
 }; // namespace recorder

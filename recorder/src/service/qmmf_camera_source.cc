@@ -68,9 +68,8 @@
 #include <dirent.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#ifndef CAMERA_HAL1_SUPPORT
+#include <errno.h>
 #include <hardware/camera3.h>
-#endif
 
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
@@ -87,7 +86,7 @@ namespace recorder {
 using ::std::make_shared;
 using ::std::shared_ptr;
 
-static const nsecs_t kWaitDuration = 5000000000; // 5 s.
+static const int64_t kWaitDuration = 5000000000; // 5 s.
 static const uint64_t kTsFactor = 10000000; // 10 ms.
 
 CameraSource* CameraSource::instance_ = nullptr;
@@ -158,7 +157,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
 
   if (!camera) {
     QMMF_ERROR("%s: Can't Instantiate Camera(%d)!", __func__, camera_id);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
   // Add contexts to map when in regular camera case.
@@ -166,7 +165,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) != 0) {
     active_cameras_lock_.unlock();
     QMMF_INFO("%s: Camera(%u) is already open!", __func__, camera_id);
-    return NO_ERROR;
+    return 0;
   }
   active_cameras_.emplace(camera_id, camera);
   active_cameras_lock_.unlock();
@@ -177,7 +176,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
   start_cam_param_lock_.unlock();
 
   auto ret = camera->OpenCamera(camera_id, framerate, extra_param, cb, errcb);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: OpenCamera(%d) Failed!", __func__, camera_id);
     active_cameras_lock_.lock();
     active_cameras_.erase(camera_id);
@@ -197,12 +196,12 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
       }
     } else {
       QMMF_ERROR("%s: Invalid FRC mode received", __func__);
-      return BAD_VALUE;
+      return -EINVAL;
     }
   }
 
   QMMF_INFO("%s: Camera(%d) opened successfully!", __func__, camera_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::StopCamera(const uint32_t camera_id) {
@@ -216,16 +215,16 @@ status_t CameraSource::StopCamera(const uint32_t camera_id) {
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
 
   auto ret = camera->CloseCamera(camera_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Failed to close camera(%d)!", __func__, camera_id);
-    return FAILED_TRANSACTION;
+    return ret;
   }
 
   active_cameras_lock_.lock();
@@ -233,7 +232,7 @@ status_t CameraSource::StopCamera(const uint32_t camera_id) {
   active_cameras_lock_.unlock();
   QMMF_INFO("%s: Camera(%d) successfully closed!", __func__, camera_id);
 
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::CaptureImage(const uint32_t camera_id,
@@ -249,7 +248,7 @@ status_t CameraSource::CaptureImage(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
@@ -260,13 +259,13 @@ status_t CameraSource::CaptureImage(const uint32_t camera_id,
     SnapshotCallback(image_id, count, buf);
   };
   auto ret = camera->CaptureImage(type, n_images, meta, stream_cb);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: CaptureImage Failed!", __func__);
     return ret;
   }
 
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::ConfigImageCapture(const uint32_t camera_id,
@@ -280,7 +279,7 @@ status_t CameraSource::ConfigImageCapture(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
@@ -294,13 +293,13 @@ status_t CameraSource::ConfigImageCapture(const uint32_t camera_id,
   sparam.rotation = param.rotation;
 
   auto ret = camera->ConfigImageCapture(image_id, sparam, xtraparam);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: ConfigImageCapture Failed!", __func__);
     return ret;
   }
 
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::CancelCaptureImage(const uint32_t camera_id,
@@ -314,18 +313,18 @@ status_t CameraSource::CancelCaptureImage(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
 
   auto ret = camera->CancelCaptureImage(image_id, cache);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: CancelCaptureImage Failed!", __func__);
     return ret;
   }
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::ReturnAllImageCaptureBuffers(const uint32_t camera_id) {
@@ -335,13 +334,13 @@ status_t CameraSource::ReturnAllImageCaptureBuffers(const uint32_t camera_id) {
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
 
   auto ret = camera->ReturnAllImageCaptureBuffers();
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: ReturnAllImageCaptureBuffers Failed!", __func__);
     return ret;
   }
@@ -358,13 +357,13 @@ status_t CameraSource::ReturnImageCaptureBuffer(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
 
   auto ret = camera->ReturnImageCaptureBuffer(camera_id, buffer_id);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: ReturnImageCaptureBuffer Failed!", __func__);
     return ret;
   }
@@ -380,7 +379,7 @@ int32_t CameraSource::GetSourceTrackId(const VideoExtraParam& extra_param) {
     extra_param.Fetch(QMMF_SOURCE_VIDEO_TRACK_ID, source_track);
     return source_track.source_track_id;
   }
-  return NAME_NOT_FOUND;
+  return -ENOENT;
 }
 
 bool CameraSource::ValidateSlaveTrackParam(
@@ -476,18 +475,18 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& camera = active_cameras_[camera_id];
   active_cameras_lock_.unlock();
 
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   bool copy_stream_mode = false;
   bool linked_mode = false;
   VideoTrackParam source_params {};
 
   int32_t source_track_id = GetSourceTrackId(xtraparam);
-  if (source_track_id != NAME_NOT_FOUND) {
+  if (source_track_id != -ENOENT) {
     QMMF_INFO("%s: Master->slave 0x%x->0x%x", __func__, source_track_id,
         track_id);
 
@@ -517,7 +516,7 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
                                                xtraparam, fr_control, cb);
   if (!track_source.get()) {
     QMMF_ERROR("%s: Can't create TrackSource Instance", __func__);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
   shared_ptr<TrackSource> master_track;
@@ -534,10 +533,10 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
       ret = rescaler->Init(params.width, params.height, format,
                            source_params.framerate, params.framerate,
                            extra_param);
-      if (ret != NO_ERROR) {
+      if (ret != 0) {
         rescaler = nullptr;
         QMMF_ERROR("%s: Rescaler Init Failed", __func__);
-        return BAD_VALUE;
+        return -EINVAL;
       }
       rescaler->Configure(GetRescalerConfig(xtraparam));
       rescalers_.emplace(track_id, rescaler);
@@ -548,7 +547,7 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
     assert(master_track.get() != nullptr);
 
     ret = track_source->InitCopy(master_track, rescaler);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: Track(%x): TrackSource InitCopy failed!", __func__,
          track_id);
       rescalers_.erase(track_id);
@@ -560,7 +559,7 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
       goto FAIL;
     }
     ret = track_source->Init();
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: Track(%x): TrackSource Init failed!", __func__,
           track_id);
       goto FAIL;
@@ -580,12 +579,12 @@ status_t CameraSource::DeleteTrackSource(const uint32_t track_id) {
 
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->DeInit();
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Track(%x): DeInit failed !!", __func__, track_id);
     return ret;
   }
@@ -603,12 +602,12 @@ status_t CameraSource::StartTrackSource(const uint32_t track_id) {
   QMMF_KPI_DETAIL();
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->StartTrack();
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_VERBOSE("%s: TrackSource id(%x) Started Successfully!", __func__,
       track_id);
@@ -620,12 +619,12 @@ status_t CameraSource::FlushTrackSource(const uint32_t track_id) {
   QMMF_KPI_DETAIL();
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->Flush();
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_VERBOSE("%s: TrackSource id(%x) Flush Buffers Successfully!", __func__,
       track_id);
@@ -637,12 +636,12 @@ status_t CameraSource::StopTrackSource(const uint32_t track_id) {
   QMMF_KPI_DETAIL();
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->StopTrack();
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Track(%x): Stop failed !!", __func__, track_id);
     return ret;
   }
@@ -657,12 +656,12 @@ status_t CameraSource::PauseTrackSource(const uint32_t track_id) {
   QMMF_KPI_DETAIL();
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->PauseTrack();
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_VERBOSE("%s: TrackSource id(%x) Paused Successfully!", __func__,
       track_id);
@@ -674,12 +673,12 @@ status_t CameraSource::ResumeTrackSource(const uint32_t track_id) {
   QMMF_KPI_DETAIL();
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->ResumeTrack();
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_VERBOSE("%s: TrackSource id(%x) Resumed Successfully!", __func__,
       track_id);
@@ -691,12 +690,12 @@ status_t CameraSource::ReturnTrackBuffer(const uint32_t track_id,
 
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   auto ret = track->ReturnTrackBuffer(buffers);
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
   return ret;
 }
 
@@ -707,7 +706,7 @@ status_t CameraSource::SetCameraParam(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -723,7 +722,7 @@ status_t CameraSource::GetCameraParam(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -739,7 +738,7 @@ status_t CameraSource::SetCameraSessionParam(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -755,7 +754,7 @@ status_t CameraSource::SetSHDR(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -771,7 +770,7 @@ status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -787,7 +786,7 @@ status_t CameraSource::GetCameraCharacteristics(const uint32_t camera_id,
   if (active_cameras_.count(camera_id) == 0) {
     active_cameras_lock_.unlock();
     QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto const& camera = active_cameras_[camera_id];
@@ -801,12 +800,12 @@ status_t CameraSource::UpdateTrackFrameRate(const uint32_t track_id,
 
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   track->UpdateFrameRate(framerate);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraSource::EnableFrameRepeat(const uint32_t track_id,
@@ -814,12 +813,12 @@ status_t CameraSource::EnableFrameRepeat(const uint32_t track_id,
 
   if (!IsTrackIdValid(track_id)) {
     QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto const& track = track_sources_[track_id];
 
   track->EnableFrameRepeat(enable);
-  return NO_ERROR;
+  return 0;
 }
 
 const shared_ptr<TrackSource>& CameraSource::GetTrackSource(uint32_t track_id) {
@@ -837,7 +836,6 @@ bool CameraSource::IsTrackIdValid(const uint32_t track_id) {
 uint32_t CameraSource::GetJpegSize(uint8_t *blobBuffer, uint32_t size) {
 
   uint32_t ret = size;
-#ifndef CAMERA_HAL1_SUPPORT
   uint32_t blob_size = sizeof(struct camera3_jpeg_blob);
 
   if (size > blob_size) {
@@ -854,7 +852,7 @@ uint32_t CameraSource::GetJpegSize(uint8_t *blobBuffer, uint32_t size) {
     QMMF_ERROR("%s Buffer size: %u equal or smaller than Blob size: %u\n",
         __func__, size, blob_size);
   }
-#endif
+
   return ret;
 }
 
@@ -909,7 +907,7 @@ status_t CameraSource::ParseThumb(uint8_t* vaddr, uint32_t size,
           if (info.n_planes == MAX_PLANE) {
             QMMF_ERROR("%s: Fail to parse thumbnail num_plane: %d!!!",
                 __func__, info.n_planes);
-            return BAD_VALUE;
+            return -EINVAL;
           }
 
           info.planes[info.n_planes].offset = i;
@@ -931,7 +929,7 @@ status_t CameraSource::ParseThumb(uint8_t* vaddr, uint32_t size,
             i = block_start + MARKER_LENGTH_SIZE; // Skip length
             w_size = block_end - i;
           } else {
-            return BAD_VALUE;
+            return -EINVAL;
           }
         }
 
@@ -957,7 +955,7 @@ status_t CameraSource::ParseThumb(uint8_t* vaddr, uint32_t size,
 
   // restore plane info
   buffer.info = info;
-  return NO_ERROR;
+  return 0;
 }
 
 void CameraSource::SnapshotCallback(uint32_t image_id, uint32_t count,
@@ -991,7 +989,7 @@ void CameraSource::SnapshotCallback(uint32_t image_id, uint32_t count,
       if (buffer.second_thumb) {
         auto ret = ParseThumb(static_cast<uint8_t*>(vaddr),
                               content_size, buffer);
-        if (ret != NO_ERROR) {
+        if (ret != 0) {
           QMMF_ERROR("%s: Warning: ParseThumb failed!!", __func__);
         }
       }
@@ -1045,13 +1043,9 @@ TrackSource::TrackSource(const uint32_t id,
 
   QMMF_GET_LOG_LEVEL();
 
-  BufferConsumerImpl<TrackSource> *consumer;
-  consumer = new BufferConsumerImpl<TrackSource>(this);
-  buffer_consumer_ = consumer;
+  buffer_consumer_ = std::make_shared<BufferConsumerImpl<TrackSource>>(this);
 
-  BufferProducerImpl<TrackSource> *producer;
-  producer = new BufferProducerImpl<TrackSource>(this);
-  buffer_producer_ = producer;
+  buffer_producer_ = std::make_shared<BufferProducerImpl<TrackSource>>(this);
 
   assert(camera.get() != nullptr);
   camera_ = camera;
@@ -1079,12 +1073,12 @@ TrackSource::~TrackSource() {
   QMMF_INFO("%s: Exit(0x%p) ", __func__, this);
 }
 
-status_t TrackSource::AddConsumer(const sp<IBufferConsumer>& consumer) {
+status_t TrackSource::AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer) {
 
   std::lock_guard<std::mutex> lock(consumer_lock_);
   if (consumer.get() == nullptr) {
     QMMF_ERROR("%s: Input consumer is nullptr", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   buffer_producer_->AddConsumer(consumer);
@@ -1094,16 +1088,16 @@ status_t TrackSource::AddConsumer(const sp<IBufferConsumer>& consumer) {
 
   QMMF_VERBOSE("%s: Consumer(%p) has been added.", __func__,
       consumer.get());
-  return NO_ERROR;
+  return 0;
 }
 
-status_t TrackSource::RemoveConsumer(sp<IBufferConsumer>& consumer) {
+status_t TrackSource::RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer) {
 
   std::lock_guard<std::mutex> lock(consumer_lock_);
 
   if (buffer_producer_->GetNumConsumer() == 0) {
     QMMF_ERROR("%s: There are no connected consumers!", __func__);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   buffer_producer_->RemoveConsumer(consumer);
@@ -1112,7 +1106,7 @@ status_t TrackSource::RemoveConsumer(sp<IBufferConsumer>& consumer) {
 
   QMMF_VERBOSE("%s: Consumer(%p) has been removed.", __func__,
       consumer.get());
-  return NO_ERROR;
+  return 0;
 }
 
 status_t TrackSource::InitCopy(shared_ptr<TrackSource> master_track_source,
@@ -1131,33 +1125,33 @@ status_t TrackSource::InitCopy(shared_ptr<TrackSource> master_track_source,
     rescaler_ = rescaler;
   }
 
-  sp<IBufferConsumer> consumer;
+  std::shared_ptr<IBufferConsumer> consumer;
   consumer = GetConsumer();
   assert(consumer.get() != nullptr);
 
   if (frc_.get() != nullptr) {
     result = frc_->AddConsumer(consumer);
-    assert(result == NO_ERROR);
+    assert(result == 0);
     consumer = frc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (rescaler_.get() != nullptr) {
     result = rescaler_->AddConsumer(consumer);
-    assert(result == NO_ERROR);
+    assert(result == 0);
     consumer = rescaler_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (fsc_.get() != nullptr) {
     result = fsc_->AddConsumer(consumer);
-    assert(result == NO_ERROR);
+    assert(result == 0);
     consumer = fsc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   result = master_track_->AddConsumer(consumer);
-  assert(result == NO_ERROR);
+  assert(result == 0);
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
   return result;
@@ -1183,35 +1177,35 @@ status_t TrackSource::Init() {
 
   assert(camera_.get() != nullptr);
   auto ret = camera_->CreateStream(param, extraparams_);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: CreateStream failed!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   QMMF_INFO("%s: TrackSource(0x%p)(%dx%d) and Camera Device Stream "
       " Created Successfully for Track(%x)",  __func__, this,
       params_.width, params_.height, id_);
 
-  sp<IBufferConsumer> consumer;
+  std::shared_ptr<IBufferConsumer> consumer;
   consumer = GetConsumer();
   assert(consumer.get() != nullptr);
 
   if (frc_.get() != nullptr) {
     ret = frc_->AddConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
     consumer = frc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (fsc_.get() != nullptr) {
     ret = fsc_->AddConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
     consumer = fsc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   ret = camera_->AddConsumer(id_, consumer);
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   QMMF_DEBUG("%s Exit Track(%x)", __func__, id_);
   return ret;
@@ -1221,38 +1215,38 @@ status_t TrackSource::DeInit() {
 
   QMMF_DEBUG("%s Enter Track(%x)", __func__, id_);
   assert(camera_.get() != nullptr);
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
 
-  sp<IBufferConsumer> consumer = GetConsumer();
+  std::shared_ptr<IBufferConsumer> consumer = GetConsumer();
   assert(consumer.get() != nullptr);
 
   if (frc_.get() != nullptr) {
     ret = frc_->RemoveConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
     consumer = frc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (rescaler_.get() != nullptr) {
     ret = rescaler_->RemoveConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
     consumer = rescaler_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (fsc_.get() != nullptr) {
     ret = fsc_->RemoveConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
     consumer = fsc_->GetConsumer();
     assert(consumer.get() != nullptr);
   }
 
   if (slave_track_source_) {
     ret = master_track_->RemoveConsumer(consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   } else {
     ret = camera_->RemoveConsumer(id_, consumer);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   std::unique_lock<std::mutex> idle_lock(idle_lock_);
@@ -1263,13 +1257,13 @@ status_t TrackSource::DeInit() {
     if (ret != 0) {
       QMMF_ERROR("%s: Track(%x): StopTrack Timed out happened! Encoder"
           " failed to go in Idle state!",  __func__, id_);
-      return TIMED_OUT;
+      return -ETIMEDOUT;
     }
   }
 
   if (slave_track_source_ == false) {
     ret = camera_->DeleteStream(id_);
-    if (ret != NO_ERROR) {
+    if (ret != 0) {
       QMMF_ERROR("%s: Track(%x): DeleteStream failed", __func__, id_);
       return ret;
     }
@@ -1291,29 +1285,29 @@ status_t TrackSource::StartTrack() {
   std::lock_guard<std::mutex> stop_lock(stop_lock_);
   is_stop_ = false;
 
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   if (slave_track_source_ == false) {
     ret = camera_->StartStream(id_);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (rescaler_.get() != nullptr) {
     ret = rescaler_->Start();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (fsc_.get() != nullptr) {
     ret = fsc_->Start();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (frc_.get() != nullptr) {
     ret = frc_->Start();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t TrackSource::Flush() {
@@ -1333,7 +1327,7 @@ status_t TrackSource::Flush() {
   is_idle_ = true;
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t TrackSource::StopTrack() {
@@ -1347,7 +1341,7 @@ status_t TrackSource::StopTrack() {
     std::lock_guard<std::mutex> lock(stop_lock_);
     if (is_stop_ == true) {
       QMMF_WARN("%s: Track(%x): already stopped!", __func__, id_);
-      return NO_ERROR;
+      return 0;
     }
     is_stop_ = true;
   }
@@ -1356,22 +1350,22 @@ status_t TrackSource::StopTrack() {
 
   if (frc_.get() != nullptr) {
     ret = frc_->Stop();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (fsc_.get() != nullptr) {
     ret = fsc_->Stop();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (rescaler_.get() != nullptr) {
     ret = rescaler_->Stop();
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   if (slave_track_source_ == false) {
     ret = camera_->StopStream(id_);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   QMMF_INFO("%s: Pipe stop done(%x)", __func__, id_);
@@ -1382,7 +1376,7 @@ status_t TrackSource::StopTrack() {
   }
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t TrackSource::PauseTrack() {
@@ -1396,13 +1390,13 @@ status_t TrackSource::PauseTrack() {
 
   if (slave_track_source_ == false) {
     status_t ret = camera_->PauseStream(id_);
-    assert(ret == NO_ERROR);
+    assert(ret == 0);
   }
 
   std::lock_guard<std::mutex> idle_lock(idle_lock_);
   is_idle_ = true;
 
-  return NO_ERROR;
+  return 0;
 }
 
 status_t TrackSource::ResumeTrack() {
@@ -1415,12 +1409,12 @@ status_t TrackSource::ResumeTrack() {
   assert(camera_.get() != nullptr);
 
   status_t ret = camera_->ResumeStream(id_);
-  assert(ret == NO_ERROR);
+  assert(ret == 0);
 
   std::lock_guard<std::mutex> idle_lock(idle_lock_);
   is_idle_ = false;
 
-  return NO_ERROR;
+  return 0;
 }
 
 void TrackSource::OnFrameAvailable(StreamBuffer& buffer) {
@@ -1536,7 +1530,7 @@ status_t TrackSource::ReturnTrackBuffer(std::vector<BnBuffer>& bn_buffers) {
   }
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
-  return NO_ERROR;
+  return 0;
 }
 
 bool TrackSource::IsStop() {

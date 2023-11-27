@@ -8,17 +8,11 @@ if (NOT RECORDER_GTEST_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
 endif()
 
-if (NOT CAMERA_HAL1_SUPPORT)
 add_executable(qmmf_recorder_gtest ${exclude}
   qmmf_gtest_common.cc
   qmmf_gtest.cc
 )
-else()
-add_executable(qmmf_recorder_gtest ${exclude}
-  qmmf_gtest_common.cc
-  qmmf_hal1_gtest.cc
-)
-endif()
+
 add_dependencies(qmmf_recorder_gtest qmmf_recorder_client qmmf_utils)
 
 target_include_directories(qmmf_recorder_gtest

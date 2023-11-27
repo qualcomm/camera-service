@@ -111,10 +111,10 @@ void Camera3RequestHandler::FinishConfiguration(uint32_t batch_size) {
   pthread_mutex_unlock(&lock_);
 }
 
-int32_t Camera3RequestHandler::QueueRequestList(List<CaptureRequest> &requests,
+int32_t Camera3RequestHandler::QueueRequestList(std::vector<CaptureRequest> &requests,
                                                 int64_t *lastFrameNumber) {
   pthread_mutex_lock(&lock_);
-  List<CaptureRequest>::iterator it = requests.begin();
+  auto it = requests.begin();
   for (; it != requests.end(); ++it) {
     requests_.push_back(*it);
   }
@@ -129,7 +129,7 @@ int32_t Camera3RequestHandler::QueueRequestList(List<CaptureRequest> &requests,
   return 0;
 }
 
-int32_t Camera3RequestHandler::QueueReprocRequestList(List<CaptureRequest> &requests,
+int32_t Camera3RequestHandler::QueueReprocRequestList(std::vector<CaptureRequest> &requests,
                                                 int64_t *lastFrameNumber) {
   pthread_mutex_lock(&lock_);
   std::unique_lock<std::mutex> lock(worker_lock_);
@@ -145,7 +145,7 @@ int32_t Camera3RequestHandler::QueueReprocRequestList(List<CaptureRequest> &requ
       return -EINTR;
     }
   }
-  List<CaptureRequest>::iterator it = requests.begin();
+  auto it = requests.begin();
   for (; it != requests.end(); ++it) {
     reproc_requests_.push_back(*it);
   }
@@ -358,7 +358,7 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
   camera3_stream_buffer_t input_buffer = camera3_stream_buffer_t();
   request.frame_number = nextRequest.resultExtras.frameNumber;
   request.input_buffer = nullptr;
-  Vector<camera3_stream_buffer_t> outputBuffers;
+  std::vector<camera3_stream_buffer_t> outputBuffers;
 
   if ((old_request_.resultExtras.requestId !=
       nextRequest.resultExtras.requestId) ||
@@ -372,12 +372,12 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
   uint32_t totalNumBuffers = 0;
 
   // Handle output buffers
-  outputBuffers.insertAt(camera3_stream_buffer_t(), 0,
-                         nextRequest.streams.size());
-  request.output_buffers = outputBuffers.array();
+  for (auto i = 0; i < nextRequest.streams.size(); ++i) {
+    outputBuffers.push_back(camera3_stream_buffer_t());
+  }
+  request.output_buffers = outputBuffers.data();
   for (size_t i = 0; i < nextRequest.streams.size(); i++) {
-    res = nextRequest.streams.editItemAt(i)
-              ->GetBuffer(&outputBuffers.editItemAt(i));
+    res = nextRequest.streams[i]->GetBuffer(&outputBuffers[i]);
     if (0 != res) {
       QMMF_ERROR(
           "%s: Can't get stream buffer, skip this"
@@ -461,7 +461,7 @@ bool Camera3RequestHandler::IsStreamActive(Camera3Stream &stream) {
   bool res = false;
   pthread_mutex_lock(&lock_);
 
-  if (!current_request_.streams.isEmpty()) {
+  if (!current_request_.streams.empty()) {
     for (const auto &s : current_request_.streams) {
       if (stream.GetId() == s->GetId()) {
         res = true;
@@ -498,20 +498,20 @@ exit:
 
 void Camera3RequestHandler::HandleErrorRequest(
     camera3_capture_request_t &request, CaptureRequest &nextRequest,
-    Vector<camera3_stream_buffer_t> &outputBuffers) {
+    std::vector<camera3_stream_buffer_t> &outputBuffers) {
   if (request.settings != NULL) {
     nextRequest.metadata.unlock(request.settings);
   }
 
   for (size_t i = 0; i < request.num_output_buffers; i++) {
-    outputBuffers.editItemAt(i).status = CAMERA3_BUFFER_STATUS_ERROR;
+    outputBuffers[i].status = CAMERA3_BUFFER_STATUS_ERROR;
     StreamBuffer b;
     memset(&b, 0, sizeof(b));
     b.handle =
-      nextRequest.streams.editItemAt(i)->buffers_map[*outputBuffers[i].buffer];
-    nextRequest.streams.editItemAt(i)->
+      nextRequest.streams[i]->buffers_map[*outputBuffers[i].buffer];
+    nextRequest.streams[i]->
       buffers_map.erase(*outputBuffers[i].buffer);
-    nextRequest.streams.editItemAt(i)->ReturnBuffer(b);
+    nextRequest.streams[i]->ReturnBuffer(b);
   }
 
   pthread_mutex_lock(&lock_);
@@ -539,7 +539,7 @@ int32_t Camera3RequestHandler::GetRequest(CaptureRequest &request) {
           cam_reqmode_lock_.lock();
           if (cam_reqmode_params_.frame_selection.available_frames <= 0) {
             realRequest.metadata = (*it).metadata;
-            realRequest.streams.push((*it).streams.editItemAt(0));
+            realRequest.streams.push_back((*it).streams[0]);
             realRequest.resultExtras = (*it).resultExtras;
             realRequest.input = (*it).input;
 

@@ -60,11 +60,9 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef __LIBGBM__
-#include <system/graphics.h>
-#else
+#ifdef HAVE_ANDROID_UTILS
 #include <hardware/gralloc.h>
-#endif
+#endif // HAVE_ANDROID_UTILS
 #include <fcntl.h>
 
 #include "qmmf_gbm_interface.h"
@@ -450,14 +448,18 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     return MemAllocError::kAllocFail;
   }
 
-  char prop[PROPERTY_VALUE_MAX];
+  char prop[PROP_VALUE_MAX];
   property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
   std::string colorspace(prop);
 
   QMMF_INFO("%s: Using color space: %s", __func__, colorspace.c_str());
 
   int32_t value = 0;
+#ifdef HAVE_ANDROID_UTILS
   ColorMetaData colormeta = {};
+#else
+  GBM_ColorMetaData colormeta = {};
+#endif // HAVE_ANDROID_UTILS
 
   auto ret = gbm_perform(GBM_PERFORM_GET_METADATA, bo,
                          GBM_METADATA_GET_COLOR_METADATA, &colormeta);
@@ -466,6 +468,7 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     return MemAllocError::kAllocFail;
   }
 
+#ifdef HAVE_ANDROID_UTILS
   if (colorspace == "ITU_R_601") {
     value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
     colormeta.colorPrimaries = ColorPrimaries_BT601_6_625;
@@ -492,7 +495,34 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     colormeta.transfer = Transfer_sRGB;
     colormeta.matrixCoefficients = MatrixCoEff_BT709_5;
   }
-
+#else
+  if (colorspace == "ITU_R_601") {
+    value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
+    colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_625;
+    colormeta.range = GBM_Range_Full;
+    colormeta.transfer = GBM_Transfer_SMPTE_170M;
+    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_625;
+  } else if (colorspace == "ITU_R_601_FR") {
+    value = GBM_METADATA_COLOR_SPACE_ITU_R_601_FR;
+    colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_525;
+    colormeta.range = GBM_Range_Full;
+    colormeta.transfer = GBM_Transfer_SMPTE_170M;
+    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_525;
+  } else if (colorspace == "ITU_R_709") {
+    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
+    colormeta.colorPrimaries = GBM_ColorPrimaries_BT709_5;
+    colormeta.range = GBM_Range_Full;
+    colormeta.transfer = GBM_Transfer_sRGB;
+    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT709_5;
+  } else {
+    QMMF_ERROR("%s: Unsupported color space, using ITU_R_709", __func__);
+    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
+    colormeta.colorPrimaries = GBM_ColorPrimaries_BT709_5;
+    colormeta.range = GBM_Range_Full;
+    colormeta.transfer = GBM_Transfer_sRGB;
+    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT709_5;
+  }
+#endif // HAVE_ANDROID_UTILS
   ret = gbm_perform(GBM_PERFORM_SET_METADATA, bo,
                     GBM_METADATA_SET_COLOR_SPACE, (void *)&value);
   if (ret != GBM_ERROR_NONE) {

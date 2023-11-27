@@ -26,9 +26,11 @@
 #define CAMERA3REQUESTHANDLER_H_
 
 #include <pthread.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <hardware/hardware.h>
-#include <utils/KeyedVector.h>
-#include <utils/List.h>
+#else
+#include <hardware/camera_hardware.h>
+#endif // HAVE_ANDROID_UTILS
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -76,10 +78,10 @@ class Camera3RequestHandler : public ThreadHelper {
                                int64_t *lastFrameNumber = NULL);
   int32_t ClearRepeatingRequests(int64_t *lastFrameNumber = NULL);
 
-  int32_t QueueRequestList(List<CaptureRequest> &requests,
+  int32_t QueueRequestList(std::vector<CaptureRequest> &requests,
                            int64_t *lastFrameNumber = NULL);
 
-  int32_t QueueReprocRequestList(List<CaptureRequest> &requests,
+  int32_t QueueReprocRequestList(std::vector<CaptureRequest> &requests,
                            int64_t *lastFrameNumber = NULL);
 
   int32_t Clear(int64_t *lastFrameNumber = NULL);
@@ -107,7 +109,7 @@ class Camera3RequestHandler : public ThreadHelper {
   void ClearCaptureRequest(CaptureRequest &request);
   void HandleErrorRequest(camera3_capture_request_t &request,
                           CaptureRequest &nextRequest,
-                          Vector<camera3_stream_buffer_t> &outputBuffers);
+                          std::vector<camera3_stream_buffer_t> &outputBuffers);
 
   bool WaitOnPause();
   void Resume();

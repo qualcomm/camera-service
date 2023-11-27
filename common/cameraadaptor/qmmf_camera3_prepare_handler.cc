@@ -70,7 +70,7 @@ int32_t Camera3PrepareHandler::Prepare(Camera3Stream *stream) {
   if (!prepare_running_) {
       RequestExitAndWait();
       res = Run("Prepare-Handler");
-      if (res != OK) {
+      if (res != 0) {
           QMMF_ERROR("%s: Failed to start prepare handler: %d (%s)\n",
                      __func__, res, strerror(-res));
           if (nullptr != prepare_cb_) {

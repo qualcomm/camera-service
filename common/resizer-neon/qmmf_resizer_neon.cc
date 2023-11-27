@@ -66,7 +66,7 @@ RESIZER_STATUS NEONResizer::Configure(const ResizerCrop& config_data) {
 
 RESIZER_STATUS NEONResizer::Init() {
 
-  char prop[PROPERTY_VALUE_MAX];
+  char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
   property_get("persist.qmmf.rescaler.method", prop, "0");
   auto value = static_cast<neonresizer::ResMethod>(atoi(prop));

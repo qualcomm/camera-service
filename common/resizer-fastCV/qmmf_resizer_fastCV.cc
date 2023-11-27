@@ -53,7 +53,7 @@ FastCVResizer::~FastCVResizer() {
 }
 
 RESIZER_STATUS FastCVResizer::Init() {
-  char prop[PROPERTY_VALUE_MAX];
+  char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
   property_get("persist.qmmf.fastcv.level", prop, "3");
   uint32_t level = (uint32_t) atoi(prop);

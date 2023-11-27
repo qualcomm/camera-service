@@ -35,11 +35,14 @@
 
 #include <atomic>
 
+#ifdef HAVE_BINDER
 #include <binder/IInterface.h>
 #include <binder/IBinder.h>
 #include <binder/ProcessState.h>
 #include <binder/IServiceManager.h>
 #include <binder/IPCThreadState.h>
+#endif // HAVE_BINDER
+
 #ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
 #else
@@ -55,7 +58,6 @@
  */
 #define QMMF_BOOT_COMPLETE "vendor.qmmf.boot.complete"
 
-using namespace android;
 using namespace qmmf;
 using namespace recorder;
 
@@ -71,10 +73,7 @@ uint32_t qmmf_log_level;
 int32_t main(int32_t argc, char **argv) {
   QMMF_GET_LOG_LEVEL();
 
-#ifdef ANDROID_O_OR_ABOVE
-  ProcessState::initWithDriver("/dev/vndbinder");
-#endif
-
+#ifdef HAVE_BINDER
   //Add Recorder service.
   defaultServiceManager()->addService(String16(QMMF_RECORDER_SERVICE_NAME),
                   new qmmf::recorder::RecorderService(), false);
@@ -84,5 +83,9 @@ int32_t main(int32_t argc, char **argv) {
   android::ProcessState::self()->giveThreadPoolName();
   property_set(QMMF_BOOT_COMPLETE, "1");
   IPCThreadState::self()->joinThreadPool();
+#else
+  RecorderService server;
+  server.MainLoop();
+#endif // HAVE_BINDER
   return 0;
 }

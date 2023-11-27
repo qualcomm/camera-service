@@ -59,9 +59,10 @@ int32_t Camera3Monitor::AcquireMonitor() {
 
   pthread_mutex_lock(&lock_);
   id = next_monitor_++;
-  res = monitor_states_.add(id, IDLE);
+  monitor_states_.emplace(id, IDLE);
   pthread_mutex_unlock(&lock_);
-  if (0 > res) {
+  if (monitor_states_.count(id) == 0) {
+    res = -ENODATA;
     QMMF_ERROR("%s: Cannot add new monitor %d: %s (%zd)\n", __func__, id,
                strerror(-res), res);
     return res;
@@ -82,7 +83,7 @@ int32_t Camera3Monitor::AcquireMonitor() {
 void Camera3Monitor::ReleaseMonitor(int32_t id) {
   int32_t idx;
   pthread_mutex_lock(&lock_);
-  idx = monitor_states_.removeItem(id);
+  idx = monitor_states_.erase(id);
   pthread_mutex_unlock(&lock_);
 
   if (0 <= idx) {
@@ -109,7 +110,7 @@ void Camera3Monitor::ChangeState(int id, MonitorState state) {
   newState.id = id;
   newState.state = state;
 
-  input_queue_.add(newState);
+  input_queue_.push_back(newState);
   pthread_cond_signal(&input_signal_);
   pthread_mutex_unlock(&input_lock_);
 }
@@ -133,8 +134,8 @@ void Camera3Monitor::RequestExitAndWait() {
 }
 
 Camera3Monitor::MonitorState Camera3Monitor::BuildCompositeState() {
-  for (uint32_t i = 0; i < monitor_states_.size(); i++) {
-    if (monitor_states_.valueAt(i) == ACTIVE) {
+  for (auto it = monitor_states_.begin(); it != monitor_states_.end(); ++it) {
+    if (it->second == ACTIVE) {
       return ACTIVE;
     }
   }
@@ -164,19 +165,18 @@ bool Camera3Monitor::ThreadLoop() {
 
   MonitorState oldState = BuildCompositeState();
   if (oldState != composite_state_) {
-    updated_states_.add(oldState);
+    updated_states_.push_back(oldState);
   }
 
   for (uint32_t i = 0; i < input_queue_.size(); i++) {
     const StateTransition &newState = input_queue_[i];
-    int32_t idx = monitor_states_.indexOfKey(newState.id);
-    if (idx >= 0) {
-      monitor_states_.replaceValueAt(idx, newState.state);
-      MonitorState newState = BuildCompositeState();
-      if (newState != oldState) {
-        updated_states_.add(newState);
+    if (monitor_states_.count(newState.id) > 0) { 
+      monitor_states_[newState.id] = newState.state;
+      MonitorState newMonitorState = BuildCompositeState();
+      if (newMonitorState != oldState) {
+        updated_states_.push_back(newMonitorState);
       }
-      oldState = newState;
+      oldState = newMonitorState;
     }
   }
   input_queue_.clear();
@@ -186,7 +186,7 @@ bool Camera3Monitor::ThreadLoop() {
   pthread_mutex_unlock(&lock_);
   pthread_mutex_unlock(&input_lock_);
 
-  if (!updated_states_.isEmpty()) {
+  if (!updated_states_.empty()) {
     for (size_t i = 0; i < updated_states_.size(); i++) {
       bool idle = (updated_states_[i] == IDLE);
       if (nullptr != idle_notify_) {

@@ -70,9 +70,24 @@
 #include <dlfcn.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#ifdef HAVE_BINDER
 #include <binder/Parcel.h>
 #include <binder/ProcessState.h>
 #include <binder/IPCThreadState.h>
+#else
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/syscall.h>
+#include <sys/un.h>
+#include <thread>
+#include <unistd.h>
+#endif // HAVE_BINDER
 
 #if TARGET_ION_ABI_VERSION >= 2
 #include <linux/dma-buf.h>
@@ -97,13 +112,767 @@ namespace recorder {
 //
 // - RecorderClient    : Delegation to binder proxy <IRecorderService>
 //                       and implementation of binder CB.
-// - BpRecorderService : Binder proxy implementation.
-// - BpRecorderServiceCallback : Binder CB proxy implementation.
-// - BnRecorderServiceCallback : Binder CB stub implementation.
+// - RecorderServiceProxy : Binder proxy implementation.
+// - RecorderServiceCallbackProxy : Binder CB proxy implementation.
+// - RecorderServiceCallbackStub : Binder CB stub implementation.
 //
 
+#ifdef HAVE_BINDER
 using namespace android;
 using ::std::underlying_type;
+#else
+class RecorderServiceProxy: public IRecorderService {
+ public:
+  RecorderServiceProxy() {}
+  ~RecorderServiceProxy() {
+    if (socket_ == -1) {
+      close(socket_);
+    }
+    service_cb_handler_.reset();
+  }
+
+  status_t Connect (const std::shared_ptr<IRecorderServiceCallback>& service_cb,
+                    uint32_t* client_id) {
+    // Connect to Server socket
+    socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (socket_ == -1) {
+      QMMF_ERROR("%s: sock failure %s", __func__, strerror(errno));
+      return errno;
+    }
+
+    // Set up server address
+    std::string path{"/var/run/le_cam_socket"};
+    sockaddr_un addr;
+    addr.sun_family = AF_UNIX;
+    auto size = path.size();
+    snprintf(addr.sun_path, size, "%s", path.c_str());
+    addr.sun_path[size] = '\0';
+
+    if (connect(socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+      close(socket_);
+      QMMF_ERROR("%s: connect failure %s", __func__, strerror(errno));
+      return errno;
+    }
+
+    RecorderClientReqMsg cmd;
+    status_t ret;
+    uint32_t server_pid;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONNECT);
+    ret = SendRequest(cmd);
+    if (ret != 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret != 0)
+      return ret;
+
+    ret = resp.status();
+    if (ret != 0)
+      return ret;
+
+    *client_id = resp.connect_resp().client_id();
+    server_pid = resp.connect_resp().server_pid();
+
+    // Callback handler
+    ret = service_cb->Init(*client_id, server_pid);
+    if(ret != 0)
+      return ret;
+    // CallbackSocketReady
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CALLBACK_SOCKET_READY);
+    cmd.mutable_callback_socket_ready()->set_client_id(*client_id);
+    ret = SendRequest(cmd);
+    if (ret != 0)
+      return ret;
+
+    ret = RecvResponse(resp);
+    if (ret != 0)
+      return ret;
+
+    service_cb_handler_ = service_cb;
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t Disconnect(const uint32_t client_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_DISCONNECT);
+    cmd.mutable_disconnect()->set_client_id(client_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret != 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t StartCamera(const uint32_t client_id, const uint32_t camera_id,
+                       const float framerate,
+                       const CameraExtraParam& extra_param,
+                       bool enable_result_cb) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_START_CAMERA);
+    cmd.mutable_start_camera()->set_client_id(client_id);
+    cmd.mutable_start_camera()->set_camera_id(camera_id);
+    cmd.mutable_start_camera()->set_framerate(framerate);
+    cmd.mutable_start_camera()->set_enable_result_cb(enable_result_cb);
+    const void *extra_data = extra_param.GetAndLock();
+    size_t extra_param_size = extra_param.Size();
+    std::string *data = new std::string(
+        reinterpret_cast<const char*>(extra_data), extra_param_size);
+    cmd.mutable_start_camera()->set_allocated_extra_params(data);
+    extra_param.ReturnAndUnlock(extra_data);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t StopCamera(const uint32_t client_id, const uint32_t camera_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_STOP_CAMERA);
+    cmd.mutable_stop_camera()->set_client_id(client_id);
+    cmd.mutable_stop_camera()->set_camera_id(camera_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t CreateSession(const uint32_t client_id, uint32_t *session_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CREATE_SESSION);
+    cmd.mutable_create_session()->set_client_id(client_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    *session_id = resp.create_session_resp().session_id();
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t DeleteSession(const uint32_t client_id, const uint32_t session_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_DELETE_SESSION);
+    cmd.mutable_delete_session()->set_client_id(client_id);
+    cmd.mutable_delete_session()->set_session_id(session_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t StartSession(const uint32_t client_id, const uint32_t session_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_START_SESSION);
+    cmd.mutable_start_session()->set_client_id(client_id);
+    cmd.mutable_start_session()->set_session_id(session_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t StopSession(const uint32_t client_id, const uint32_t session_id,
+                       bool do_flush) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_STOP_SESSION);
+    cmd.mutable_stop_session()->set_client_id(client_id);
+    cmd.mutable_stop_session()->set_session_id(session_id);
+    cmd.mutable_stop_session()->set_do_flush(do_flush);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t PauseSession(const uint32_t client_id, const uint32_t session_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_PAUSE_SESSION);
+    cmd.mutable_pause_session()->set_client_id(client_id);
+    cmd.mutable_pause_session()->set_session_id(session_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t ResumeSession(const uint32_t client_id, const uint32_t session_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_RESUME_SESSION);
+    cmd.mutable_resume_session()->set_client_id(client_id);
+    cmd.mutable_resume_session()->set_session_id(session_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t CreateVideoTrack(const uint32_t client_id,
+                            const uint32_t session_id,
+                            const uint32_t track_id,
+                            const VideoTrackParam& params,
+                            const VideoExtraParam& xtraparam) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CREATE_VIDEOTRACK);
+    cmd.mutable_create_video_track()->set_client_id(client_id);
+    cmd.mutable_create_video_track()->set_session_id(session_id);
+    cmd.mutable_create_video_track()->set_track_id(track_id);
+
+    VideoTrackParamMsg *vparam = cmd.mutable_create_video_track()->mutable_video_params();
+    vparam->set_camera_id(params.camera_id);
+    vparam->set_width(params.width);
+    vparam->set_height(params.height);
+    vparam->set_framerate(params.framerate);
+    vparam->set_format(static_cast<VideoFormatMsg>(params.format));
+    vparam->set_rotation(static_cast<RotationMsg>(params.rotation));
+    vparam->set_xtrabufs(params.xtrabufs);
+    vparam->set_flags(static_cast<VideoFlagsMsg>(params.flags));
+
+    const void *extra_data = xtraparam.GetAndLock();
+    size_t extra_param_size = xtraparam.Size();
+    std::string *data = new std::string(
+        reinterpret_cast<const char*>(extra_data), extra_param_size);
+    cmd.mutable_create_video_track()->set_allocated_extra_params(data);
+    xtraparam.ReturnAndUnlock(extra_data);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t DeleteVideoTrack(const uint32_t client_id,
+                          const uint32_t session_id,
+                          const uint32_t track_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_DELETE_VIDEOTRACK);
+    cmd.mutable_delete_video_track()->set_client_id(client_id);
+    cmd.mutable_delete_video_track()->set_session_id(session_id);
+    cmd.mutable_delete_video_track()->set_track_id(track_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t ReturnTrackBuffer(const uint32_t client_id,
+                             const uint32_t session_id,
+                             const uint32_t track_id,
+                             std::vector<BnBuffer> &buffers) {
+
+    QMMF_DEBUG("%s Enter", __func__);
+    QMMF_VERBOSE("%s INPARAM: session_id[%u]", __func__, session_id);
+    QMMF_VERBOSE("%s INPARAM: track_id[%u]", __func__, track_id);
+    for (const BnBuffer& buffer : buffers) {
+      QMMF_VERBOSE("%s INPARAM: buffers[%s]", __func__,
+          buffer.ToString().c_str());
+    }
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_RETURN_TRACKBUFFER);
+    cmd.mutable_return_track_buffer()->set_client_id(client_id);
+    cmd.mutable_return_track_buffer()->set_session_id(session_id);
+    cmd.mutable_return_track_buffer()->set_track_id(track_id);
+
+    uint32_t size = buffers.size();
+    for (uint32_t i = 0; i < size; i++) {
+      BufferInfoMsg* buffer = cmd.mutable_return_track_buffer()->add_buffers();
+      buffer->set_ion_fd(buffers[i].ion_fd);
+      buffer->set_ion_meta_fd(buffers[i].ion_meta_fd);
+      buffer->set_img_id(buffers[i].img_id);
+      buffer->set_size(buffers[i].size);
+      buffer->set_timestamp(buffers[i].timestamp);
+      buffer->set_seqnum(buffers[i].seqnum);
+      buffer->set_buffer_id(buffers[i].buffer_id);
+      buffer->set_flags(buffers[i].flags);
+      buffer->set_capacity(buffers[i].capacity);
+    }
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t SetVideoTrackParam(const uint32_t client_id,
+                              const uint32_t session_id,
+                              const uint32_t track_id,
+                              VideoParam type,
+                              void *param, size_t size) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_SET_VIDEOTRACK_PARAMS);
+    cmd.mutable_set_video_track_param()->set_client_id(client_id);
+    cmd.mutable_set_video_track_param()->set_session_id(session_id);
+    cmd.mutable_set_video_track_param()->set_track_id(track_id);
+    cmd.mutable_set_video_track_param()->set_type(static_cast<VIDEO_PARAM>(type));
+
+    std::string *data = new std::string(
+        reinterpret_cast<const char*>(param), size);
+    cmd.mutable_set_video_track_param()->set_allocated_param(data);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t CaptureImage(const uint32_t client_id, const uint32_t camera_id,
+                        const SnapshotType type, const uint32_t n_images,
+                        const std::vector<CameraMetadata> &meta) {
+    QMMF_DEBUG("%s Enter ", __func__);
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CAPTURE_IMAGE);
+    cmd.mutable_capture_image()->set_client_id(client_id);
+    cmd.mutable_capture_image()->set_camera_id(camera_id);
+    cmd.mutable_capture_image()->set_type(static_cast<SNAPSHOT_TYPE>(type));
+    cmd.mutable_capture_image()->set_n_images(n_images);
+
+    uint32_t size = meta.size();
+    for (uint32_t i = 0; i < size; i++) {
+      const camera_metadata_t *meta_buffer = meta[i].getAndLock();
+      uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+      std::string *data = cmd.mutable_capture_image()->add_meta();
+      *data = std::string(reinterpret_cast<const char *>(meta_buffer), size);
+      const_cast<CameraMetadata&>(meta[i]).unlock(meta_buffer);
+    }
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    QMMF_DEBUG("%s Exit ", __func__);
+    return ret;
+  }
+
+  status_t ConfigImageCapture(const uint32_t client_id,
+                              const uint32_t camera_id,
+                              const uint32_t image_id,
+                              const ImageParam &param,
+                              const ImageExtraParam &xtraparam) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONFIG_IMAGECAPTURE);
+    cmd.mutable_config_image_capture()->set_client_id(client_id);
+    cmd.mutable_config_image_capture()->set_camera_id(camera_id);
+    cmd.mutable_config_image_capture()->set_image_id(image_id);
+
+    ImageParamMsg *iparam = cmd.mutable_config_image_capture()->mutable_image_param();
+    iparam->set_mode(static_cast<ImageModeMsg>(param.mode));
+    iparam->set_width(param.width);
+    iparam->set_height(param.height);
+    iparam->set_format(static_cast<ImageFormatMsg>(param.format));
+    iparam->set_quality(param.quality);
+    iparam->set_rotation(static_cast<RotationMsg>(param.rotation));
+
+    const void *extra_data = xtraparam.GetAndLock();
+    size_t extra_param_size = xtraparam.Size();
+    std::string *data = new std::string(
+        reinterpret_cast<const char*>(extra_data), extra_param_size);
+    cmd.mutable_config_image_capture()->set_allocated_extra_param(data);
+    xtraparam.ReturnAndUnlock(extra_data);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t CancelCaptureImage(const uint32_t client_id,
+                              const uint32_t camera_id,
+                              const uint32_t image_id,
+                              const bool cache) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CANCEL_IMAGECAPTURE);
+    cmd.mutable_cancel_image_capture()->set_client_id(client_id);
+    cmd.mutable_cancel_image_capture()->set_camera_id(camera_id);
+    cmd.mutable_cancel_image_capture()->set_image_id(image_id);
+    cmd.mutable_cancel_image_capture()->set_cache(cache);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t ReturnImageCaptureBuffer(const uint32_t client_id,
+                                    const uint32_t camera_id,
+                                    const int32_t buffer_id) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_RETURN_IMAGECAPTURE_BUFFER);
+    cmd.mutable_return_image_capture_buffer()->set_client_id(client_id);
+    cmd.mutable_return_image_capture_buffer()->set_camera_id(camera_id);
+    cmd.mutable_return_image_capture_buffer()->set_buffer_id(buffer_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t SetCameraParam(const uint32_t client_id,
+                          const uint32_t camera_id,
+                          const CameraMetadata &meta) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_PARAMS);
+    cmd.mutable_set_camera_param()->set_client_id(client_id);
+    cmd.mutable_set_camera_param()->set_camera_id(camera_id);
+
+    const camera_metadata_t *meta_buffer = meta.getAndLock();
+    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+
+    std::string *data = new std::string(reinterpret_cast<const char *>(meta_buffer), size);
+    cmd.mutable_set_camera_param()->set_allocated_meta(data);
+    const_cast<CameraMetadata&>(meta).unlock(meta_buffer);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t GetCameraParam(const uint32_t client_id,
+                          const uint32_t camera_id,
+                          CameraMetadata &meta) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_PARAMS);
+    cmd.mutable_get_camera_param()->set_client_id(client_id);
+    cmd.mutable_get_camera_param()->set_camera_id(camera_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return false;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    const std::string& data = resp.get_camera_param_resp().meta();
+    const camera_metadata_t *meta_buffer =
+        reinterpret_cast <const camera_metadata_t *> (data.data());
+    meta.clear();
+    meta.append(clone_camera_metadata(meta_buffer));
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t SetCameraSessionParam(const uint32_t client_id,
+                          const uint32_t camera_id,
+                          const CameraMetadata &meta) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_SESSION_PARAMS);
+    cmd.mutable_set_camera_session_param()->set_client_id(client_id);
+    cmd.mutable_set_camera_session_param()->set_camera_id(camera_id);
+
+    const camera_metadata_t *meta_buffer = meta.getAndLock();
+    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+
+    std::string *data = new std::string(reinterpret_cast<const char *>(meta_buffer), size);
+    cmd.mutable_set_camera_session_param()->set_allocated_meta(data);
+    const_cast<CameraMetadata&>(meta).unlock(meta_buffer);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
+  }
+
+  status_t SetSHDR(const uint32_t client_id,
+                   const uint32_t camera_id,
+                   const bool enable) {
+  }
+
+  status_t GetDefaultCaptureParam(const uint32_t client_id,
+                                  const uint32_t camera_id,
+                                  CameraMetadata &meta) {
+    QMMF_DEBUG("%s Enter ", __func__);
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_DEFAULT_CAPTURE_PARAMS);
+    cmd.mutable_get_default_capture_param()->set_client_id(client_id);
+    cmd.mutable_get_default_capture_param()->set_camera_id(camera_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return false;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    const std::string& data = resp.get_default_capture_param_resp().meta();
+    const camera_metadata_t *meta_buffer = reinterpret_cast <const camera_metadata_t *> (data.data());
+    meta.clear();
+    meta.append(clone_camera_metadata(meta_buffer));
+
+    ret = resp.status();
+    QMMF_DEBUG("%s Exit ", __func__);
+    return ret;
+  }
+
+  status_t GetCameraCharacteristics(const uint32_t client_id,
+                                    const uint32_t camera_id,
+                                    CameraMetadata &meta) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_CHARACTERISTICS);
+    cmd.mutable_get_camera_characteristics()->set_client_id(client_id);
+    cmd.mutable_get_camera_characteristics()->set_camera_id(camera_id);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    const std::string& data = resp.get_camera_characteristics_resp().meta();
+    const camera_metadata_t *meta_buffer =
+        reinterpret_cast <const camera_metadata_t *> (data.data());
+    meta.clear();
+    meta.append(clone_camera_metadata(meta_buffer));
+
+    return resp.status();
+  }
+
+  status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) {
+    // RecorderClientReqMsg cmd;
+    // cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR);
+
+    // status_t ret;
+    // ret = SendRequest(cmd);
+    // if (ret < 0)
+    //   return ret;
+
+    // RecorderClientRespMsg resp;
+    // ret = RecvResponse(resp);
+    // if (ret < 0)
+    //   return ret;
+
+    // const std::string& data = resp.get_camera_characteristics_resp().meta();
+    // const camera_metadata_t *meta_buffer = reinterpret_cast <const camera_metadata_t *> (data.data());
+    // meta.clear();
+    // meta.append(clone_camera_metadata(meta_buffer));
+
+    // return resp.status();
+
+  }
+
+  status_t CreateOfflineJPEG(const uint32_t client_id,
+                             const OfflineJpegCreateParams &params) {
+
+  }
+
+  status_t EncodeOfflineJPEG(const uint32_t client_id,
+                             const BnBuffer& in_buf,
+                             const BnBuffer& out_buf,
+                             const OfflineJpegMeta& meta) {
+  }
+
+  status_t DestroyOfflineJPEG(const uint32_t client_id) {
+  }
+ private:
+  status_t SendRequest(RecorderClientReqMsg &cmd) {
+    auto size = cmd.ByteSizeLong();
+    void *buffer = malloc(size);
+    cmd.SerializeToArray(buffer, size);
+    QMMF_VERBOSE("%s: SerializeToArray size: %lu", __func__, size);
+
+    ssize_t bytes_sent = send(socket_, buffer, size, 0);
+    free (buffer);
+    if (bytes_sent == -1) {
+      return errno;
+    }
+
+    QMMF_DEBUG("%s: Sent to server cmd: %u bytes:%ld",
+        __func__, cmd.command(), bytes_sent);
+    return 0;
+  }
+
+  status_t RecvResponse(RecorderClientRespMsg &resp) {
+    char buffer[kMaxSocketBufSize] = {0};
+
+    ssize_t bytes_read = recv(socket_, buffer, sizeof(buffer), 0);
+    if (bytes_read == -1) {
+      return errno;
+    } else  if (bytes_read == 0) {
+      return -1;
+    }
+
+    resp.ParseFromArray(buffer, bytes_read);
+    QMMF_DEBUG("%s: Received from server: %u bytes:%ld",
+        __func__, resp.command(), bytes_read);
+
+    return 0;
+  }
+
+  std::shared_ptr<IRecorderServiceCallback> service_cb_handler_;
+  int socket_;
+};
+#endif // HAVE_BINDER
 
 RecorderClient::RecorderClient()
     : recorder_service_(nullptr),
@@ -118,10 +887,6 @@ RecorderClient::RecorderClient()
   QMMF_KPI_DETAIL();
   QMMF_INFO("%s Enter ", __func__);
 
-#ifdef ANDROID_O_OR_ABOVE
-  ProcessState::initWithDriver("/dev/vndbinder");
-#endif
-
 #ifdef TARGET_USES_GBM
   gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDWR);
   if (gbm_fd_ < 0) {
@@ -134,8 +899,10 @@ RecorderClient::RecorderClient()
   assert(gbm_device_ != nullptr);
 #endif
 
+#ifdef HAVE_BINDER
   sp<ProcessState> proc(ProcessState::self());
   proc->startThreadPool();
+#endif // HAVE_BINDER
   QMMF_INFO("%s Exit (0x%p)", __func__, this);
 }
 
@@ -144,8 +911,7 @@ RecorderClient::~RecorderClient() {
   QMMF_INFO("%s Enter ", __func__);
   QMMF_KPI_DETAIL();
 
-  recorder_service_.clear();
-  recorder_service_ = nullptr;
+  recorder_service_.reset();
 
 #ifdef TARGET_USES_GBM
   gbm_device_destroy(gbm_device_);
@@ -163,7 +929,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
 
   if (CheckServiceStatus()) {
     QMMF_WARN("%s Client is already connected to service!", __func__);
-    return NO_ERROR;
+    return 0;
   }
 
   ion_device_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
@@ -173,18 +939,20 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   }
   if (ion_device_ < 0) {
     QMMF_ERROR("%s: Can't open Ion device!", __func__);
-    return NO_INIT;
+    return -ENODEV;
   }
 
   recorder_cb_ = cb;
 
   NotifyServerDeathCB death_cb = [&] { ServiceDeathHandler(); };
-  death_notifier_ = new DeathNotifier(death_cb);
+  death_notifier_ = std::make_unique<DeathNotifier>(death_cb);
   if (nullptr == death_notifier_.get()) {
     QMMF_ERROR("%s Unable to allocate death notifier!", __func__);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
+  uint32_t client_id;
+#ifdef HAVE_BINDER
   sp<IBinder> service_handle;
   sp<IServiceManager> service_manager = defaultServiceManager();
 
@@ -193,20 +961,31 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   if (service_handle.get() == nullptr) {
     QMMF_ERROR("%s Can't get (%s) service", __func__,
         QMMF_RECORDER_SERVICE_NAME);
-    return NO_INIT;
+    return -ENODEV;
   }
 
   recorder_service_ = interface_cast<IRecorderService>(service_handle);
   IInterface::asBinder(recorder_service_)->linkToDeath(death_notifier_);
 
   sp<ServiceCallbackHandler> handler = new ServiceCallbackHandler(this);
-  uint32_t client_id;
   auto ret = recorder_service_->Connect(handler, &client_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
+    QMMF_ERROR("%s Can't connect to (%s) service", __func__,
+        QMMF_RECORDER_SERVICE_NAME);
+  }
+#else
+
+  recorder_service_ = std::make_unique<RecorderServiceProxy>();
+
+  std::shared_ptr<ServiceCallbackHandler> handler =
+      std::make_shared<ServiceCallbackHandler>(this);
+  auto ret = recorder_service_->Connect(handler, &client_id);
+  if (0 != ret) {
     QMMF_ERROR("%s Can't connect to (%s) service", __func__,
         QMMF_RECORDER_SERVICE_NAME);
   }
 
+#endif // HAVE_BINDER
   client_id_ = client_id;
   QMMF_INFO("%s: client_id(%d)", __func__, client_id);
 
@@ -224,23 +1003,21 @@ status_t RecorderClient::Disconnect() {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   auto ret = recorder_service_->Disconnect(client_id_);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s Disconnect failed!", __func__);
   }
 
+#ifdef HAVE_BINDER
   recorder_service_->asBinder(recorder_service_)->
       unlinkToDeath(death_notifier_);
+#endif
 
-  recorder_service_.clear();
-  recorder_service_ = nullptr;
-
-  death_notifier_.clear();
-  death_notifier_ = nullptr;
-
+  recorder_service_.reset();
+  death_notifier_.reset();
 
   sessions_.clear();
   session_cb_list_.clear();
@@ -270,7 +1047,7 @@ status_t RecorderClient::StartCamera(const uint32_t camera_id,
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (nullptr != result_cb) {
@@ -282,12 +1059,11 @@ status_t RecorderClient::StartCamera(const uint32_t camera_id,
   auto ret = recorder_service_->StartCamera(client_id_, camera_id, framerate,
                                             extra_param,
                                             enable_result_cb);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s StartCamera failed!", __func__);
     return ret;
   }
 
-#ifndef CAMERA_HAL1_SUPPORT
   if (vendor_tag_desc_ == nullptr) {
     vendor_tag_desc_ = std::make_shared<VendorTagDescriptor>();
     ret = GetVendorTagDescriptor(vendor_tag_desc_);
@@ -305,7 +1081,6 @@ status_t RecorderClient::StartCamera(const uint32_t camera_id,
       return ret;
     }
   }
-#endif
 
   QMMF_DEBUG("%s Exit ", __func__);
   return ret;
@@ -319,12 +1094,12 @@ status_t RecorderClient::StopCamera(const uint32_t camera_id) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->StopCamera(client_id_, camera_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s StopCamera failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -338,12 +1113,12 @@ status_t RecorderClient::CreateSession(const SessionCb& cb,
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->CreateSession(client_id_, session_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s CreateSession failed!", __func__);
   } else {
     sessions_.emplace(*session_id, std::set<uint32_t>());
@@ -361,23 +1136,23 @@ status_t RecorderClient::DeleteSession(const uint32_t session_id) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto& tracks = sessions_[session_id];
 
   if (!tracks.empty()) {
     QMMF_ERROR("%s: Delete tracks first before deleting Session(%d)",
         __func__, session_id);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->DeleteSession(client_id_, session_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s DeleteSession failed!", __func__);
   }
 
@@ -394,18 +1169,18 @@ status_t RecorderClient::StartSession(const uint32_t session_id) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s: Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto& tracks = sessions_[session_id];
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->StartSession(client_id_, session_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s StartSession failed!", __func__);
   } else {
     for (auto const& track : tracks) {
@@ -423,17 +1198,17 @@ status_t RecorderClient::StopSession(const uint32_t session_id,
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->StopSession(client_id_, session_id, do_flush);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s StopSession failed!", __func__);
   } else {
     auto& tracks = sessions_[session_id];
@@ -452,17 +1227,17 @@ status_t RecorderClient::PauseSession(const uint32_t session_id) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->PauseSession(client_id_, session_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s PauseSession failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -476,17 +1251,17 @@ status_t RecorderClient::ResumeSession(const uint32_t session_id)
   std::lock_guard<std::mutex> lock(lock_);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->ResumeSession(client_id_, session_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s ResumeSession failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -504,24 +1279,24 @@ status_t RecorderClient::CreateVideoTrack(const uint32_t session_id,
 
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(track_id != 0);
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s: Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (sessions_[session_id].count(track_id) != 0) {
     QMMF_ERROR("%s track_id(%d) already exists!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->CreateVideoTrack(client_id_, session_id,
                                                  track_id, param, xtraparam);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s CreateVideoTrackWithExtraParam failed!", __func__);
   } else {
     UpdateSessionTopology(session_id, track_id, true /*add*/);
@@ -546,11 +1321,11 @@ status_t RecorderClient::ReturnTrackBuffer(const uint32_t session_id,
     QMMF_VERBOSE("%s INPARAM: buffer[%s]", __func__,
                  buffer.ToString().c_str());
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   QMMF_KPI_ASYNC_END("VideoAppCB", track_id);
-  uint32_t ret = NO_ERROR;
+  uint32_t ret = 0;
   std::vector<BnBuffer> bn_buffers;
 
   for (auto const& buffer : buffers) {
@@ -570,7 +1345,7 @@ status_t RecorderClient::ReturnTrackBuffer(const uint32_t session_id,
   assert(client_id_ > 0);
   ret = recorder_service_->ReturnTrackBuffer(client_id_, session_id, track_id,
                                              bn_buffers);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s ReturnTrackBuffer failed: %d", __func__, ret);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -586,23 +1361,23 @@ status_t RecorderClient::SetVideoTrackParam(const uint32_t session_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s: Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (sessions_[session_id].count(track_id) == 0) {
     QMMF_ERROR("%s Invalid track_id(%d)!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   assert(client_id_ > 0);
   auto ret = recorder_service_->SetVideoTrackParam(client_id_, session_id,
       track_id, type, const_cast<void*>(param), size);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s SetVideoTrackParam failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -617,17 +1392,17 @@ status_t RecorderClient::DeleteVideoTrack(const uint32_t session_id,
 
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   if (sessions_.count(session_id) == 0) {
     QMMF_ERROR("%s: Invalid session_id(%d)!", __func__, session_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (sessions_[session_id].count(track_id) == 0) {
     QMMF_ERROR("%s Invalid track_id(%d)!", __func__, track_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   {
@@ -649,7 +1424,7 @@ status_t RecorderClient::DeleteVideoTrack(const uint32_t session_id,
   assert(client_id_ > 0);
   auto ret = recorder_service_->DeleteVideoTrack(client_id_, session_id,
       track_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s track_id(%d) DeleteVideoTrack failed!", __func__, track_id);
   } else {
     UpdateSessionTopology(session_id, track_id, false /*remove*/);
@@ -672,12 +1447,12 @@ status_t RecorderClient::CaptureImage(const uint32_t camera_id,
 
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->CaptureImage(client_id_, camera_id, type,
                                              n_images, meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s CaptureImage failed!", __func__);
   }
   image_capture_cb_ = cb;
@@ -693,12 +1468,12 @@ status_t RecorderClient::ConfigImageCapture(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->ConfigImageCapture(client_id_, camera_id,
                                                    image_id, param, xtraparam);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s ConfigImageCapture failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -713,12 +1488,12 @@ status_t RecorderClient::CancelCaptureImage(const uint32_t camera_id,
   QMMF_KPI_DETAIL();
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->CancelCaptureImage(client_id_, camera_id,
                                                    image_id, cache);
-  if(NO_ERROR != ret) {
+  if(0 != ret) {
     QMMF_ERROR("%s CancelCaptureImage failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -731,7 +1506,7 @@ status_t RecorderClient::ReturnImageCaptureBuffer(const uint32_t camera_id,
 
   QMMF_DEBUG("%s Enter ", __func__);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
 
   {
@@ -739,7 +1514,7 @@ status_t RecorderClient::ReturnImageCaptureBuffer(const uint32_t camera_id,
     std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
     if (snapshot_buffers_.count(buffer.fd) == 0) {
       QMMF_ERROR("%s Invalid buffer fd(%d)!", __func__, buffer.fd);
-      return BAD_VALUE;
+      return -EINVAL;
     }
     auto buffer_info = snapshot_buffers_[buffer.fd];
 
@@ -755,7 +1530,7 @@ status_t RecorderClient::ReturnImageCaptureBuffer(const uint32_t camera_id,
   assert(client_id_ > 0);
   auto ret = recorder_service_->ReturnImageCaptureBuffer(client_id_, camera_id,
                                                          buffer.buf_id);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
       QMMF_ERROR("%s ReturnImageCaptureBuffer failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -768,11 +1543,11 @@ status_t RecorderClient::SetCameraParam(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->SetCameraParam(client_id_, camera_id, meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s SetCameraParam failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -786,11 +1561,11 @@ status_t RecorderClient::GetCameraParam(const uint32_t camera_id,
 
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->GetCameraParam(client_id_, camera_id, meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s GetCameraParam failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -803,12 +1578,12 @@ status_t RecorderClient::SetCameraSessionParam(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->SetCameraSessionParam(client_id_, camera_id,
                                                       meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s SetCameraSessionParam failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -822,11 +1597,11 @@ status_t RecorderClient::SetSHDR(const uint32_t camera_id,
 
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->SetSHDR(client_id_, camera_id, enable);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s SetSHDR failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -839,12 +1614,12 @@ status_t RecorderClient::GetDefaultCaptureParam(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->GetDefaultCaptureParam(client_id_,  camera_id,
                                                        meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s GetDefaultCaptureParam failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -857,12 +1632,12 @@ status_t RecorderClient::GetCameraCharacteristics(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->GetCameraCharacteristics(client_id_,  camera_id,
                                                          meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s GetCameraCharacteristics failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -874,11 +1649,11 @@ status_t RecorderClient::GetVendorTagDescriptor(std::shared_ptr<VendorTagDescrip
   QMMF_DEBUG("%s Enter ", __func__);
 
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   auto ret = recorder_service_->GetVendorTagDescriptor(desc);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s GetVendorTagDescriptor failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -892,16 +1667,16 @@ status_t RecorderClient::CreateOfflineJPEG(
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
 
   if (nullptr == cb) {
     QMMF_ERROR("%s: Error. Client callback is null.", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto ret = recorder_service_->CreateOfflineJPEG(client_id_, params);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s CreateOfflineJPEG failed!", __func__);
   }
   offline_jpeg_cb_ = cb;
@@ -915,7 +1690,7 @@ status_t RecorderClient::EncodeOfflineJPEG(
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
 
@@ -939,7 +1714,7 @@ status_t RecorderClient::EncodeOfflineJPEG(
                                                   in_buf,
                                                   out_buf,
                                                   params.metadata);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s EncodeOfflineJPEG failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -951,12 +1726,12 @@ status_t RecorderClient::DestroyOfflineJPEG() {
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
   offline_jpeg_buffers_.clear();
   auto ret = recorder_service_->DestroyOfflineJPEG(client_id_);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s DestroyOfflineJPEG failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
@@ -1094,7 +1869,7 @@ status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
   if (nullptr == vaddr) {
     QMMF_ERROR("%s Failed to map ion_fd %d : %d[%s]!", __func__, info.ion_fd,
                -errno, strerror(errno));
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
 #if TARGET_ION_ABI_VERSION >= 2
@@ -1112,7 +1887,7 @@ status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
 #endif
 
   QMMF_DEBUG("%s Exit ", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 void RecorderClient::UnmapBuffer(BufferInfo& info) {
@@ -1213,14 +1988,14 @@ void RecorderClient::ServiceDeathHandler() {
     snapshot_buffers_.clear();
   }
 
+#if HAVE_BINDER
   recorder_service_->asBinder(recorder_service_)->
       unlinkToDeath(death_notifier_);
+#endif // HAVE_BINDER
 
-  recorder_service_.clear();
-  recorder_service_ = nullptr;
+  recorder_service_.reset();
 
-  death_notifier_.clear();
-  death_notifier_ = nullptr;
+  death_notifier_.reset();
 
   sessions_.clear();
   session_cb_list_.clear();
@@ -1290,7 +2065,7 @@ void RecorderClient::NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
   buffer_info.size        = bn_buffer.capacity;
 
   auto ret = MapBuffer(buffer_info, meta);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s Failed to map buffer!", __func__);
     return;
   }
@@ -1372,7 +2147,7 @@ void RecorderClient::NotifyVideoTrackData(uint32_t session_id,
       buffer_info.size        = bn_buffer.capacity;
 
       auto ret = MapBuffer(buffer_info, metas[idx]);
-      if (NO_ERROR != ret) {
+      if (0 != ret) {
         QMMF_ERROR("%s Failed to map buffer!", __func__);
         return;
       }
@@ -1460,10 +2235,11 @@ void RecorderClient::NotifyCameraResult(uint32_t camera_id,
   }
 }
 
+#ifdef HAVE_BINDER
 //Binder Proxy implementation of IRecoderService.
-class BpRecorderService: public BpInterface<IRecorderService> {
+class RecorderServiceProxy: public BpInterface<IRecorderService> {
  public:
-  BpRecorderService(const sp<IBinder>& impl)
+  RecorderServiceProxy(const sp<IBinder>& impl)
   : BpInterface<IRecorderService>(impl) {}
 
   status_t Connect(const sp<IRecorderServiceCallback>& service_cb,
@@ -1680,7 +2456,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
         uint32_t(QMMF_RECORDER_SERVICE_CMDS::RECORDER_RETURN_TRACKBUFFER),
         data, &reply, IBinder::FLAG_ONEWAY);
 
-    return NO_ERROR;
+    return 0;
   }
 
   status_t SetVideoTrackParam(const uint32_t client_id,
@@ -1803,7 +2579,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
     remote()->transact(uint32_t(QMMF_RECORDER_SERVICE_CMDS::
                                 RECORDER_GET_CAMERA_PARAMS), data, &reply);
     auto ret = reply.readInt32();
-    if (NO_ERROR == ret) {
+    if (0 == ret) {
       ret = meta.readFromParcel(&reply);
     }
     return ret;
@@ -1846,7 +2622,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
                                 RECORDER_GET_DEFAULT_CAPTURE_PARAMS), data,
                                 &reply);
     auto ret = reply.readInt32();
-    if (NO_ERROR == ret) {
+    if (0 == ret) {
       ret = meta.readFromParcel(&reply);
     }
     return ret;
@@ -1863,7 +2639,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
                                 RECORDER_GET_CAMERA_CHARACTERISTICS), data,
                                 &reply);
     auto ret = reply.readInt32();
-    if (NO_ERROR == ret) {
+    if (0 == ret) {
       ret = meta.readFromParcel(&reply);
     }
     return ret;
@@ -1875,7 +2651,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
     remote()->transact(uint32_t(QMMF_RECORDER_SERVICE_CMDS::
                                 RECORDER_GET_VENDOR_TAG_DESCRIPTOR), data, &reply);
     auto ret = reply.readInt32();
-    if (NO_ERROR == ret) {
+    if (0 == ret) {
       ret = desc->readFromParcel(&reply);
     }
     return ret;
@@ -1945,6 +2721,7 @@ status_t DeleteVideoTrack(const uint32_t client_id,
 };
 
 IMPLEMENT_META_INTERFACE(RecorderService, QMMF_RECORDER_SERVICE_NAME);
+#endif // HAVE_BINDER
 
 ServiceCallbackHandler::ServiceCallbackHandler(RecorderClient* client)
     : client_(client) {
@@ -2016,12 +2793,13 @@ void ServiceCallbackHandler::NotifyCameraResult(uint32_t camera_id,
   client_->NotifyCameraResult(camera_id, result);
 }
 
-class BpRecorderServiceCallback: public BpInterface<IRecorderServiceCallback> {
+#ifdef HAVE_BINDER
+class RecorderServiceCallbackProxy: public BpInterface<IRecorderServiceCallback> {
  public:
-  BpRecorderServiceCallback(const sp<IBinder>& impl)
+  RecorderServiceCallbackProxy(const sp<IBinder>& impl)
      : BpInterface<IRecorderServiceCallback>(impl) {}
 
-  ~BpRecorderServiceCallback() {
+  ~RecorderServiceCallbackProxy() {
     track_buffers_map_.clear();
     //TODO: Expose DeleteTrack Api from Binder proxy and call it from service.
   }
@@ -2241,12 +3019,12 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
       if (size) {
         blob.release();
       }
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SESSION_EVENT: {
       //TODO:
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SNAPSHOT_DATA: {
@@ -2277,7 +3055,7 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
       if (meta_size > 0) {
         meta_blob.release();
       }
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_OFFLINE_JPEG_DATA: {
@@ -2287,7 +3065,7 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
       data.readInt32(&buf_fd);
       data.readUint32(&encoded_size);
       NotifyOfflineJpegData(buf_fd, encoded_size);
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_VIDEO_TRACK_DATA: {
@@ -2337,12 +3115,12 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
         meta_blob.release();
       }
       NotifyVideoTrackData(session_id, track_id, buffers, metas);
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_VIDEO_TRACK_EVENT: {
       //TODO:
-      return NO_ERROR;
+      return 0;
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_CAMERA_RESULT: {
@@ -2355,7 +3133,7 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
         QMMF_ERROR("%s Failed to read camera result from parcel: %d\n",
                      __func__, ret);
       }
-      return NO_ERROR;
+      return 0;
     }
     break;
     default: {
@@ -2363,9 +3141,288 @@ status_t BnRecorderServiceCallback::onTransact(uint32_t code,
     }
     break;
   }
-  return NO_ERROR;
+  return 0;
+}
+#else
+RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
+  QMMF_INFO("%s: Enter", __func__);
+  cb_socket_ = -1;
+  client_socket_ = -1;
+  QMMF_INFO("%s: Exit", __func__);
 }
 
+RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
+  QMMF_INFO("%s: Enter", __func__);
+
+  if (!ion_fd_map_.empty()) {
+    for (const auto& [fd, dup_fd] : ion_fd_map_ ) {
+      close(dup_fd);
+    }
+    ion_fd_map_.clear();
+  }
+  if (!meta_fd_map_.empty()) {
+    for (const auto& [fd, dup_fd] : meta_fd_map_ ) {
+      close(dup_fd);
+    }
+    meta_fd_map_.clear();
+  }
+
+  if (cb_socket_ != -1) {
+    close(cb_socket_);
+    cb_socket_ = -1;
+  }
+
+  if (client_socket_ != -1 ) {
+    shutdown(client_socket_, SHUT_RDWR);
+    RequestExitAndWait();
+    close(client_socket_);
+    client_socket_ = -1;
+  }
+
+  QMMF_INFO("%s: Exit", __func__);
+}
+
+status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_pid) {
+  QMMF_INFO("%s: Enter", __func__);
+
+  std:;stringstream path;
+  path << "/var/run/le_cam_client." << client_id << ".sock";
+  socket_path_ = path.str();
+  ::unlink(socket_path_.c_str());
+
+  // Create a socket
+  cb_socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (cb_socket_ == -1) {
+    QMMF_ERROR("Server: sock failure - %s", strerror(errno));
+    return errno;
+  }
+
+  sockaddr_un addr;
+  addr.sun_family = AF_UNIX;
+  auto size = socket_path_.size();
+  snprintf(addr.sun_path, size, "%s", socket_path_.c_str());
+  addr.sun_path[size] = '\0';
+  if (bind(cb_socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+    QMMF_ERROR("Server: bind failure - %s", strerror(errno));
+    return errno;
+  }
+
+  // TODO: Check the max queue limit for incoming request
+  if (listen(cb_socket_, 5) == -1) {
+    QMMF_ERROR("%s: listen failure - %s", __func__, strerror(errno));
+    return errno;
+  }
+
+  server_pid_ = server_pid;
+
+  auto ret = Run ("RecorderServiceCallbackStub-Thread");
+  if (ret != 0) {
+    QMMF_ERROR("%s: failed to start RecorderServiceCallbackStub thread", __func__);
+    return ret;
+  }
+
+  QMMF_INFO("%s: Exit: Server is listening on %s", __func__, socket_path_.c_str());
+  return 0;
+}
+
+bool RecorderServiceCallbackStub::ThreadLoop () {
+
+  if (cb_socket_ != -1 && client_socket_ == -1) {
+    QMMF_INFO("%s: waiting for connection on %d", __func__, cb_socket_);
+    client_socket_ = accept(cb_socket_, nullptr, nullptr);
+    if (client_socket_ == -1) {
+      QMMF_ERROR("%s: accept failure %s", __func__, strerror(errno));
+      close(cb_socket_);
+      unlink(socket_path_.c_str());
+      return false;
+    }
+    QMMF_INFO("%s: connection accepted new fd %d", __func__, client_socket_);
+  }
+
+  ssize_t bytes_read = recv(client_socket_, buffer_, sizeof(buffer_), 0);
+  QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
+
+  if (bytes_read > 0) {
+    buffer_[bytes_read] = '\0';
+    RecorderClientCallbacksAsync msg;
+    msg.ParseFromArray(buffer_, bytes_read);
+    auto ret = ProcessCallbackMsg(msg);
+    QMMF_VERBOSE("%s: Processed cmd: %d", __func__, msg.cmd());
+    if (ret != 0) {
+      QMMF_ERROR("%s: ProcessCallbackMsg failed %s", __func__, strerror(errno));
+      return false;
+    }
+  }
+
+  if (bytes_read == -1) {
+    QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));
+    return false;
+  } else if (bytes_read == 0) {
+    QMMF_ERROR("%s: connection closed", __func__);
+    return false;
+  }
+
+  return true;
+}
+
+status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
+    RecorderClientCallbacksAsync &msg) {
+
+  switch(msg.cmd()) {
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_EVENT: {
+      NotifyRecorderEventMsg data = msg.recorder_event();
+      EventType event = static_cast<EventType>(data.type());
+      const void *payload = static_cast<const void*>(data.event_msg().data());
+      uint32_t size = data.event_msg().size();
+      NotifyRecorderEvent(event, const_cast<void *>(payload), size);
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SESSION_EVENT: {
+      //TODO:
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SNAPSHOT_DATA: {
+      NotifySnapshotDataMsg data = msg.snapshot_data();
+      uint32_t camera_id = data.camera_id();
+      uint32_t count = data.img_count();
+      BnBuffer bn_buffer;
+      int32_t dup_buf_fd, dup_meta_fd;
+      dup_buf_fd = syscall(SYS_pidfd_getfd,
+                syscall(SYS_pidfd_open, server_pid_, 0),
+                data.buffer().ion_fd(),
+                0);
+
+      dup_meta_fd = syscall(SYS_pidfd_getfd,
+                syscall(SYS_pidfd_open, server_pid_, 0),
+                data.buffer().ion_meta_fd(),
+                0);
+      bn_buffer.ion_fd = dup_buf_fd;
+      bn_buffer.ion_meta_fd = dup_meta_fd;
+      bn_buffer.img_id = data.buffer().img_id();
+      bn_buffer.size = data.buffer().size();
+      bn_buffer.timestamp = data.buffer().timestamp();
+      bn_buffer.seqnum = data.buffer().seqnum();
+      bn_buffer.buffer_id = data.buffer().buffer_id();
+      bn_buffer.flags = data.buffer().flags();
+      bn_buffer.capacity = data.buffer().capacity();
+      QMMF_INFO("%s : INPARAM: buffers: %s", __func__,
+          bn_buffer.ToString().c_str());
+
+      BufferMeta meta;
+      meta.format = static_cast<BufferFormat>(data.meta().format());
+      meta.n_planes = data.meta().n_planes();
+      for (auto i = 0; i < meta.n_planes; i++) {
+        auto p_info = data.meta().info(i);
+        meta.planes[i].stride = p_info.stride();
+        meta.planes[i].scanline = p_info.scanline();
+        meta.planes[i].width = p_info.width();
+        meta.planes[i].height = p_info.height();
+        meta.planes[i].offset = p_info.offset();
+        meta.planes[i].size = p_info.size();
+      }
+
+      NotifySnapshotData(camera_id, count, bn_buffer, meta);
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_OFFLINE_JPEG_DATA: {
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_VIDEO_TRACK_DATA: {
+      NotifyVideoTrackDataMsg data = msg.video_track_data();
+      uint32_t session_id = data.session_id();
+      uint32_t track_id = data.track_id();
+      std::vector<BnBuffer> buffers;
+      int32_t ion_fd, meta_fd, dup_buf_fd, dup_meta_fd;
+      for (auto &&b_data : data.buffers()) {
+        BnBuffer buffer;
+        ion_fd = b_data.ion_fd();
+        meta_fd = b_data.ion_meta_fd();
+        { 
+          std::lock_guard<std::mutex> l(fd_map_lock_);
+          if (ion_fd > 0) {
+            if (ion_fd_map_.count(ion_fd) != 0) {
+              // Buffer is already mapped to the client
+              dup_buf_fd = ion_fd_map_.at(ion_fd);
+            } else {
+              // New buffer, map it to the client
+              dup_buf_fd = syscall(SYS_pidfd_getfd,
+                        syscall(SYS_pidfd_open, server_pid_, 0),
+                        ion_fd,
+                        0);
+              ion_fd_map_[ion_fd] = dup_buf_fd;
+            }
+          }
+
+          if (meta_fd > 0) {
+            if (meta_fd_map_.count(meta_fd) != 0) {
+              // Meta buffer is already mapped to the client
+              dup_meta_fd = meta_fd_map_.at(meta_fd);
+            } else {
+              // New meta buffer, map it to the client
+              dup_meta_fd = syscall(SYS_pidfd_getfd,
+                        syscall(SYS_pidfd_open, server_pid_, 0),
+                        meta_fd,
+                        0);
+              meta_fd_map_[meta_fd] = dup_meta_fd;
+            }
+          }
+        }
+        buffer.ion_fd = dup_buf_fd;
+        buffer.ion_meta_fd = dup_meta_fd;
+        buffer.img_id = b_data.img_id();
+        buffer.size = b_data.size();
+        buffer.timestamp = b_data.timestamp();
+        buffer.seqnum = b_data.seqnum();
+        buffer.buffer_id = b_data.buffer_id();
+        buffer.flags = b_data.flags();
+        buffer.capacity = b_data.capacity();
+        QMMF_INFO("%s : INPARAM: buffers: %s", __func__,
+            buffer.ToString().c_str());
+        buffers.push_back(buffer);
+      }
+
+      std::vector<BufferMeta> metas;
+      for (auto &&m_data : data.metas()) {
+        BufferMeta meta;
+        meta.format = static_cast<BufferFormat>(m_data.format());
+        meta.n_planes = m_data.n_planes();
+        for (auto i = 0; i < meta.n_planes; i++) {
+          auto p_info = m_data.info(i);
+          meta.planes[i].stride = p_info.stride();
+          meta.planes[i].scanline = p_info.scanline();
+          meta.planes[i].width = p_info.width();
+          meta.planes[i].height = p_info.height();
+          meta.planes[i].offset = p_info.offset();
+          meta.planes[i].size = p_info.size();
+        }
+        metas.push_back(meta);
+      }
+      NotifyVideoTrackData(session_id, track_id, buffers, metas);
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_VIDEO_TRACK_EVENT: {
+      //TODO:
+      return 0;
+    }
+    break;
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_CAMERA_RESULT: {
+      return 0;
+    }
+    break;
+    default: {
+      QMMF_ERROR("%s Method not supported ", __func__);
+    }
+    break;
+  }
+
+  return -1;
+}
+#endif // HAVE_BINDER
 }; //namespace qmmf
 
 }; //namespace recorder

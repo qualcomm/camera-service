@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -84,7 +84,7 @@ void DualCamera3Gtest::SetUp() {
                             int64_t ts) { ShutterCb(extras, ts); };
   client_cb_.resultCb = [&](const CaptureResult &result) { ResultCb(result); };
 
-  device_client_= new Camera3DeviceClient(client_cb_);
+  device_client_= std::make_unique<Camera3DeviceClient>(client_cb_);
   ASSERT_TRUE(NULL != device_client_.get());
 
   auto ret = device_client_->Initialize();
@@ -102,21 +102,21 @@ void DualCamera3Gtest::SetUp() {
 
 void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
 #ifndef TARGET_USES_GBM
-  String8 path;
-
   int32_t ret;
   printf("%s: E streamId: %d buffer: %p size %d ts: %" PRId64 "\n", __func__,
          buffer.stream_id, buffer.handle, buffer.size, buffer.timestamp);
 
+  std::string path {"/var/tmp/qmmf/frame_"};
+  path += std::to_string(buffer.frame_number) + "_dim_";
+  path += std::to_string(buffer.info.planes[0].width) + "x";
+  path += std::to_string(buffer.info.planes[0].height);
   if (!(buffer.frame_number % 10)) {
     if (buffer.info.format < BufferFormat::kBLOB ) {
-       path.appendFormat("/data/misc/qmmf/frame_%d_dim_%dx%d.yuv", buffer.frame_number,
-          buffer.info.planes[0].width, buffer.info.planes[0].height);
+      path += ".yuv";
     } else if (buffer.info.format > BufferFormat::kBLOB ) {
-       path.appendFormat("/data/misc/qmmf/frame_%d_dim_%dx%d.raw", buffer.frame_number,
-          buffer.info.planes[0].width, buffer.info.planes[0].height);
+      path += ".raw";
     }
-    FILE *file = fopen(path.string(), "w+");
+    FILE *file = fopen(path.c_str(), "w+");
     uint8_t *mappedBuffer = NULL;
     MemAllocError mret = device_client_->alloc_device_interface_->MapBuffer(
                             buffer.handle,
@@ -197,7 +197,7 @@ int32_t DualCamera3Gtest::StartStreaming(CameraContext &ctx, uint32_t width,
   clientCb.shutterCb = [&](const CaptureResultExtras &extras,
                            int64_t ts) { ShutterCb(extras, ts); };
   clientCb.resultCb = [&](const CaptureResult &result) { ResultCb(result); };
-  ctx.device = new Camera3DeviceClient(clientCb);
+  ctx.device = std::make_shared<Camera3DeviceClient>(clientCb);
   if (NULL == ctx.device.get()) {
     return -ENOMEM;
   }
@@ -241,7 +241,7 @@ int32_t DualCamera3Gtest::StartStreaming(CameraContext &ctx, uint32_t width,
              strerror(-ret));
       goto exit;
     }
-    request.streamIds.add(ret);
+    request.streamIds.push_back(ret);
     /* during multi camera we need to use Raw only mode to avoid
      * allocating unneeded resources */
     bool is_raw_only = (format == HAL_PIXEL_FORMAT_RAW10);
@@ -281,8 +281,7 @@ int32_t DualCamera3Gtest::StartStreaming(CameraContext &ctx, uint32_t width,
 exit:
 
   if (NULL != ctx.device.get()) {
-    ctx.device.clear();
-    ctx.device = NULL;
+    ctx.device = nullptr;
   }
 
   return ret;
@@ -312,8 +311,7 @@ int32_t DualCamera3Gtest::StopStreamingAndClose(CameraContext &ctx) {
 
 exit:
 
-  ctx.device.clear();
-  ctx.device = NULL;
+  ctx.device = nullptr;
 
   return ret;
 }

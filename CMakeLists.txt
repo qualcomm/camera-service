@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 
 include_directories(${SYSROOT_INCDIR})
-include_directories(${SYSROOT_INCDIR}/mm-core)
+
 link_directories(${SYSROOT_LIBDIR})
 
 project(qmmf-sdk)
@@ -31,7 +31,7 @@ check_include_file_cxx("chicdk/chiofflinepostprocintf.h" HAVE_CHI_OFFLINE_POST_P
 include(CheckIncludeFileCXX)
 check_include_file_cxx("binder/IBinder.h" HAVE_BINDER_H)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -fno-short-enums -O2 -DANDROID")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -fno-short-enums -O2")
 # uncomment to generate debug information
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
@@ -42,7 +42,7 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(CMAKE_STATIC_LINKER_FLAGS
     "${CMAKE_STATIC_LINKER_FLAGS} -Wl,-no-undefined")
 
-add_subdirectory(config/LE-${TARGET_BOARD_PLATFORM})
+add_subdirectory(config/${TARGET_BOARD_PLATFORM})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
 
@@ -62,9 +62,24 @@ if (RESIZER_NEON_ENABLED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_RESCALER_NEON")
 endif()
 
+if (ENABLE_OFFLINE_JPEG)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OFFLINE_JPEG")
+endif()
+
 if(HAVE_ANDROID_UTILS)
 add_compile_definitions(HAVE_ANDROID_UTILS)
+include_directories(${SYSROOT_INCDIR}/mm-core)
+else()
+# required for camera headers
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLE_CAMERA")
+include_directories(${SYSROOT_INCDIR}/camx-api/camx/service)
+include_directories(${SYSROOT_INCDIR}/camx-api/camx/service/hardware)
+include_directories(${SYSROOT_INCDIR}/camx-api/camx/service/system)
+include_directories(${SYSROOT_INCDIR}/glib-2.0)
+include_directories(${SYSROOT_LIBDIR}/glib-2.0/include)
 endif()
+
+include_directories(${TOP_DIRECTORY}/include)
 
 add_subdirectory(qmmf-server)
 
@@ -78,11 +93,9 @@ add_subdirectory(recorder/src/client)
 
 add_subdirectory(common/memory)
 
-if (NOT CAMERA_HAL1_SUPPORT)
 add_subdirectory(common/cameraadaptor/gtest)
 
 add_subdirectory(common/cameraadaptor)
-endif()
 
 if (RESIZER_FASTCV_ENABLED)
 add_subdirectory(common/resizer-fastCV)
@@ -97,3 +110,7 @@ add_subdirectory(common/resizer-neon)
 endif()
 
 add_subdirectory(common/utils)
+
+if (NOT HAVE_BINDER_H)
+add_subdirectory(common/proto)
+endif()

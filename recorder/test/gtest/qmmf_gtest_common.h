@@ -66,7 +66,6 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <functional>
-#include <system/graphics.h>
 #include <gtest/gtest.h>
 #include <vector>
 #include <map>
@@ -77,13 +76,14 @@
 #include <chrono>
 #include <condition_variable>
 #ifdef HAVE_ANDROID_UTILS
+#include <system/graphics.h>
 #include <cutils/properties.h>
+#include <utils/Errors.h>
 #else
 #include "properties.h"
 #endif
 #include <random>
 #include <fstream>
-#include <utils/Errors.h>
 
 #include <qmmf-sdk/qmmf_recorder.h>
 #include <qmmf-sdk/qmmf_recorder_params.h>
@@ -91,35 +91,16 @@
 
 #include "common/utils/qmmf_log.h"
 
-#ifdef __LIBGBM__
-#include <gbm_priv.h>
-#include <gbm.h>
-#endif
-
-#define DUMP_META_PATH "/data/misc/qmmf/param.dump"
-
-#ifdef USE_SURFACEFLINGER
-#include <sys/mman.h>
-#include <android/native_window.h>
-#endif
+#define DUMP_META_PATH "/var/tmp/qmmf/param.dump"
 
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include <qmmf-sdk/qmmf_vendor_tag_descriptor.h>
 #endif
 
-#ifdef USE_SURFACEFLINGER
-#include <ui/DisplayInfo.h>
-#include <gui/Surface.h>
-#include <gui/SurfaceComposerClient.h>
-#include <gui/ISurfaceComposer.h>
-#endif
-
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include "common/utils/qmmf_common_utils.h"
 #else
-#ifndef CAMERA_HAL1_SUPPORT
 #include <QCamera3VendorTags.h>
-#endif
 #endif  // QCAMERA3_TAG_LOCAL_COPY
 
 //#define DEBUG
@@ -533,27 +514,6 @@ typedef struct ExposureTable {
   }
 } ExposureTable;
 
-#ifdef USE_SURFACEFLINGER
-class SFDisplaySink
-{
- public:
-  SFDisplaySink(uint32_t width, uint32_t height);
-
-  ~SFDisplaySink();
-
-  void HandlePreviewBuffer(BufferDescriptor &buffer, BufferMeta &meta);
-
- private:
-  int32_t CreatePreviewSurface(uint32_t width, uint32_t height);
-
-  void DestroyPreviewSurface();
-
-  sp<SurfaceComposerClient> surface_client_;
-  sp<Surface>               preview_surface_;
-  sp<SurfaceControl>        surface_control_;
-};
-#endif
-
 class FrameTrace {
  public:
   FrameTrace(bool enable)
@@ -728,15 +688,9 @@ class GtestCommon : public ::testing::Test {
                                       const uint32_t width,
                                       const uint32_t height);
 
-#ifdef __LIBGBM__
-  static bool GetMaxSupportedCameraRes(const CameraMetadata& meta,
-                                      uint32_t &width, uint32_t &height,
-                                const int32_t format = GBM_FORMAT_RAW10);
-#else
   static bool GetMaxSupportedCameraRes(const CameraMetadata& meta,
                                       uint32_t &width, uint32_t &height,
                                 const int32_t format = HAL_PIXEL_FORMAT_RAW10);
-#endif
 
   static bool GetMinSupportedCameraRes(const CameraMetadata& meta,
                                         uint32_t &width,
@@ -826,10 +780,8 @@ class GtestCommon : public ::testing::Test {
 
   // Map of Stream and its Parameter
   std::map<uint32_t, VideoStreamInfo> stream_info_map_;
-#ifndef CAMERA_HAL1_SUPPORT
 #ifdef QCAMERA3_TAG_LOCAL_COPY
   std::shared_ptr<VendorTagDescriptor> vendor_tag_desc_;
-#endif
 #endif
 
   struct TestEventWait {
@@ -863,10 +815,10 @@ class GtestCommon : public ::testing::Test {
         auto status = signal_.wait_for(lock,
                                        std::chrono::seconds(wait_sec_ * cnt_));
         if (status != std::cv_status::no_timeout) {
-          return TIMED_OUT;
+          return -ETIMEDOUT;
         }
       }
-      return NO_ERROR;
+      return 0;
     }
   } test_wait_;
 };

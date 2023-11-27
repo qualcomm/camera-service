@@ -64,7 +64,7 @@ status_t OfflineJpegEncoder::Init(
   assert(remote_cb_handle != nullptr);
   remote_cb_handle_ = remote_cb_handle;
 
-  int32_t ret = NO_ERROR;
+  int32_t ret = 0;
 
   // This is required for proper working of the jpeg lib
   ret = hw_get_module(CAMERA_HARDWARE_MODULE_ID,
@@ -78,7 +78,7 @@ status_t OfflineJpegEncoder::Init(
   if (!jpeg_lib_) {
     QMMF_ERROR("%s: No postproc lib, dlopen failed with: %s.",
                  __func__, dlerror());
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   pCameraPostProcCreate   = (PFN_CameraPostProc_Create)
@@ -95,7 +95,7 @@ status_t OfflineJpegEncoder::Init(
                                                pCameraPostProcCreate,
                                                pCameraPostProcProcess,
                                                pCameraPostProcDestroy);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   QMMF_INFO("%s: Exit ", __func__);
@@ -137,7 +137,7 @@ status_t OfflineJpegEncoder::DeInit() {
   }
 
   QMMF_INFO("%s: Exit ", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t OfflineJpegEncoder::RegisterClient(const uint32_t client_id) {
@@ -146,7 +146,7 @@ status_t OfflineJpegEncoder::RegisterClient(const uint32_t client_id) {
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
   if (IsClientFound(client_id)) {
     QMMF_INFO("%s: Client %d already registered.", __func__, client_id);
-    return ALREADY_EXISTS;
+    return -EEXIST;
   }
 
   clients_list_.push_back(client_id);
@@ -154,7 +154,7 @@ status_t OfflineJpegEncoder::RegisterClient(const uint32_t client_id) {
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
 
-  return NO_ERROR;
+  return 0;
 }
 
 status_t OfflineJpegEncoder::DeRegisterClient(const uint32_t client_id) {
@@ -163,7 +163,7 @@ status_t OfflineJpegEncoder::DeRegisterClient(const uint32_t client_id) {
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
   if (!IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client %d not found.", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   for (uint32_t i = 0; i < clients_list_.size(); i++) {
@@ -176,7 +176,7 @@ status_t OfflineJpegEncoder::DeRegisterClient(const uint32_t client_id) {
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
 
-  return NO_ERROR;
+  return 0;
 }
 
 bool OfflineJpegEncoder::IsClientFound(const uint32_t& client_id) {
@@ -224,7 +224,7 @@ status_t OfflineJpegEncoder::Create(const uint32_t client_id,
 
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   JpegCreateParams create_params;
@@ -251,7 +251,7 @@ status_t OfflineJpegEncoder::Create(const uint32_t client_id,
   create_params.pproc_instance = pCameraPostProcCreate(&create_params.config);
   if (!create_params.pproc_instance) {
     QMMF_ERROR("%s pproc_instance creation failed.", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   {
@@ -267,7 +267,7 @@ status_t OfflineJpegEncoder::Create(const uint32_t client_id,
   client_requests_map_.emplace(client_id, JpegRequests());
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t OfflineJpegEncoder::Process(const uint32_t client_id,
@@ -279,7 +279,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
   std::unique_lock<std::mutex> client_lock(client_pproc_lock_);
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   native_handle_t *input_nh;
@@ -304,7 +304,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
                   in_buf.buffer_id);
         native_handle_delete(input_nh);
         native_handle_delete(output_nh);
-        return BAD_VALUE;
+        return -EINVAL;
       }
     }
     if (-1 != out_buf.ion_fd) {
@@ -318,7 +318,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
                   out_buf.buffer_id);
         native_handle_delete(input_nh);
         native_handle_delete(output_nh);
-        return BAD_VALUE;
+        return -EINVAL;
       }
     }
   }
@@ -337,7 +337,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
     native_handle_delete(input_nh);
     native_handle_delete(output_nh);
     delete pproc_params;
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 
   pproc_params->streamId = client_id;
@@ -352,7 +352,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
     QMMF_ERROR("%s: No jpeg encoder instance for client %d",
               __func__, client_id);
     ReleaseRequestData(pproc_params);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   QMMF_INFO("pproc instance: %p", pproc_instance);
 
@@ -395,7 +395,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
     remote_cb_handle_(client_id)->NotifyOfflineJpegData(out_buf.buffer_id, 0);
 
     ReleaseRequestData(pproc_params);
-    return NO_ERROR;
+    return 0;
   }
 
   requests_lock_.lock();
@@ -403,7 +403,7 @@ status_t OfflineJpegEncoder::Process(const uint32_t client_id,
   requests_lock_.unlock();
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t OfflineJpegEncoder::Destroy(const uint32_t client_id) {
@@ -412,7 +412,7 @@ status_t OfflineJpegEncoder::Destroy(const uint32_t client_id) {
   std::unique_lock<std::mutex> client_lock(client_pproc_lock_);
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   {
@@ -445,7 +445,7 @@ status_t OfflineJpegEncoder::Destroy(const uint32_t client_id) {
   if (!pproc_instance) {
     QMMF_ERROR("%s: No jpeg encoder instance for client %d!",
                client_id, __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   QMMF_INFO("%s: pproc instance: %p", __func__, pproc_instance);
 
@@ -461,7 +461,7 @@ status_t OfflineJpegEncoder::Destroy(const uint32_t client_id) {
   pproc_instance = nullptr;
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 void OfflineJpegEncoder::ReleaseRequestData(PostProcSessionParams* params) {
@@ -510,11 +510,11 @@ int32_t JpegCb(PostProcSessionParams* pproc_params,
                void* user_data) {
   if (!pproc_params) {
     QMMF_ERROR("%s: pproc_params is null", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   if (!user_data) {
     QMMF_ERROR("%s: user_data is null", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   JpegCbData* cb_data = reinterpret_cast<JpegCbData*>(user_data);
@@ -523,7 +523,7 @@ int32_t JpegCb(PostProcSessionParams* pproc_params,
   int32_t out_buf_fd = pproc_params->outHandle[0].phHandle->data[0];
   enc->NotifyJpeg(client, out_buf_fd, encoded_size, pproc_params);
 
-  return NO_ERROR;
+  return 0;
 }
 
 };  // namespace qmmf.

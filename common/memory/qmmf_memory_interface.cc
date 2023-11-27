@@ -61,14 +61,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef TARGET_USES_GRALLOC1
-#include "qmmf_gralloc1_interface.h"
-#elif TARGET_USES_GRALLOC2
-#include "qmmf_gralloc2_interface.h"
-#elif TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
 #include "qmmf_gbm_interface.h"
-#else
-#include "qmmf_gralloc_interface.h"
 #endif
 #include "qmmf_memory_interface.h"
 #include "common/utils/qmmf_log.h"
@@ -93,19 +87,13 @@ const int IMemAllocUsage::kHwCameraWrite        = (1 << 16);
 const int IMemAllocUsage::kPrivateAllocHEIF     = (1 << 17);
 
 IAllocDevice *AllocDeviceFactory::CreateAllocDevice() {
-#ifdef TARGET_USES_GRALLOC1
-  return new Gralloc1Device;
-#elif TARGET_USES_GRALLOC2
-  return new Gralloc2Device;
-#elif TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
   return GBMDevice::CreateGBMDevice();
-#else
-  return new GrallocDevice;
 #endif
 }
 
 void AllocDeviceFactory::DestroyAllocDevice(IAllocDevice* alloc_device_interface) {
-#if TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
   GBMDevice::DestroyGBMDevice();
 #else
   delete alloc_device_interface;
@@ -113,43 +101,13 @@ void AllocDeviceFactory::DestroyAllocDevice(IAllocDevice* alloc_device_interface
 }
 
 const IMemAllocUsage &AllocUsageFactory::GetAllocUsage() {
-#ifdef TARGET_USES_GRALLOC1
-  static const Gralloc1Usage x = Gralloc1Usage();
-#elif TARGET_USES_GRALLOC2
-  static const Gralloc2Usage x = Gralloc2Usage();
-#elif TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
   static const GBMUsage x = GBMUsage();
-#else
-  static const GrallocUsage x = GrallocUsage();
 #endif
   return x;
 }
 
-#ifdef TARGET_USES_GRALLOC1
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
-  Gralloc1Buffer *b = static_cast<Gralloc1Buffer *>(handle);
-  assert(b != nullptr);
-  return b->GetNativeHandle();
-}
-
-gralloc1_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
-  const Gralloc1Device &b = static_cast<const Gralloc1Device &>(handle);
-  return b.GetDevice();
-}
-
-#elif TARGET_USES_GRALLOC2
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
-  const Gralloc2Buffer *b = static_cast<const Gralloc2Buffer *>(handle);
-  assert(b != nullptr);
-  return b->GetNativeHandle();
-}
-
-gralloc2_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
-  const Gralloc2Device &b = static_cast<const Gralloc2Device &>(handle);
-  return b.GetDevice();
-}
-
-#elif TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle) {
   GBMBuffer *b = static_cast<GBMBuffer *>(handle);
   assert(b != nullptr);
@@ -165,17 +123,5 @@ buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle) {
   GBMBuffer *b = static_cast<GBMBuffer *>(handle);
   assert(b != nullptr);
   return b->RepackToGralloc();
-}
-
-#else
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
-  GrallocBuffer *b = static_cast<GrallocBuffer *>(handle);
-  assert(b != nullptr);
-  return b->GetNativeHandle();
-}
-
-alloc_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
-  const GrallocDevice &b = static_cast<const GrallocDevice &>(handle);
-  return b.GetDevice();
 }
 #endif

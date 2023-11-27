@@ -200,7 +200,7 @@ class RecorderClient {
 
  private:
   typedef std::function <void(void)> NotifyServerDeathCB;
-
+#ifdef HAVE_BINDER
   class DeathNotifier : public IBinder::DeathRecipient {
    public:
     DeathNotifier(NotifyServerDeathCB& cb) : notify_server_death_(cb) {}
@@ -211,6 +211,20 @@ class RecorderClient {
     }
     NotifyServerDeathCB notify_server_death_;
   };
+#else
+  class DeathNotifier {
+   public:
+    DeathNotifier(NotifyServerDeathCB& cb) : notify_server_death_(cb) {}
+
+    void ServerDied() {
+      QMMF_DEBUG("RecorderClient:%s: Recorder service died", __func__);
+      notify_server_death_();
+    }
+
+   private:
+    NotifyServerDeathCB notify_server_death_;
+  };
+#endif // HAVE_BINDER
 
   struct BufferInfo {
     int32_t ion_fd;      // Transferred ION Id.
@@ -240,9 +254,13 @@ class RecorderClient {
 
   bool IsJpegBufPresent(const int32_t& buf_fd);
 
+#ifdef HAVE_BINDER
   sp<IRecorderService>              recorder_service_;
   sp<DeathNotifier>                 death_notifier_;
-
+#else
+  std::unique_ptr<IRecorderService> recorder_service_;
+  std::unique_ptr<DeathNotifier>    death_notifier_;
+#endif // HAVE_BINDER
   int32_t                           ion_device_;
   uint32_t                          client_id_;
 
@@ -286,7 +304,7 @@ class RecorderClient {
   std::mutex                        lock_;
 };
 
-class ServiceCallbackHandler : public BnRecorderServiceCallback {
+class ServiceCallbackHandler : public RecorderServiceCallbackStub {
  public:
 
   ServiceCallbackHandler(RecorderClient* client);

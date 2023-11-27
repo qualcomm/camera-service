@@ -35,10 +35,11 @@
 #define CAMERA3SMOOTHZOOM_H_
 
 #include <pthread.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <hardware/hardware.h>
-#include <utils/KeyedVector.h>
-#include <utils/List.h>
-
+#else
+#include <hardware/camera_hardware.h>
+#endif // HAVE_ANDROID_UTILS
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "common/cameraadaptor/qmmf_camera3_types.h"
 #include "common/cameraadaptor/qmmf_camera3_internal_types.h"

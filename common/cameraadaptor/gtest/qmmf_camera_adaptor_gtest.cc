@@ -161,7 +161,7 @@ void Camera3Gtest::SetUp() {
   awb_lock_ = false;
   memset(&fps_old_ts_, 0, sizeof(fps_old_ts_));
   avg_fps_ = 0.0f;
-  device_client_ = new Camera3DeviceClient(client_cb_);
+  device_client_ = std::make_unique<Camera3DeviceClient>(client_cb_);
   ASSERT_TRUE(NULL != device_client_.get());
 
   auto ret = device_client_->Initialize();
@@ -176,8 +176,7 @@ void Camera3Gtest::SetUp() {
 
 void Camera3Gtest::TearDown() {
   if (NULL != device_client_.get()) {
-    device_client_.clear();
-    device_client_ = NULL;
+    device_client_ = nullptr;
   }
 }
 
@@ -265,9 +264,9 @@ void Camera3Gtest::SnapshotCb(StreamBuffer buffer) {
       uint8_t *mappedBuffer, uint32_t width, uint32_t height,
       uint32_t stride) { return GetJpegSize(mappedBuffer, width); };
 
-  String8 path;
-  path.appendFormat("/usr/stream_%d_%" PRIo64, buffer.stream_id, jpeg_idx_);
-  path.appendFormat(".jpg");
+  std::string path {"/usr/stream_"};
+  path = path + std::to_string(buffer.stream_id) + "_" + std::to_string(jpeg_idx_);
+  path += ".jpg";
   StoreBuffer(path, jpeg_idx_, buffer, sizeFunc);
 
   device_client_->ReturnStreamBuffer(buffer);
@@ -412,7 +411,7 @@ int32_t Camera3Gtest::StartSreaming(MemAllocFlags usage, uint32_t width,
     return ret;
   }
   streamId = ret;
-  streamingRequest.streamIds.add(streamId);
+  streamingRequest.streamIds.push_back(streamId);
 
   ret = device_client_->EndConfigure();
   if (0 != ret) {
@@ -482,13 +481,13 @@ void Camera3Gtest::StreamCbDumpNVXX(StreamBuffer buffer) {
          buffer.stream_id, buffer.handle, buffer.timestamp);
 
   if (dump_yuv_) {
-    String8 path;
     dump_yuv_ = false;
     CalcSize sizeFunc = [&](uint8_t *mappedBuffer, uint32_t width,
         uint32_t height, uint32_t stride) { return 0; };
 
-    path.appendFormat("/usr/stream_%d_%" PRIo64, buffer.stream_id, yuv_idx_);
-    path.appendFormat(".yuv");
+    std::string path {"/usr/stream_"};
+    path += std::to_string(buffer.stream_id) + "_" + std::to_string(yuv_idx_);
+    path += ".yuv";
     StoreBuffer(path, yuv_idx_, buffer, sizeFunc);
   }
 
@@ -510,10 +509,11 @@ void Camera3Gtest::StreamCbAecLock(StreamBuffer buffer) {
         uint32_t height, uint32_t stride) { return 0; };
 
   if(buffer.frame_number % 5 == 0) {
-    String8 path;
-    path.appendFormat("/data/misc/qmmf/aec_lock/stream_%d_%d_%d.yuv",
-                      buffer.stream_id, buffer.frame_number, aec_lock_);
-    mkdir("/data/misc/qmmf/aec_lock", S_IRWXU);
+    std::string path {"/var/tmp/qmmf/aec_lock/stream_"};
+    path += std::to_string(buffer.stream_id) + "_";
+    path += std::to_string(buffer.frame_number) + "_";
+    path += std::to_string(aec_lock_) + ".yuv";
+    mkdir("/var/tmp/qmmf/aec_lock", S_IRWXU);
     StoreBuffer(path, yuv_idx_, buffer, sizeFunc);
   }
   device_client_->ReturnStreamBuffer(buffer);
@@ -527,10 +527,11 @@ void Camera3Gtest::StreamCbAwbLock(StreamBuffer buffer) {
         uint32_t height, uint32_t stride) { return 0; };
 
   if(buffer.frame_number % 5 == 0) {
-    String8 path;
-    path.appendFormat("/data/misc/qmmf/awb_lock/stream_%d_%d_%d.yuv",
-                      buffer.stream_id, buffer.frame_number, awb_lock_);
-    mkdir("/data/misc/qmmf/awb_lock", S_IRWXU);
+    std::string path {"data/misc/qmmf/awb_lock/stream_"};
+    path += std::to_string(buffer.stream_id) + "_";
+    path += std::to_string(buffer.frame_number) + "_";
+    path += std::to_string(awb_lock_) + ".yuv";
+    mkdir("/var/tmp/qmmf/awb_lock", S_IRWXU);
     StoreBuffer(path, yuv_idx_, buffer, sizeFunc);
   }
   device_client_->ReturnStreamBuffer(buffer);
@@ -544,9 +545,9 @@ void Camera3Gtest::Raw16Cb(StreamBuffer buffer) {
       uint8_t *mappedBuffer, uint32_t width, uint32_t height,
       uint32_t stride) { return stride*height*2; };
 
-  String8 path;
-  path.appendFormat("/usr/stream_%d_%" PRIo64, buffer.stream_id, raw_idx_);
-  path.appendFormat(".raw");
+  std::string path {"/usr/stream_%"};
+  path += std::to_string(buffer.stream_id) + "_";
+  path += std::to_string(raw_idx_) + ".raw";
   StoreBuffer(path, raw_idx_, buffer, sizeFunc);
 
   device_client_->ReturnStreamBuffer(buffer);
@@ -587,10 +588,10 @@ void Camera3Gtest::ReturnInputBuffer(StreamBuffer &buffer) {
   }
 }
 
-int32_t Camera3Gtest::StoreBuffer(String8 path, uint64_t &idx,
+int32_t Camera3Gtest::StoreBuffer(std::string &path, uint64_t &idx,
                                   StreamBuffer &buffer, CalcSize &calcSize) {
   int32_t ret = 0;
-  FILE *f = fopen(path.string(), "w+");
+  FILE *f = fopen(path.c_str(), "w+");
   if (NULL == f) {
     printf("%s:Unable to open file(%s) \n", __func__, strerror(errno));
     return -errno;
@@ -625,7 +626,7 @@ int32_t Camera3Gtest::StoreBuffer(String8 path, uint64_t &idx,
     }
     idx++;
 
-    printf("%s: %s Size=%" PRIo64 " Stored\n", __func__, path.string(),
+    printf("%s: %s Size=%" PRIo64 " Stored\n", __func__, path.c_str(),
            size);
   } else {
     if (0 == buffer.info.n_planes) {
@@ -663,7 +664,7 @@ int32_t Camera3Gtest::StoreBuffer(String8 path, uint64_t &idx,
     idx++;
 
     printf("%s: %s Buffer=%p, Size=%" PRIo64 " Stored\n", __func__,
-           path.string(), mapped_buffer, size);
+           path.c_str(), mapped_buffer, size);
   }
 
 exit:
@@ -699,7 +700,7 @@ TEST_F(Camera3Gtest, Video1080pManualExposure) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -827,7 +828,7 @@ TEST_F(Camera3Gtest, Video1080pSceneControl) {
     // 1080p Stream1
     repeatingStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(repeatingStreamId, 0);
-    videoRequest.streamIds.add(repeatingStreamId);
+    videoRequest.streamIds.push_back(repeatingStreamId);
 
     ret = device_client_->EndConfigure();
     ASSERT_EQ(0, ret);
@@ -910,7 +911,7 @@ TEST_F(Camera3Gtest, Video1080pEVcontrol) {
     // 1080p Stream1
     repeatingStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(repeatingStreamId, 0);
-    videoRequest.streamIds.add(repeatingStreamId);
+    videoRequest.streamIds.push_back(repeatingStreamId);
 
     ret = device_client_->EndConfigure();
     ASSERT_EQ(0, ret);
@@ -999,7 +1000,7 @@ TEST_F(Camera3Gtest, Video1080pExposureModes) {
     // 1080p Stream1
     repeatingStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(repeatingStreamId, 0);
-    videoRequest.streamIds.add(repeatingStreamId);
+    videoRequest.streamIds.push_back(repeatingStreamId);
 
     ret = device_client_->EndConfigure();
     ASSERT_EQ(0, ret);
@@ -1078,7 +1079,7 @@ TEST_F(Camera3Gtest, Video1080pExposureMeteringModes) {
     // 1080p Stream1
     repeatingStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(repeatingStreamId, 0);
-    videoRequest.streamIds.add(repeatingStreamId);
+    videoRequest.streamIds.push_back(repeatingStreamId);
 
     ret = device_client_->EndConfigure();
     ASSERT_EQ(0, ret);
@@ -1158,7 +1159,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshotHDR) {
     // 1080p Stream1
     previewStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(previewStreamId, 0);
-    previewRequest.streamIds.add(previewStreamId);
+    previewRequest.streamIds.push_back(previewStreamId);
 
     memset(&streamParams, 0, sizeof(streamParams));
     streamParams.bufferCount = 3;
@@ -1170,7 +1171,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshotHDR) {
 
     snapshotStreamId = device_client_->CreateStream(streamParams);
     ASSERT_GE(snapshotStreamId, 0);
-    snapshotRequest.streamIds.add(snapshotStreamId);
+    snapshotRequest.streamIds.push_back(snapshotStreamId);
 
     ret = device_client_->EndConfigure();
     ASSERT_EQ(0, ret);
@@ -1247,7 +1248,7 @@ TEST_F(Camera3Gtest, ZSLStream12Mp) {
 
   zslStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(zslStreamId, 0);
-  zslRequest.streamIds.add(zslStreamId);
+  zslRequest.streamIds.push_back(zslStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1303,7 +1304,7 @@ TEST_F(Camera3Gtest, FlushZSL) {
 
   zslStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(zslStreamId, 0);
-  zslRequest.streamIds.add(zslStreamId);
+  zslRequest.streamIds.push_back(zslStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1348,7 +1349,7 @@ TEST_F(Camera3Gtest, Preview1080pSnapshot12Mp) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -1360,7 +1361,7 @@ TEST_F(Camera3Gtest, Preview1080pSnapshot12Mp) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1428,7 +1429,7 @@ TEST_F(Camera3Gtest, UpdateExposureDuringPreviewVGA) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1497,7 +1498,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kSaturation) {
 
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -1509,7 +1510,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kSaturation) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1586,7 +1587,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kISO) {
 
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -1598,7 +1599,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kISO) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1689,7 +1690,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kWNR) {
 
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -1701,7 +1702,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kWNR) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1782,7 +1783,7 @@ TEST_F(Camera3Gtest, Video4KLiveSnapshot4K) {
 
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -1794,7 +1795,7 @@ TEST_F(Camera3Gtest, Video4KLiveSnapshot4K) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1854,7 +1855,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
 
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 180p video stream
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
@@ -1865,7 +1866,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
   streamParams.cb = [&](StreamBuffer buffer) { StreamCb(buffer); };
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p preview stream
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
@@ -1875,7 +1876,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
   streamParams.cb = [&](StreamBuffer buffer) { StreamCb(buffer); };
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 4K YUV snapshot
   memset(&streamParams, 0, sizeof(streamParams));
@@ -1888,7 +1889,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -1979,7 +1980,7 @@ TEST_F(Camera3Gtest, Video1080pAFR) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2053,7 +2054,7 @@ TEST_F(Camera3Gtest, Video1080pSharpness) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2099,7 +2100,7 @@ TEST_F(Camera3Gtest, Video1080pSharpness) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2161,7 +2162,7 @@ TEST_F(Camera3Gtest, Video1080pZoom) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2226,18 +2227,18 @@ TEST_F(Camera3Gtest, Video1080pThreeStreams) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p Stream2
   streamParams.cb = [&](StreamBuffer buffer) { StreamCb(buffer); };
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p Stream3
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2286,24 +2287,24 @@ TEST_F(Camera3Gtest, ThreeVideo1080Plus180pPreview1080pLiveSnapshot4KYUV) {
   // 1080p Stream1
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p Stream2
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p Stream3
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 1080p Preview
   streamParams.allocFlags.flags = IMemAllocUsage::kHwFb;
   streamParams.cb = [&](StreamBuffer buffer) { StreamCbAvgFPS(buffer); };
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 180p Video
   streamParams.width = 320;
@@ -2313,7 +2314,7 @@ TEST_F(Camera3Gtest, ThreeVideo1080Plus180pPreview1080pLiveSnapshot4KYUV) {
   streamParams.cb = [&](StreamBuffer buffer) { StreamCb(buffer); };
   repeatingStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(repeatingStreamId, 0);
-  videoRequest.streamIds.add(repeatingStreamId);
+  videoRequest.streamIds.push_back(repeatingStreamId);
 
   // 4K YUV snapshot
   memset(&streamParams, 0, sizeof(streamParams));
@@ -2326,7 +2327,7 @@ TEST_F(Camera3Gtest, ThreeVideo1080Plus180pPreview1080pLiveSnapshot4KYUV) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  snapshotRequest.streamIds.add(snapshotStreamId);
+  snapshotRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2396,13 +2397,13 @@ TEST_F(Camera3Gtest, DynamicDeleteVideo1080p) {
   // Stream1
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   // Add a second 1080p video stream
   streamParams.cb = [&](StreamBuffer buffer) { StreamCbSignalOnFrame(buffer); };
   videoStreamId1 = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId1, 0);
-  videoRequest.streamIds.add(videoStreamId1);
+  videoRequest.streamIds.push_back(videoStreamId1);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2421,7 +2422,7 @@ TEST_F(Camera3Gtest, DynamicDeleteVideo1080p) {
   //Update request and remove second stream;
   input_buffer_flag_ = true;
   videoRequest.streamIds.clear();
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
   ret = device_client_->SubmitRequest(videoRequest, true,
                                       &input_last_frame_number_);
   ASSERT_GE(ret, 0);
@@ -2474,7 +2475,7 @@ TEST_F(Camera3Gtest, DynamicReconfigureVideo1080p) {
   // Stream1
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2504,7 +2505,7 @@ TEST_F(Camera3Gtest, DynamicReconfigureVideo1080p) {
   ASSERT_EQ(0, ret);
   ASSERT_FALSE(camera_error_);
 
-  videoRequest.streamIds.add(videoStreamId1);
+  videoRequest.streamIds.push_back(videoStreamId1);
   ret = device_client_->SubmitRequest(videoRequest, true, &lastFrameNumber);
   ASSERT_GE(ret, 0);
   videoRequestId = ret;
@@ -2577,9 +2578,9 @@ TEST_F(Camera3Gtest, InvalidRequest) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
   //Try to include one stream twice in the same request
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2611,7 +2612,7 @@ TEST_F(Camera3Gtest, PrepareTeardownPreview) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -2706,7 +2707,7 @@ TEST_F(Camera3Gtest, HFRVideo1080p60FPS) {
 
   video_stream_id = device_client_->CreateStream(stream_params);
   ASSERT_GE(video_stream_id, 0);
-  video_request.streamIds.add(video_stream_id);
+  video_request.streamIds.push_back(video_stream_id);
 
   CameraParameters camera_params = CameraParameters();
   camera_params.is_constrained_high_speed = true;
@@ -2729,7 +2730,7 @@ TEST_F(Camera3Gtest, HFRVideo1080p60FPS) {
   video_request.metadata.update(QCAMERA3_VENDOR_SENSOR_MODE,
                                 &sensor_vendor_mode, 1);
 
-  std::list<Camera3Request> requests;
+  std::vector<Camera3Request> requests;
   requests.push_back(video_request);
 
   ret = device_client_->SubmitRequestList(requests, true, &last_frame_number);
@@ -2818,7 +2819,7 @@ TEST_F(Camera3Gtest, HFRVideo720p120FPS) {
 
   videoStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(videoStreamId, 0);
-  videoRequest.streamIds.add(videoStreamId);
+  videoRequest.streamIds.push_back(videoStreamId);
 
   CameraParameters camera_params = CameraParameters();
   camera_params.is_constrained_high_speed = true;
@@ -2836,7 +2837,7 @@ TEST_F(Camera3Gtest, HFRVideo720p120FPS) {
 
   videoRequest.metadata.update(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, fpsRange,
                                2);
-  std::list<Camera3Request> requests;
+  std::vector<Camera3Request> requests;
   for (int32_t i = 0; i < batchSize; i++) {
     requests.push_back(videoRequest);
   }
@@ -2889,7 +2890,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -2901,7 +2902,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
 
   yuvStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(yuvStreamId, 0);
-  yuvRequest.streamIds.add(yuvStreamId);
+  yuvRequest.streamIds.push_back(yuvStreamId);
   input_stream_id_ = yuvStreamId;
 
   memset(&inputStreamParams, 0, sizeof(inputStreamParams));
@@ -2915,7 +2916,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
 
   inputStreamId = device_client_->CreateInputStream(inputStreamParams);
   ASSERT_GE(inputStreamId, 0);
-  reprocessRequest.streamIds.add(inputStreamId);
+  reprocessRequest.streamIds.push_back(inputStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -2927,7 +2928,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
 
   yuvOutputStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(yuvOutputStreamId, 0);
-  reprocessRequest.streamIds.add(yuvOutputStreamId);
+  reprocessRequest.streamIds.push_back(yuvOutputStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3011,7 +3012,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3023,7 +3024,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
 
   rawStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(rawStreamId, 0);
-  rawRequest.streamIds.add(rawStreamId);
+  rawRequest.streamIds.push_back(rawStreamId);
   input_stream_id_ = rawStreamId;
 
   memset(&inputStreamParams, 0, sizeof(inputStreamParams));
@@ -3037,7 +3038,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
 
   inputStreamId = device_client_->CreateInputStream(inputStreamParams);
   ASSERT_GE(inputStreamId, 0);
-  reprocessRequest.streamIds.add(inputStreamId);
+  reprocessRequest.streamIds.push_back(inputStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3049,7 +3050,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
 
   yuvOutputStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(yuvOutputStreamId, 0);
-  reprocessRequest.streamIds.add(yuvOutputStreamId);
+  reprocessRequest.streamIds.push_back(yuvOutputStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3136,7 +3137,7 @@ TEST_F(Camera3Gtest, ReprocessZSL12MpToYUV4K) {
 
   zsl_stream_id = device_client_->CreateStream(stream_params);
   ASSERT_GE(zsl_stream_id, 0);
-  zsl_request.streamIds.add(zsl_stream_id);
+  zsl_request.streamIds.push_back(zsl_stream_id);
   input_stream_id_ = zsl_stream_id;
 
   memset(&input_stream_params, 0, sizeof(input_stream_params));
@@ -3150,7 +3151,7 @@ TEST_F(Camera3Gtest, ReprocessZSL12MpToYUV4K) {
 
   input_stream_id = device_client_->CreateInputStream(input_stream_params);
   ASSERT_GE(input_stream_id, 0);
-  reprocess_request.streamIds.add(input_stream_id);
+  reprocess_request.streamIds.push_back(input_stream_id);
 
   memset(&stream_params, 0, sizeof(stream_params));
   stream_params.bufferCount = 1;
@@ -3162,7 +3163,7 @@ TEST_F(Camera3Gtest, ReprocessZSL12MpToYUV4K) {
 
   yuv_output_stream_id = device_client_->CreateStream(stream_params);
   ASSERT_GE(yuv_output_stream_id, 0);
-  reprocess_request.streamIds.add(yuv_output_stream_id);
+  reprocess_request.streamIds.push_back(yuv_output_stream_id);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3248,7 +3249,7 @@ TEST_F(Camera3Gtest, RAW16Bit) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3260,7 +3261,7 @@ TEST_F(Camera3Gtest, RAW16Bit) {
 
   rawStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(rawStreamId, 0);
-  rawRequest.streamIds.add(rawStreamId);
+  rawRequest.streamIds.push_back(rawStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3304,7 +3305,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
 
   Camera3Request previewRequest;
   Camera3Request captureRequest;
-  std::list<Camera3Request> burstRequests;
+  std::vector<Camera3Request> burstRequests;
   int64_t lastFrameNumber;
   int32_t previewStreamId, previewRequestId;
   int32_t snapshotStreamId;
@@ -3322,7 +3323,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3334,7 +3335,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  captureRequest.streamIds.add(snapshotStreamId);
+  captureRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3418,7 +3419,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3430,7 +3431,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
 
   rawStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(rawStreamId, 0);
-  rawRequest.streamIds.add(rawStreamId);
+  rawRequest.streamIds.push_back(rawStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
   streamParams.bufferCount = 1;
@@ -3442,7 +3443,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
 
   snapshotStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(snapshotStreamId, 0);
-  rawRequest.streamIds.add(snapshotStreamId);
+  rawRequest.streamIds.push_back(snapshotStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3503,7 +3504,7 @@ TEST_F(Camera3Gtest, ExposureLockVGA) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);
@@ -3569,7 +3570,7 @@ TEST_F(Camera3Gtest, AwbLockVGA) {
 
   previewStreamId = device_client_->CreateStream(streamParams);
   ASSERT_GE(previewStreamId, 0);
-  previewRequest.streamIds.add(previewStreamId);
+  previewRequest.streamIds.push_back(previewStreamId);
 
   ret = device_client_->EndConfigure();
   ASSERT_EQ(0, ret);

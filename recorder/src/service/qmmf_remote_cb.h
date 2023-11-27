@@ -69,6 +69,7 @@ namespace qmmf {
 
 namespace recorder {
 
+#ifdef HAVE_BINDER
 class RemoteCallBack : public RefBase {
    public:
     RemoteCallBack(const uint32_t client_id,
@@ -79,7 +80,15 @@ class RemoteCallBack : public RefBase {
     sp<IRecorderServiceCallback>& getRemoteClient() {
        return client_cb_handle_;
     }
+#else
+class RemoteCallBack {
+   public:
+    RemoteCallBack(const uint32_t client_id,
+                   const std::shared_ptr<IRecorderServiceCallback>& remote_cb);
 
+    ~RemoteCallBack();
+
+#endif // HAVE_BINDER
     void NotifyRecorderEvent(EventType event_type, void *event_data,
                              size_t event_data_size);
 
@@ -106,7 +115,11 @@ class RemoteCallBack : public RefBase {
     uint32_t GetClientId() { return client_id_; }
 
    private:
+#ifdef HAVE_BINDER
     sp<IRecorderServiceCallback> client_cb_handle_;
+#else
+    std::shared_ptr<IRecorderServiceCallback> client_cb_handle_;
+#endif
     uint32_t client_id_;
   };
 

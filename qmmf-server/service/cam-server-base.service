@@ -1,4 +1,4 @@
-# Copyright (c) 2018, 2019, The Linux Foundation. All rights reserved.
+# Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -24,15 +24,19 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Changes from Qualcomm Innovation Center are provided under the following license:
+# Copyright (c) 2022-23 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
 
 [Unit]
-Description= QMMF Server Service
-SourcePath=/usr/bin/qmmf-server
+Description= Camera Server Service
+SourcePath=/usr/bin/cam-server
 
 [Service]
 Restart=always
-Environment=LD_LIBRARY_PATH=/usr/lib/camera/components/:/usr/lib/camera/
-ExecStart=/usr/bin/qmmf-server
+EnvironmentFile=/etc/cam-server-env
+ExecStart=/usr/bin/cam-server
 
 [Install]
 WantedBy=multi-user.target

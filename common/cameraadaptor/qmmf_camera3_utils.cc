@@ -64,16 +64,6 @@ int32_t cond_wait_relative(pthread_cond_t *cond, pthread_mutex_t *mutex,
   return -pthread_cond_timedwait(cond, mutex, &ts);
 }
 
-int compare(const int32_t *left, const int32_t *right) {
-    if (*left < *right) {
-        return -1;
-    } else if (*left > *right) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 }  // namespace cameraadaptor ends here
 
 }  // namespace qmmf ends here

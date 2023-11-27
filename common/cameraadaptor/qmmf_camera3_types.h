@@ -168,7 +168,7 @@ struct CameraParameters {
 
 typedef struct Camera3Request_t {
   CameraMetadata metadata;
-  Vector<int32_t> streamIds;
+  std::vector<int32_t> streamIds;
 } Camera3Request;
 
 typedef struct {

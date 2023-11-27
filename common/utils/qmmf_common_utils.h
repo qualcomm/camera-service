@@ -67,7 +67,6 @@
 #include <condition_variable>
 #include <cmath>
 #include <iomanip>
-#include <list>
 #include <map>
 #include <set>
 #include <mutex>
@@ -75,12 +74,13 @@
 #include <sstream>
 #include <string>
 
+#ifdef HAVE_ANDROID_UTILS
 #include <system/graphics.h>
+#endif // HAVE_ANDROID_UTILS
+
 #include <sys/mman.h>
 #include <sys/time.h>
-#ifndef CAMERA_HAL1_SUPPORT
 #include <hardware/camera3.h>
-#endif
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
@@ -90,12 +90,15 @@
 
 namespace qmmf {
 
+#ifdef HAVE_ANDROID_UTILS
 using namespace android;
+#endif // HAVE_ANDROID_UTILS
 using namespace recorder;
 
 typedef int32_t status_t;
 
 const int64_t kWaitDelay = 2000000000;  // 2 sec
+const uint32_t kMaxSocketBufSize = 64000;
 
 struct StreamBuffer {
   BufferMeta info;
@@ -155,7 +158,7 @@ class Property {
   static T Get(std::string property, T default_value) {
 
     T value = default_value;
-    char prop_val[PROPERTY_VALUE_MAX];
+    char prop_val[PROP_VALUE_MAX];
 
     std::stringstream s;
     s << default_value;
@@ -914,7 +917,7 @@ class Common {
       default:
         QMMF_ERROR("%s: Format(%d) not supported!", __func__,
           (int32_t) format);
-        return -1;
+        return -EINVAL;
     }
     return is_supported;
   }

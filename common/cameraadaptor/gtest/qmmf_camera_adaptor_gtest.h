@@ -64,7 +64,7 @@ class Camera3Gtest : public ::testing::Test {
   void StreamCbDumpNVXX(StreamBuffer buffer);
   void StreamCbAecLock(StreamBuffer buffer);
   void StreamCbAwbLock(StreamBuffer buffer);
-  int32_t StoreBuffer(String8 extension, uint64_t &idx, StreamBuffer &buffer,
+  int32_t StoreBuffer(std::string &extension, uint64_t &idx, StreamBuffer &buffer,
                       CalcSize &calcSize);
 
   void InputCb(StreamBuffer buffer);
@@ -89,7 +89,7 @@ class Camera3Gtest : public ::testing::Test {
   uint32_t camera_idx_;
   uint32_t number_of_cameras_;
   CameraClientCallbacks client_cb_;
-  sp<Camera3DeviceClient> device_client_;
+  std::shared_ptr<Camera3DeviceClient> device_client_;
   bool camera_error_;
 
   struct timeval fps_old_ts_;

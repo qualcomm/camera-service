@@ -27,19 +27,23 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #pragma once
 
 #include <memory>
 #include <thread>
 
-#include <utils/Timers.h>
 #include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
 #include "common/utils/qmmf_common_utils.h"
 #include "common/utils/qmmf_condition.h"
 #include "recorder/src/service/qmmf_camera_interface.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
-#include <utils/List.h>
 
 #include "common/resizer-interface/qmmf_resizer_interface.h"
 
@@ -126,7 +130,7 @@ class CameraRescalerMemPool {
    std::mutex                    buffer_lock_;
    QCondition                    wait_for_buffer_;
 
-   static const nsecs_t kBufferWaitTimeout = 1000000000;// 1 s.
+   static const int64_t kBufferWaitTimeout = 1000000000;// 1 s.
    uint32_t                      buffer_cnt_;
    bool                          is_eis_on_;
    bool                          is_ldc_on_;
@@ -178,9 +182,9 @@ class CameraRescalerBase : public CameraRescalerThread,
     size_t size;
   };
 
-  static const nsecs_t              kFrameTimeout  = 50000000;  // 50 ms.
+  static const int64_t              kFrameTimeout  = 50000000;  // 50 ms.
   std::map<uint32_t, map_data_t>    mapped_buffs_;
-  List<StreamBuffer>                bufs_list_;
+  std::vector<StreamBuffer>           bufs_list_;
   std::mutex                        wait_lock_;
   QCondition                        wait_;
   ResizerInterface*                 rescaler_;
@@ -196,13 +200,13 @@ class CameraRescaler: public CameraRescalerBase {
 
   // Methods for establishing buffer communication link between the
   // consumer of the client and buffer producer of the stitching pipeline.
-  status_t AddConsumer(const sp<IBufferConsumer>& consumer);
+  status_t AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer);
 
-  status_t RemoveConsumer(sp<IBufferConsumer>& consumer);
+  status_t RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
   // Method to provide consumer interface, it would be used by a CameraContext
   // port producer to post buffers.
-  sp<IBufferConsumer>& GetConsumer();
+  std::shared_ptr<IBufferConsumer>& GetConsumer();
 
   // Method for handling incoming buffers from CameraPort buffer producer.
   void OnFrameAvailable(StreamBuffer& buffer);
@@ -230,9 +234,9 @@ class CameraRescaler: public CameraRescalerBase {
  private:
 
   std::mutex               consumer_lock_;
-  sp<IBufferConsumer>      buffer_consumer_impl_;
-  sp<IBufferProducer>      buffer_producer_impl_;
-  sp<IBufferConsumer>      copy_consumer_impl_;
+  std::shared_ptr<IBufferConsumer>      buffer_consumer_impl_;
+  std::shared_ptr<IBufferProducer>      buffer_producer_impl_;
+  std::shared_ptr<IBufferConsumer>      copy_consumer_impl_;
   bool                     is_stop_;
   std::mutex               stop_lock_;
 

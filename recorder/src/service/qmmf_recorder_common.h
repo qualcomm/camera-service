@@ -41,7 +41,7 @@
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_remote_cb.h"
 
-#define FRAME_DUMP_PATH        "/data/misc/qmmf"
+#define FRAME_DUMP_PATH        "/var/tmp/qmmf"
 
 #define FPS_TIME_INTERVAL 3000000
 
@@ -69,8 +69,13 @@ typedef std::function<void(uint32_t image_id, uint32_t imgcount,
 typedef std::function<void(uint32_t camera_id,
     const CameraMetadata &result)> ResultCb;
 
+#ifdef HAVE_ANDROID_UTILS
 typedef std::function< const sp<RemoteCallBack>& (uint32_t client_id)>
     RemoteCallbackHandle;
+#else
+typedef std::function< const std::shared_ptr<RemoteCallBack>& (uint32_t client_id)>
+    RemoteCallbackHandle;
+#endif // HAVE_ANDROID_UTILS
 
 typedef std::function<void(uint32_t camera_id, int32_t errcode)> ErrorCb;
 

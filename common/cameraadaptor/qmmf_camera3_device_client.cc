@@ -83,8 +83,10 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <algorithm>
 #include <memory>
-#include <utils/String8.h>
+#include <string>
+
 
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_utils.h"
@@ -187,12 +189,12 @@ Camera3DeviceClient::~Camera3DeviceClient() {
   prepare_handler_.RequestExit();
 
   for (uint32_t i = 0; i < streams_.size(); i++) {
-    Camera3Stream *stream = streams_.editValueAt(i);
+    Camera3Stream *stream = streams_[i];
     delete stream;
   }
   streams_.clear();
 
-  Vector<Camera3Stream* >::iterator it = deleted_streams_.begin();
+  auto it = deleted_streams_.begin();
   while (it != deleted_streams_.end()) {
     Camera3Stream *stream = *it;
     it = deleted_streams_.erase(it);
@@ -533,7 +535,7 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
 
   if (IsInputROIMode()) {
     uint32_t tag_id = 0;
-    bool roienable = true;
+    uint8_t roienable = true;
     const std::shared_ptr<VendorTagDescriptor> vtags =
         VendorTagDescriptor::getGlobalVendorTagDescriptor();
     if (vtags.get() == NULL) {
@@ -551,24 +553,24 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   config.session_parameters = session_metadata_.getAndLock();
 #endif
 
-  Vector<camera3_stream_t *> streams;
+  std::vector<camera3_stream_t *> streams;
 
   if (0 <= input_stream_.stream_id) {
     input_stream_.usage = 0; // Reset any previously set usage flags from Hal
-    streams.add(&input_stream_);
+    streams.push_back(&input_stream_);
   }
 
   for (size_t i = 0; i < streams_.size(); i++) {
     camera3_stream_t *outputStream;
-    outputStream = streams_.editValueAt(i)->BeginConfigure();
+    outputStream = streams_[i]->BeginConfigure();
     if (outputStream == NULL) {
       QMMF_ERROR("%s: Can't start stream configuration\n", __func__);
       return -ENOSYS;
     }
-    streams.add(outputStream);
+    streams.push_back(outputStream);
   }
 
-  config.streams = streams.editArray();
+  config.streams = streams.data();
   config.num_streams = streams.size();
 
   res = device_->ops->configure_streams(device_, &config);
@@ -579,7 +581,7 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
 #endif
   if (res == -EINVAL) {
     for (uint32_t i = 0; i < streams_.size(); i++) {
-      Camera3Stream *stream = streams_.editValueAt(i);
+      Camera3Stream *stream = streams_[i];
       if (stream->IsConfigureActive()) {
         res = stream->AbortConfigure();
         if (0 != res) {
@@ -601,7 +603,7 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   }
 
   for (uint32_t i = 0; i < streams_.size(); i++) {
-    Camera3Stream *outputStream = streams_.editValueAt(i);
+    Camera3Stream *outputStream = streams_[i];
     if (outputStream->IsConfigureActive()) {
       res = outputStream->EndConfigure();
       if (0 != res) {
@@ -619,7 +621,7 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   frame_number_ = 0;
   InternalUpdateStatusLocked(STATE_CONFIGURED);
 
-  Vector<Camera3Stream* >::iterator it = deleted_streams_.begin();
+  auto it = deleted_streams_.begin();
   while (it != deleted_streams_.end()) {
     Camera3Stream *stream = *it;
     it = deleted_streams_.erase(it);
@@ -670,14 +672,13 @@ int32_t Camera3DeviceClient::DeleteStream(int streamId, bool cache) {
     input_stream_.stream_id = -1;
     // todo: wait for stream idle
   } else {
-    outputStreamIdx = streams_.indexOfKey(streamId);
-    if (outputStreamIdx == -ENOENT) {
+    if (streams_.count(streamId) == 0) {
       QMMF_ERROR("%s: Stream %d does not exist\n", __func__, streamId);
       res = -EINVAL;
       goto exit;
     }
 
-    stream = streams_.editValueAt(outputStreamIdx);
+    stream = streams_[streamId];
     if (request_handler_.IsStreamActive(*stream)) {
       QMMF_ERROR("%s: Stream %d still has pending requests\n", __func__,
                  streamId);
@@ -693,9 +694,9 @@ int32_t Camera3DeviceClient::DeleteStream(int streamId, bool cache) {
     pthread_mutex_lock(&lock_);
 
     // Remove stream after buffer returned from client
-    streams_.removeItem(streamId);
+    streams_.erase(streamId);
 
-    if (streams_.isEmpty()) {
+    if (streams_.empty()) {
       cam_feature_flags_ = static_cast<uint32_t>(CamFeatureFlag::kNone);
     }
 
@@ -703,7 +704,7 @@ int32_t Camera3DeviceClient::DeleteStream(int streamId, bool cache) {
     if (0 != res) {
       QMMF_ERROR("%s: Can't close deleted stream %d\n", __func__, streamId);
     }
-    if (!cache && !streams_.isEmpty()) {
+    if (!cache && !streams_.empty()) {
       reconfig_ = true;
       res = ConfigureStreamsLocked();
       if (0 != res) {
@@ -874,13 +875,7 @@ int32_t Camera3DeviceClient::CreateStream(
     goto exit;
   }
 
-  res = streams_.add(next_stream_id_, newStream);
-  if (res < 0) {
-    QMMF_ERROR("%s: Can't add new stream to set: %s (%d)\n", __func__,
-               strerror(-res), res);
-    goto exit;
-  }
-
+  streams_.emplace(next_stream_id_, newStream);
   reconfig_ = true;
 
   // Continue captures if active at start
@@ -1009,6 +1004,7 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
 
   assert(JPEG_BUFFER_SIZE_MIN < maxJpegBufferSize);
 
+#ifdef HAVE_BINDER
   // Calculate final jpeg buffer size for the given resolution.
   float scaleFactor =
       ((float)(width * height)) / (maxJpegSizeWidth * maxJpegSizeHeight);
@@ -1022,6 +1018,15 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
 
   QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%d",
       __func__, scaleFactor, jpegBufferSize);
+#else
+  // TODO: Check with camera team why this required
+  float scaleFactor = 2.0;
+  ssize_t jpegBufferSize = width * height * scaleFactor;
+
+  QMMF_INFO("%s: jpegBufferSize=%d",
+      __func__, jpegBufferSize);
+#endif
+
 
   return jpegBufferSize;
 }
@@ -1159,7 +1164,7 @@ bool Camera3DeviceClient::UpdatePartialTag(CameraMetadata &result, int32_t tag,
 
 int32_t Camera3DeviceClient::CancelRequest(int requestId,
                                            int64_t *lastFrameNumber) {
-  Vector<int32_t>::iterator it, end;
+  std::vector<int32_t>::iterator it, end;
   int32_t res = 0;
 
   pthread_mutex_lock(&lock_);
@@ -1340,8 +1345,9 @@ void Camera3DeviceClient::HandleCaptureResult(
 
   if ((shutterTimestamp == 0) && (NULL != result->output_buffers) &&
       (0 < result->num_output_buffers)) {
-    request.pendingBuffers.appendArray(result->output_buffers,
-                                       result->num_output_buffers);
+    for (uint32_t i = 0; i < result->num_output_buffers; ++i) {
+      request.pendingBuffers.push_back(result->output_buffers[i]);
+    }
   }
 
   if (result->result != NULL && !isPartialResult) {
@@ -1501,7 +1507,7 @@ void Camera3DeviceClient::NotifyShutter(const camera3_shutter_msg_t &msg) {
 
     SendCaptureResult(r.pendingMetadata, r.resultExtras,
                       r.partialResult.composedResult, msg.frame_number);
-    ReturnOutputBuffers(r.pendingBuffers.array(), r.pendingBuffers.size(),
+    ReturnOutputBuffers(r.pendingBuffers.data(), r.pendingBuffers.size(),
                         r.shutterTS, msg.frame_number);
     r.pendingBuffers.clear();
 
@@ -1621,15 +1627,15 @@ void Camera3DeviceClient::ReturnOutputBuffers(
 
 int32_t Camera3DeviceClient::ReturnStreamBuffer(StreamBuffer buffer) {
   Camera3Stream *stream;
-  int32_t streamIdx;
+  bool isStreamValid;
   int32_t res = 0;
   pthread_mutex_lock(&lock_);
 
-  streamIdx = streams_.indexOfKey(buffer.stream_id);
+  isStreamValid = (streams_.count(buffer.stream_id) != 0);
 
   switch (state_) {
     case STATE_ERROR:
-      if (streamIdx == -ENOENT) {
+      if (!isStreamValid) {
         QMMF_ERROR("%s: Device has encountered a serious error\n", __func__);
         res = -ENOSYS;
         goto exit;
@@ -1653,13 +1659,13 @@ int32_t Camera3DeviceClient::ReturnStreamBuffer(StreamBuffer buffer) {
       goto exit;
   }
 
-  if (streamIdx == -ENOENT) {
+  if (!isStreamValid) {
     QMMF_ERROR("%s: Stream %d does not exist\n", __func__, buffer.stream_id);
     res = -EINVAL;
     goto exit;
   }
 
-  stream = streams_.editValueAt(streamIdx);
+  stream = streams_[buffer.stream_id];
   if (0 != res) {
     QMMF_ERROR("%s: Can't return buffer to its stream: %s (%d)\n", __func__,
                strerror(-res), res);
@@ -1688,7 +1694,7 @@ void Camera3DeviceClient::RemovePendingRequestLocked(uint32_t frameNumber) {
           sensorTS, frameNumber, shutterTS);
     }
 
-    ReturnOutputBuffers(request.pendingBuffers.array(),
+    ReturnOutputBuffers(request.pendingBuffers.data(),
                         request.pendingBuffers.size(), 0,
                         frameNumber);
 
@@ -1751,12 +1757,12 @@ int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
 int32_t Camera3DeviceClient::SubmitRequest(Camera3Request request,
                                            bool streaming,
                                            int64_t *lastFrameNumber) {
-  std::list<Camera3Request> requestList;
+  std::vector<Camera3Request> requestList;
   requestList.push_back(request);
   return SubmitRequestList(requestList, streaming, lastFrameNumber);
 }
 
-int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> requests,
+int32_t Camera3DeviceClient::SubmitRequestList(std::vector<Camera3Request> requests,
                                                bool streaming,
                                                int64_t *lastFrameNumber) {
   int32_t res = 0;
@@ -1765,7 +1771,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
     return -EINVAL;
   }
 
-  List<const CameraMetadata> metadataRequestList;
+  std::vector<CameraMetadata> metadataRequestList;
   int32_t requestId = next_request_id_;
   int32_t temp_request_id = requestId;
 
@@ -1792,7 +1798,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
       goto exit;
   }
 
-  for (std::list<Camera3Request>::iterator it = requests.begin();
+  for (std::vector<Camera3Request>::iterator it = requests.begin();
        it != requests.end(); ++it) {
     Camera3Request request = *it;
     CameraMetadata metadata(request.metadata);
@@ -1800,7 +1806,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
       QMMF_ERROR("%s: Camera %d: Received invalid meta.\n", __func__, id_);
       res = -EINVAL;
       goto exit;
-    } else if (request.streamIds.isEmpty()) {
+    } else if (request.streamIds.empty()) {
       QMMF_ERROR(
           "%s: Camera %d: Requests must have at least one"
           " stream.\n",
@@ -1809,9 +1815,8 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
       goto exit;
     }
 
-    Vector<int32_t> request_stream_id;
-    request_stream_id.appendVector(request.streamIds);
-    request_stream_id.sort(compare);
+    std::vector<int32_t> request_stream_id {request.streamIds.begin(), request.streamIds.end()};
+    std::sort(request_stream_id.begin(), request_stream_id.end());
     int32_t prev_id = -1;
     int32_t input_stream_idx = -1;
     for (uint32_t i = 0; i < request_stream_id.size(); ++i) {
@@ -1821,7 +1826,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
         input_stream_idx = i;
         continue;
       }
-      Camera3Stream *stream = streams_.valueFor(request_stream_id[i]);
+      Camera3Stream *stream = streams_[request_stream_id[i]];
 
       if (NULL == stream) {
         QMMF_ERROR("%s: Camera %d: Request contains invalid stream!\n",
@@ -1841,7 +1846,8 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
     }
 
     if (0 <= input_stream_idx) {
-      request_stream_id.removeAt(input_stream_idx);
+      auto it = request_stream_id.begin();
+      request_stream_id.erase(it + input_stream_idx);
     }
     metadata.update(ANDROID_REQUEST_OUTPUT_STREAMS, &request_stream_id[0],
                     request_stream_id.size());
@@ -1874,7 +1880,7 @@ exit:
 }
 
 int32_t Camera3DeviceClient::AddRequestListLocked(
-    const List<const CameraMetadata> &requests, bool streaming,
+    const std::vector<CameraMetadata> &requests, bool streaming,
     int64_t *lastFrameNumber) {
   RequestList requestList;
   RequestList requestListReproc;
@@ -1916,7 +1922,7 @@ int32_t Camera3DeviceClient::AddRequestListLocked(
 }
 
 int32_t Camera3DeviceClient::GetRequestListLocked(
-    const List<const CameraMetadata> &metadataList,
+    const std::vector<CameraMetadata> &metadataList,
     RequestList *requestList,
     RequestList *requestListReproc) {
   if (requestList == NULL) {
@@ -1925,7 +1931,7 @@ int32_t Camera3DeviceClient::GetRequestListLocked(
   }
 
   int32_t burstId = 0;
-  for (List<const CameraMetadata>::const_iterator it = metadataList.begin();
+  for (std::vector<CameraMetadata>::const_iterator it = metadataList.begin();
        it != metadataList.end(); ++it) {
     CaptureRequest newRequest;
     int32_t res = GenerateCaptureRequestLocked(*it, newRequest);
@@ -1961,7 +1967,7 @@ int32_t Camera3DeviceClient::GenerateCaptureRequestLocked(
 
   if (state_ == STATE_NOT_CONFIGURED || reconfig_) {
     res = ConfigureStreamsLocked();
-    if (res == BAD_VALUE && state_ == STATE_NOT_CONFIGURED) {
+    if (res == -EINVAL && state_ == STATE_NOT_CONFIGURED) {
       QMMF_ERROR("%s: No streams configured\n", __func__);
       return -EINVAL;
     }
@@ -1986,13 +1992,13 @@ int32_t Camera3DeviceClient::GenerateCaptureRequestLocked(
   }
 
   for (uint32_t i = 0; i < streams.count; i++) {
-    int idx = streams_.indexOfKey(streams.data.i32[i]);
-    if (-ENOENT == idx) {
+    int idx = streams.data.i32[i];
+    if (streams_.count(idx) == 0) {
       QMMF_ERROR("%s: Request references unknown stream %d\n", __func__,
                  streams.data.u8[i]);
       return -EINVAL;
     }
-    Camera3Stream *stream = streams_.editValueAt(idx);
+    Camera3Stream *stream = streams_[idx];
 
     if (stream->IsConfigureActive()) {
       res = stream->EndConfigure();
@@ -2009,7 +2015,7 @@ int32_t Camera3DeviceClient::GenerateCaptureRequestLocked(
         return -ENOSYS;
     }
 
-    captureRequest.streams.push(stream);
+    captureRequest.streams.push_back(stream);
   }
   captureRequest.metadata.erase(ANDROID_REQUEST_OUTPUT_STREAMS);
 
@@ -2066,14 +2072,20 @@ void Camera3DeviceClient::SetErrorStateLocked(const char *fmt, ...) {
 }
 
 void Camera3DeviceClient::SetErrorStateLockedV(const char *fmt, va_list args) {
-  String8 errorCause = String8::formatV(fmt, args);
-  QMMF_ERROR("%s: Camera %d: %s\n", __func__, id_, errorCause.string());
+  va_list tmp_args;
+  va_copy(tmp_args, args);
+  const int size = std::vsnprintf(nullptr, 0, fmt, tmp_args);
+  va_end(tmp_args);
+
+  last_error_.clear();
+  last_error_.resize(size + 1, '\0');
+  std::vsnprintf(&last_error_[0], size + 1, fmt, args);
+
+  QMMF_ERROR("%s: Camera %d: %s\n", __func__, id_, last_error_.c_str());
 
   if (state_ == STATE_ERROR || state_ == STATE_NOT_INITIALIZED ||
       state_ == STATE_CLOSED)
     return;
-
-  last_error_ = errorCause;
 
   request_handler_.RequestExit();
   InternalUpdateStatusLocked(STATE_ERROR);
@@ -2183,7 +2195,7 @@ int32_t Camera3DeviceClient::WaitUntilDrainedLocked() {
 
 void Camera3DeviceClient::InternalUpdateStatusLocked(State state) {
   state_ = state;
-  current_state_updates_.add(state_);
+  current_state_updates_.push_back(state_);
   pthread_cond_broadcast(&state_updated_);
 }
 
@@ -2260,13 +2272,12 @@ int32_t Camera3DeviceClient::Prepare(int streamId) {
   pthread_mutex_lock(&lock_);
 
   Camera3Stream *stream;
-  int32_t outputStreamIdx = streams_.indexOfKey(streamId);
-  if (-ENOENT == outputStreamIdx) {
+  if (streams_.count(streamId) == 0) {
       QMMF_ERROR("%s: Stream %d is invalid!\n", __func__, streamId);
       res = -EINVAL;
   }
 
-  stream = streams_.editValueAt(outputStreamIdx);
+  stream = streams_[streamId];
   if (stream->IsStreamActive()) {
     QMMF_ERROR("%s: Stream %d has already received requests\n", __func__,
                streamId);
@@ -2295,13 +2306,12 @@ int32_t Camera3DeviceClient::TearDown(int streamId) {
   pthread_mutex_lock(&lock_);
 
   Camera3Stream *stream;
-  int32_t outputStreamIdx = streams_.indexOfKey(streamId);
-  if (-ENOENT == outputStreamIdx) {
+  if (streams_.count(streamId) == 0) {
       QMMF_ERROR("%s: Stream %d is invalid!\n", __func__, streamId);
       res = -EINVAL;
   }
 
-  stream = streams_.editValueAt(outputStreamIdx);
+  stream = streams_[streamId];
   if (request_handler_.IsStreamActive(*stream)) {
     QMMF_ERROR("%s: Stream %d already has pending requests\n", __func__,
                streamId);
@@ -2325,7 +2335,7 @@ int32_t Camera3DeviceClient::SetCameraSessionParam(
 
   session_metadata_.clear();
   res = session_metadata_.append(meta);
-  if (res != NO_ERROR)
+  if (res != 0)
     QMMF_ERROR("%s Append cammera session metadata failed!\n", __func__);
 
   pthread_mutex_unlock(&lock_);

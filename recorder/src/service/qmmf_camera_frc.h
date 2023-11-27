@@ -27,6 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #pragma once
 
 #include <cstdint>
@@ -52,13 +58,13 @@ class FrameRateController {
   status_t Stop();
 
   // Buffer Producer/Consumer APIs
-  status_t AddConsumer(sp<IBufferConsumer>& consumer);
-  status_t RemoveConsumer(sp<IBufferConsumer>& consumer);
+  status_t AddConsumer(std::shared_ptr<IBufferConsumer>& consumer);
+  status_t RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
   void OnFrameAvailable(StreamBuffer& buffer);
   void NotifyBufferReturned(StreamBuffer& buffer);
 
-  sp<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
+  std::shared_ptr<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
 
  private:
   bool SkipFrame(const StreamBuffer& buffer);
@@ -82,8 +88,8 @@ class FrameRateController {
   // Contains the debug flags set with the property.
   uint32_t                 debug_flags_;
 
-  sp<IBufferProducer>      buffer_producer_;
-  sp<IBufferConsumer>      buffer_consumer_;
+  std::shared_ptr<IBufferProducer>      buffer_producer_;
+  std::shared_ptr<IBufferConsumer>      buffer_consumer_;
 
   std::mutex               lock_;
   std::mutex               frame_lock_;

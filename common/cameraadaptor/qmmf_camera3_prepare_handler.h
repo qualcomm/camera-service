@@ -22,14 +22,11 @@
 #define CAMERA3PREPAREHANDLER_H_
 
 #include <pthread.h>
-#include <utils/List.h>
 
 #include "qmmf_camera3_types.h"
 #include "qmmf_camera3_internal_types.h"
 
 #include "common/utils/qmmf_thread.h"
-
-using namespace android;
 
 namespace qmmf {
 
@@ -57,7 +54,7 @@ class Camera3PrepareHandler : public ThreadHelper {
 
   PreparedCallback prepare_cb_;
   pthread_mutex_t lock_;
-  List<Camera3Stream *> streams_;
+  std::vector<Camera3Stream *> streams_;
   bool prepare_running_;
   bool abort_prepare_;
   Camera3Stream *prepared_stream_;

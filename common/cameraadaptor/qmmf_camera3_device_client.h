@@ -81,10 +81,11 @@
 #define CAMERA3DEVICE_H_
 
 #include <pthread.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <hardware/hardware.h>
-#include <utils/KeyedVector.h>
-#include <utils/List.h>
-#include <utils/RefBase.h>
+#else
+#include <hardware/camera_hardware.h>
+#endif // HAVE_ANDROID_UTILS
 #include <mutex>
 
 #ifdef TARGET_USES_GBM
@@ -123,8 +124,7 @@ namespace qmmf {
 namespace cameraadaptor {
 
 class Camera3DeviceClient : public camera3_callback_ops,
-                            public camera_module_callbacks_t,
-                            public RefBase {
+                            public camera_module_callbacks_t {
  public:
   Camera3DeviceClient(CameraClientCallbacks clientCb);
   virtual ~Camera3DeviceClient();
@@ -148,7 +148,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t CreateDefaultRequest(int templateId, CameraMetadata *request);
   int32_t SubmitRequest(Camera3Request request, bool streaming = false,
                         int64_t *lastFrameNumber = NULL);
-  int32_t SubmitRequestList(std::list<Camera3Request> requests,
+  int32_t SubmitRequestList(std::vector<Camera3Request> requests,
                             bool streaming = false,
                             int64_t *lastFrameNumber = NULL);
   int32_t ReturnStreamBuffer(StreamBuffer buffer);
@@ -184,7 +184,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   friend class Camera3Gtest;
   friend class DualCamera3Gtest;
 
-  int32_t AddRequestListLocked(const List<const CameraMetadata> &requests,
+  int32_t AddRequestListLocked(const std::vector<CameraMetadata> &requests,
                                bool streaming, int64_t *lastFrameNumber = NULL);
 
   void HandleCaptureResult(const camera3_capture_result *result);
@@ -258,7 +258,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   bool UpdatePartialTag(CameraMetadata &result, int32_t tag, const T *value,
                         uint32_t frameNumber);
 
-  int32_t GetRequestListLocked(const List<const CameraMetadata> &metadataList,
+  int32_t GetRequestListLocked(const std::vector<CameraMetadata> &metadataList,
                                RequestList *requestList,
                                RequestList *requestListReproc);
   int32_t GenerateCaptureRequestLocked(const CameraMetadata &request,
@@ -275,14 +275,14 @@ class Camera3DeviceClient : public camera3_callback_ops,
   pthread_mutex_t lock_;
   CameraClientCallbacks client_cb_;
 
-  String8 last_error_;
+  std::string last_error_;
   uint32_t id_;
 
   State state_;
   bool flush_on_going_;
 
-  KeyedVector<int, Camera3Stream *> streams_;
-  Vector<Camera3Stream *> deleted_streams_;
+  std::map<int, Camera3Stream *> streams_;
+  std::vector<Camera3Stream *> deleted_streams_;
 
   int next_stream_id_;
   bool reconfig_;
@@ -297,7 +297,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   CameraMetadata device_info_;
   IAllocDevice* alloc_device_interface_;
 
-  Vector<int32_t> repeating_requests_;
+  std::vector<int32_t> repeating_requests_;
   int32_t next_request_id_;
   uint32_t frame_number_;
   uint32_t next_shutter_frame_number_;
@@ -311,7 +311,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   Camera3RequestHandler request_handler_;
 
   bool pause_state_notify_;
-  Vector<State> current_state_updates_;
+  std::vector<State> current_state_updates_;
   int state_listeners_;
   pthread_cond_t state_updated_;
   static const int64_t WAIT_FOR_SHUTDOWN = 10e9;  // 10 sec.

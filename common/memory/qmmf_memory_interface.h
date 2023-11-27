@@ -63,20 +63,20 @@
 
 #pragma once
 
-#ifdef TARGET_USES_GRALLOC1
-#include <grallocusage/GrallocUsageConversion.h>
-#include <libgralloc1/gralloc_priv.h>
-#elif TARGET_USES_GBM
-#ifdef __LIBGBM__
-#include <hardware/camera.h>
+#ifdef TARGET_USES_GBM
+#ifdef HAVE_ANDROID_UTILS
+#include <system/window.h>
+#else
+// TODO: update when camera exports this header
+#include <hardware/graphics.h>
+#include <hardware/native_handle.h>
+
 #define GRALLOC_USAGE_PROTECTED                  0x00004000
 #define GRALLOC_USAGE_SW_READ_OFTEN              0x00000003
 #define GRALLOC_USAGE_SW_WRITE_OFTEN             0x00000030
 #define GRALLOC_USAGE_HW_FB                      0x00001000
 #define GRALLOC_USAGE_HW_CAMERA_ZSL              0x00060000
-#else
-#include <system/window.h>
-#endif
+#endif // HAVE_ANDROID_UTILS
 
 // todo: add and move to platform specific header
 #define HAL_PIXEL_FORMAT_RAW8                    0x123
@@ -94,16 +94,14 @@
 #define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC         0x10000000 // GRALLOC_USAGE_PRIVATE_0
 #define GRALLOC_USAGE_PRIVATE_ALLOC_10BIT        0x40000000 // GRALLOC_USAGE_PRIVATE_2
 #define GRALLOC_USAGE_PRIVATE_UNCACHED           0x02000000
+#ifndef HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS      0x7FA30C04
+#endif
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC 0x7FA30C06
 #define HAL_PIXEL_FORMAT_YCbCr_422_I_10BIT       0x4C595559
 #define HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC     0x7FA30C09
 
-#ifdef __LIBGBM__
-struct private_handle_t : public gbm_bo {
-#else
 struct private_handle_t : public native_handle {
-#endif
   enum {
       PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
       PRIV_FLAGS_VIDEO_ENCODER = 0x00010000
@@ -122,13 +120,8 @@ struct private_handle_t : public native_handle {
 
   static const int sNumFds = 2;
   static inline int sNumInts() {
-#ifdef __LIBGBM__
-      return (((sizeof(private_handle_t) - sizeof(struct gbm_bo*)) /
-              sizeof(int)) - sNumFds);
-#else
       return (((sizeof(private_handle_t) - sizeof(native_handle_t)) /
               sizeof(int)) - sNumFds);
-#endif
   }
 
   private_handle_t(int fd, unsigned int size, int flags, int bufferType,
@@ -136,19 +129,14 @@ struct private_handle_t : public native_handle {
       fd(fd), flags(flags), size(size), offset(0), bufferType(bufferType),
       format(format), width(width), height(height), unaligned_width(width),
       unaligned_height(height) {
-#ifndef __LIBGBM__
     version = (int) sizeof(native_handle);
     numInts = sNumInts();
     numFds = sNumFds;
-#endif
   };
 
   ~private_handle_t() {
   };
 };
-
-#else
-#include <qcom/display/gralloc_priv.h>
 #endif
 #include <unordered_map>
 
@@ -433,17 +421,8 @@ class AllocUsageFactory {
  */
 
 // Support for code with hard dependency to native handles.
-#ifdef TARGET_USES_GRALLOC1
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
-gralloc1_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
-#elif TARGET_USES_GRALLOC2
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
-gralloc2_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
-#elif TARGET_USES_GBM
+#ifdef TARGET_USES_GBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle);
 struct gbm_device *GetAllocDeviceHandle(const IAllocDevice &handle);
 buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle);
-#else
-buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
-alloc_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
 #endif

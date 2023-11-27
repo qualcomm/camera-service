@@ -64,14 +64,20 @@
 #pragma once
 
 #include <iomanip>
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include <unistd.h>
 
+#ifdef HAVE_BINDER
 #include <binder/IBinder.h>
 #include <binder/IServiceManager.h>
 #include <binder/Parcel.h>
+#else
+#include "common/utils/qmmf_thread.h"
+#include "common/proto/qmmf.pb.h"
+#endif // HAVE_BINDER
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
@@ -87,38 +93,6 @@ using ::std::string;
 using ::std::stringstream;
 
 #define QMMF_RECORDER_SERVICE_NAME "qmmf_recorder.service"
-
-enum QMMF_RECORDER_SERVICE_CMDS {
-  RECORDER_CONNECT = IBinder::FIRST_CALL_TRANSACTION,
-  RECORDER_DISCONNECT,
-  RECORDER_START_CAMERA,
-  RECORDER_STOP_CAMERA,
-  RECORDER_CREATE_SESSION,
-  RECORDER_DELETE_SESSION,
-  RECORDER_START_SESSION,
-  RECORDER_STOP_SESSION,
-  RECORDER_PAUSE_SESSION,
-  RECORDER_RESUME_SESSION,
-  RECORDER_GET_NUMBER_OF_CAMERAS,
-  RECORDER_CREATE_VIDEOTRACK,
-  RECORDER_DELETE_VIDEOTRACK,
-  RECORDER_RETURN_TRACKBUFFER,
-  RECORDER_SET_VIDEOTRACK_PARAMS,
-  RECORDER_CAPTURE_IMAGE,
-  RECORDER_CONFIG_IMAGECAPTURE,
-  RECORDER_CANCEL_IMAGECAPTURE,
-  RECORDER_RETURN_IMAGECAPTURE_BUFFER,
-  RECORDER_SET_CAMERA_PARAMS,
-  RECORDER_GET_CAMERA_PARAMS,
-  RECORDER_SET_CAMERA_SESSION_PARAMS,
-  RECORDER_SET_SHDR,
-  RECORDER_GET_DEFAULT_CAPTURE_PARAMS,
-  RECORDER_GET_CAMERA_CHARACTERISTICS,
-  RECORDER_GET_VENDOR_TAG_DESCRIPTOR,
-  RECORDER_CONFIGURE_OFFLINE_JPEG,
-  RECORDER_ENCODE_OFFLINE_JPEG,
-  RECORDER_DESTROY_OFFLINE_JPEG,
-};
 
 struct BnBuffer {
   int32_t   ion_fd;
@@ -145,6 +119,7 @@ struct BnBuffer {
     return stream.str();
   }
 
+#ifdef HAVE_BINDER
   void ToParcel(Parcel* parcel, bool writeFileDescriptor) const {
     if (writeFileDescriptor) {
       if (ion_meta_fd == -1) {
@@ -188,16 +163,57 @@ struct BnBuffer {
     flags = parcel.readUint32();
     capacity = parcel.readUint32();
   }
+#endif // HAVE_BINDER
 };
 
 class IRecorderServiceCallback;
+
+#ifdef HAVE_BINDER
+enum QMMF_RECORDER_SERVICE_CMDS {
+  RECORDER_CONNECT = IBinder::FIRST_CALL_TRANSACTION,
+  RECORDER_DISCONNECT,
+  RECORDER_START_CAMERA,
+  RECORDER_STOP_CAMERA,
+  RECORDER_CREATE_SESSION,
+  RECORDER_DELETE_SESSION,
+  RECORDER_START_SESSION,
+  RECORDER_STOP_SESSION,
+  RECORDER_PAUSE_SESSION,
+  RECORDER_RESUME_SESSION,
+  RECORDER_GET_NUMBER_OF_CAMERAS,
+  RECORDER_CREATE_VIDEOTRACK,
+  RECORDER_DELETE_VIDEOTRACK,
+  RECORDER_RETURN_TRACKBUFFER,
+  RECORDER_SET_VIDEOTRACK_PARAMS,
+  RECORDER_CAPTURE_IMAGE,
+  RECORDER_CONFIG_IMAGECAPTURE,
+  RECORDER_CANCEL_IMAGECAPTURE,
+  RECORDER_RETURN_IMAGECAPTURE_BUFFER,
+  RECORDER_SET_CAMERA_PARAMS,
+  RECORDER_GET_CAMERA_PARAMS,
+  RECORDER_SET_CAMERA_SESSION_PARAMS,
+  RECORDER_SET_SHDR,
+  RECORDER_GET_DEFAULT_CAPTURE_PARAMS,
+  RECORDER_GET_CAMERA_CHARACTERISTICS,
+  RECORDER_GET_VENDOR_TAG_DESCRIPTOR,
+  RECORDER_CONFIGURE_OFFLINE_JPEG,
+  RECORDER_ENCODE_OFFLINE_JPEG,
+  RECORDER_DESTROY_OFFLINE_JPEG,
+};
+
 class IRecorderService : public IInterface {
  public:
   DECLARE_META_INTERFACE(RecorderService);
 
   virtual status_t Connect(const sp<IRecorderServiceCallback>& service_cb,
                            uint32_t* client_id) = 0;
-
+#else
+class IRecorderService {
+ public:
+  virtual status_t Connect (const std::shared_ptr<IRecorderServiceCallback>&
+                            service_cb,
+                            uint32_t* client_id) = 0;
+#endif // HAVE_BINDER
   virtual status_t Disconnect(const uint32_t client_id) = 0;
 
   virtual status_t StartCamera(const uint32_t client_id,
@@ -308,6 +324,7 @@ class IRecorderService : public IInterface {
   virtual status_t DestroyOfflineJPEG(const uint32_t client_id) = 0;
 };
 
+#ifdef HAVE_BINDER
 enum RECORDER_SERVICE_CB_CMDS{
   RECORDER_NOTIFY_EVENT=IBinder::FIRST_CALL_TRANSACTION,
   RECORDER_NOTIFY_SESSION_EVENT,
@@ -322,6 +339,11 @@ enum RECORDER_SERVICE_CB_CMDS{
 class IRecorderServiceCallback : public IInterface {
  public:
   DECLARE_META_INTERFACE(RecorderServiceCallback);
+#else
+class IRecorderServiceCallback {
+ public:
+  virtual status_t Init(uint32_t client_id, uint32_t server_pid = 0) = 0;
+#endif // HAVE_BINDER
 
   virtual void NotifyRecorderEvent(EventType event_type, void *event_data,
                                    size_t event_data_size) = 0;
@@ -355,11 +377,38 @@ class IRecorderServiceCallback : public IInterface {
 };
 
 //This class is responsible to provide callbacks from recoder service.
-class BnRecorderServiceCallback : public BnInterface<IRecorderServiceCallback> {
+#ifdef HAVE_BINDER
+class RecorderServiceCallbackStub : public BnInterface<IRecorderServiceCallback> {
  public:
   virtual status_t onTransact(uint32_t code, const Parcel& data,
                               Parcel* reply, uint32_t flags = 0) override;
 };
+#else
+class RecorderServiceCallbackStub : public IRecorderServiceCallback,
+                                    public ThreadHelper   {
+ public:
+  RecorderServiceCallbackStub();
+  ~RecorderServiceCallbackStub();
+  status_t Init(uint32_t client_id, uint32_t server_pid);
+ protected:
+  bool ThreadLoop() override;
+ private:
+  status_t ProcessCallbackMsg (RecorderClientCallbacksAsync &msg);
+
+  int32_t server_pid_;
+  std::string socket_path_;
+  int32_t cb_socket_;
+  int32_t client_socket_;
+  // TODO: check buffer size
+  char buffer_[64000] = {0};
+  // Map of server buffer fd to client dupped fd
+  std::map<int32_t, int32_t> ion_fd_map_;
+  // Map of server meta fd to client dupped meta fd
+  std::map<int32_t, int32_t> meta_fd_map_;
+  // lock to protect dupped fd maps
+  std::mutex  fd_map_lock_;
+};
+#endif // HAVE_BINDER
 
 }; //namespace recorder
 

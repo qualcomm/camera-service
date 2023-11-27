@@ -72,7 +72,7 @@ CameraMetadata &CameraMetadata::operator=(const camera_metadata_t *buffer) {
         return *this;
     }
 
-    if (CC_LIKELY(buffer != mBuffer)) {
+    if (!!(buffer != mBuffer)) {
         camera_metadata_t *newBuffer = clone_camera_metadata(buffer);
         clear();
         mBuffer = newBuffer;
@@ -133,7 +133,7 @@ void CameraMetadata::acquire(camera_metadata_t *buffer) {
     clear();
     mBuffer = buffer;
 
-    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == OK);
+    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
 }
 
 void CameraMetadata::acquire(CameraMetadata &other) {
@@ -179,11 +179,11 @@ status_t CameraMetadata::sort() {
 
 status_t CameraMetadata::checkType(uint32_t tag, uint8_t expectedType) {
     int tagType = get_camera_metadata_tag_type(tag);
-    if ( CC_UNLIKELY(tagType == -1)) {
+    if (tagType == -1) {
         QMMF_ERROR("Update metadata entry: Unknown tag %d", tag);
         return -ENOSYS;
     }
-    if ( CC_UNLIKELY(tagType != expectedType) ) {
+    if ( tagType != expectedType) {
         QMMF_ERROR("Mismatched tag type when updating entry %s (%d) of type %s; "
                 "got type %s data instead ",
                 get_camera_metadata_tag_name(tag), tag,
@@ -201,7 +201,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_INT32)) != OK) {
+    if ( (res = checkType(tag, TYPE_INT32)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -214,7 +214,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_BYTE)) != OK) {
+    if ( (res = checkType(tag, TYPE_BYTE)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -227,7 +227,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_FLOAT)) != OK) {
+    if ( (res = checkType(tag, TYPE_FLOAT)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -240,7 +240,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_INT64)) != OK) {
+    if ( (res = checkType(tag, TYPE_INT64)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -253,7 +253,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_DOUBLE)) != OK) {
+    if ( (res = checkType(tag, TYPE_DOUBLE)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -266,7 +266,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_RATIONAL)) != OK) {
+    if ( (res = checkType(tag, TYPE_RATIONAL)) != 0) {
         return res;
     }
     return updateImpl(tag, (const void*)data, data_count);
@@ -279,7 +279,7 @@ status_t CameraMetadata::update(uint32_t tag,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    if ( (res = checkType(tag, TYPE_BYTE)) != OK) {
+    if ( (res = checkType(tag, TYPE_BYTE)) != 0) {
         return res;
     }
     // string.size() doesn't count the null termination character.
@@ -326,13 +326,13 @@ status_t CameraMetadata::updateImpl(uint32_t tag, const void *data,
         }
     }
 
-    if (res != OK) {
+    if (res != 0) {
         QMMF_ERROR("%s: Unable to update metadata entry %s.%s (%x): %s (%d)",
                 __FUNCTION__, get_camera_metadata_section_name(tag),
                 get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
     }
 
-    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == OK);
+    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
 
     return res;
 }
@@ -351,7 +351,7 @@ camera_metadata_entry_t CameraMetadata::find(uint32_t tag) {
         return entry;
     }
     res = find_camera_metadata_entry(mBuffer, tag, &entry);
-    if (CC_UNLIKELY( res != OK )) {
+    if (res != 0) {
         entry.count = 0;
         entry.data.u8 = NULL;
     }
@@ -362,7 +362,7 @@ camera_metadata_ro_entry_t CameraMetadata::find(uint32_t tag) const {
     status_t res;
     camera_metadata_ro_entry entry;
     res = find_camera_metadata_ro_entry(mBuffer, tag, &entry);
-    if (CC_UNLIKELY( res != OK )) {
+    if (res != 0 ) {
         entry.count = 0;
         entry.data.u8 = NULL;
     }
@@ -442,7 +442,7 @@ status_t CameraMetadata::resizeIfNeeded(size_t extraEntries, size_t extraData) {
 status_t CameraMetadata::readFromParcel(const Parcel& data,
                                         camera_metadata_t** out) {
 
-    status_t err = OK;
+    status_t err = 0;
 
     camera_metadata_t* metadata = NULL;
 
@@ -453,7 +453,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
     // See CameraMetadata::writeToParcel for parcel data layout diagram and explanation.
     // arg0 = blobSize (int32)
     int32_t blobSizeTmp = -1;
-    if ((err = data.readInt32(&blobSizeTmp)) != OK) {
+    if ((err = data.readInt32(&blobSizeTmp)) != 0) {
         QMMF_ERROR("%s: Failed to read metadata size (error %d %s)",
               __FUNCTION__, err, strerror(-err));
         return err;
@@ -481,7 +481,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
     ReadableBlob blob;
     // arg1 = metadata (blob)
     do {
-        if ((err = data.readBlob(blobSize, &blob)) != OK) {
+        if ((err = data.readBlob(blobSize, &blob)) != 0) {
             QMMF_ERROR("%s: Failed to read metadata blob (sized %zu). Possible "
                   " serialization bug. Error %d %s",
                   __FUNCTION__, blobSize, err, strerror(-err));
@@ -491,7 +491,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
         // arg2 = offset (blob)
         // Must be after blob since we don't know offset until after writeBlob.
         int32_t offsetTmp;
-        if ((err = data.readInt32(&offsetTmp)) != OK) {
+        if ((err = data.readInt32(&offsetTmp)) != 0) {
             QMMF_ERROR("%s: Failed to read metadata offsetTmp (error %d %s)",
                   __FUNCTION__, err, strerror(-err));
             break;
@@ -532,7 +532,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
 
 status_t CameraMetadata::writeToParcel(Parcel& data,
                                        const camera_metadata_t* metadata) {
-    status_t res = OK;
+    status_t res = 0;
 
     /**
      * Below is the camera metadata parcel layout:
@@ -599,7 +599,7 @@ status_t CameraMetadata::writeToParcel(Parcel& data,
     WritableBlob blob;
     do {
         res = data.writeBlob(blobSize, false, &blob);
-        if (res != OK) {
+        if (res != 0) {
             break;
         }
         const uintptr_t metadataStart = ALIGN_TO(blob.data(), alignment);
@@ -611,7 +611,7 @@ status_t CameraMetadata::writeToParcel(Parcel& data,
 
         // Not too big of a problem since receiving side does hard validation
         // Don't check the size since the compact size could be larger
-        if (validate_camera_metadata_structure(metadata, /*size*/NULL) != OK) {
+        if (validate_camera_metadata_structure(metadata, /*size*/NULL) != 0) {
             QMMF_WARN("%s: Failed to validate metadata %p before writing blob",
                    __FUNCTION__, metadata);
         }
@@ -711,8 +711,6 @@ status_t CameraMetadata::getTagFromName(const char *name,
         const char *str = (i < ANDROID_SECTION_COUNT) ? camera_metadata_section_names[i] :
                 vendorSections[i - ANDROID_SECTION_COUNT].c_str();
 
-        //ALOGV("%s: Trying to match against section '%s'", __FUNCTION__, str);
-
         if (strstr(name, str) == name) { // name begins with the section name
             size_t strLength = strlen(str);
 
@@ -770,8 +768,8 @@ status_t CameraMetadata::getTagFromName(const char *name,
         const std::string sectionName(section);
         const std::string tagName(nameTagName);
 
-        status_t res = OK;
-        if ((res = vTags->lookupTag(tagName, sectionName, &candidateTag)) != OK) {
+        status_t res = 0;
+        if ((res = vTags->lookupTag(tagName, sectionName, &candidateTag)) != 0) {
             return -ENOENT;
         }
     }

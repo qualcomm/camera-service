@@ -63,8 +63,6 @@
 
 #pragma once
 
-#include <utils/RefBase.h>
-
 #include "common/utils/qmmf_common_utils.h"
 #include "common/utils/qmmf_condition.h"
 #include "common/utils/qmmf_log.h"
@@ -73,12 +71,10 @@ namespace qmmf {
 
 namespace recorder {
 
-using namespace android;
-
 class IBufferConsumer;
 
 // Buffer Producer interface.
-class IBufferProducer : public RefBase {
+class IBufferProducer {
  public:
   virtual ~IBufferProducer() {}
 
@@ -90,15 +86,15 @@ class IBufferProducer : public RefBase {
   virtual void NotifyBufferReturned(StreamBuffer& buffer) = 0;
 
   // By using this method consumer can be added to producer's list of consumer.
-  virtual void AddConsumer(const sp<IBufferConsumer>& consumer) = 0;
+  virtual void AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer) = 0;
 
   // Consumer can be removed at any point of time.
-  virtual void RemoveConsumer(sp<IBufferConsumer>& consumer) = 0;
+  virtual void RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer) = 0;
 
   virtual status_t CheckAndWaitPendingBuffers() = 0;
 
   // Check if the buffer consumer is already connected to this producer.
-  bool IsConnected(const sp<IBufferConsumer>& consumer) {
+  bool IsConnected(const std::shared_ptr<IBufferConsumer>& consumer) {
     std::lock_guard<std::mutex> lock(lock_);
     return IsConnectedLocked(consumer);
   }
@@ -110,7 +106,7 @@ class IBufferProducer : public RefBase {
   }
 
  protected:
-  bool IsConnectedLocked(const sp<IBufferConsumer>& consumer) {
+  bool IsConnectedLocked(const std::shared_ptr<IBufferConsumer>& consumer) {
     uintptr_t key = reinterpret_cast<uintptr_t>(consumer.get());
     return (buffer_consumers_.count(key) != 0) ? true : false;
   }
@@ -129,10 +125,10 @@ class IBufferProducer : public RefBase {
   std::map<IBufferHandle, uint32_t>  buffers_;
 
   // List of consumers.
-  std::map<uintptr_t, sp<IBufferConsumer>> buffer_consumers_;
+  std::map<uintptr_t, std::shared_ptr<IBufferConsumer>> buffer_consumers_;
 };
 
-class IBufferConsumer : public RefBase {
+class IBufferConsumer {
  public:
   virtual ~IBufferConsumer() {}
 
@@ -140,20 +136,20 @@ class IBufferConsumer : public RefBase {
   virtual void OnFrameAvailable(StreamBuffer& buffer) = 0;
 
   // Set handle of producer, would be used to return buffers back to producer.
-  void SetProducerHandle(sp<IBufferProducer>& producer) {
+  void SetProducerHandle(std::shared_ptr<IBufferProducer>& producer) {
     assert(producer.get() != nullptr);
     buffer_producer_ = producer;
   }
 
   // Reset producer handle to nullptr, used when the consumer is disconnected
   // from a producer.
-  void ClearProducerHandle() { buffer_producer_.clear(); }
+  void ClearProducerHandle() { buffer_producer_.reset(); }
 
   // Get handle of producer, used to return buffers back to producer.
-  sp<IBufferProducer>& GetProducerHandle() { return buffer_producer_; }
+  std::shared_ptr<IBufferProducer>& GetProducerHandle() { return buffer_producer_; }
 
  protected:
-  sp<IBufferProducer> buffer_producer_;
+  std::shared_ptr<IBufferProducer> buffer_producer_;
 
 };
 
@@ -168,9 +164,9 @@ class BufferProducerImpl : public IBufferProducer {
 
   void NotifyBufferReturned(StreamBuffer& Buffer);
 
-  void AddConsumer(const sp<IBufferConsumer>& consumer);
+  void AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer);
 
-  void RemoveConsumer(sp<IBufferConsumer>& consumer);
+  void RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
   status_t CheckAndWaitPendingBuffers();
 
@@ -265,7 +261,7 @@ void BufferProducerImpl<_type>::NotifyBufferReturned(StreamBuffer& buffer) {
 }
 
 template <typename _type>
-void BufferProducerImpl<_type>::AddConsumer(const sp<IBufferConsumer>&
+void BufferProducerImpl<_type>::AddConsumer(const std::shared_ptr<IBufferConsumer>&
                                             consumer) {
 
   assert(consumer.get() != nullptr);
@@ -283,7 +279,7 @@ void BufferProducerImpl<_type>::AddConsumer(const sp<IBufferConsumer>&
 }
 
 template <typename _type>
-void BufferProducerImpl<_type>::RemoveConsumer(sp<IBufferConsumer>& consumer) {
+void BufferProducerImpl<_type>::RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer) {
 
   assert(consumer.get() != nullptr);
   std::lock_guard<std::mutex> lock(lock_);

@@ -145,11 +145,11 @@ class CameraInterface {
 
   /// Add consumer
   virtual status_t AddConsumer(const uint32_t& track_id,
-                               sp<IBufferConsumer>& consumer) = 0;
+                               std::shared_ptr<IBufferConsumer>& consumer) = 0;
 
   /// Remove consumer
   virtual status_t RemoveConsumer(const uint32_t& track_id,
-                                  sp<IBufferConsumer>& consumer) = 0;
+                                  std::shared_ptr<IBufferConsumer>& consumer) = 0;
 
   /// Start stream
   virtual status_t StartStream(const uint32_t track_id) = 0;

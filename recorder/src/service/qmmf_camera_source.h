@@ -66,6 +66,7 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include <mutex>
 
@@ -75,21 +76,14 @@
 #include "common/utils/qmmf_condition.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_camera_interface.h"
-#ifndef CAMERA_HAL1_SUPPORT
 #include "common/cameraadaptor/qmmf_camera3_device_client.h"
 #include "recorder/src/service/qmmf_camera_context.h"
-#else
-#include "recorder/src/service/qmmf_camera_context_hal1.h"
-#endif
 #include "recorder/src/service/qmmf_camera_rescaler.h"
 #include "recorder/src/service/qmmf_camera_frc.h"
 
 namespace qmmf {
 
-#ifndef CAMERA_HAL1_SUPPORT
 using namespace cameraadaptor;
-#endif
-using namespace android;
 
 namespace recorder {
 
@@ -320,16 +314,16 @@ class TrackSource {
   bool IsSlaveTrack() {return slave_track_source_; };
 
   /// Add track source Consumer
-  status_t AddConsumer(const sp<IBufferConsumer>& consumer);
+  status_t AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer);
 
   /// Remove track source Consumer
-  status_t RemoveConsumer(sp<IBufferConsumer>& consumer);
+  status_t RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
  private:
 
   // Method to provide consumer interface, it would be used by producer to
   // post buffers.
-  sp<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
+  std::shared_ptr<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
 
   void ReturnBufferToProducer(StreamBuffer& buffer);
 
@@ -361,8 +355,8 @@ class TrackSource {
   std::shared_ptr<FrameRateController> frc_;
   std::shared_ptr<CameraRescaler>      rescaler_;
 
-  sp<IBufferConsumer>    buffer_consumer_;
-  sp<IBufferProducer>    buffer_producer_;
+  std::shared_ptr<IBufferConsumer>    buffer_consumer_;
+  std::shared_ptr<IBufferProducer>    buffer_producer_;
   std::mutex             consumer_lock_;
   uint32_t               num_consumers_;
 

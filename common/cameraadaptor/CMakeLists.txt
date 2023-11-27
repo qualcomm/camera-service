@@ -15,7 +15,13 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera3_stream.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera3_utils.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera3_smooth_zoom.cc
 )
+
+if (HAVE_BINDER_H)
 add_dependencies(qmmf_camera_adaptor qmmf_utils)
+else()
+add_dependencies(qmmf_camera_adaptor qmmf_proto qmmf_utils)
+endif()
+
 
 target_include_directories(qmmf_camera_adaptor
  PRIVATE ${TOP_DIRECTORY})
@@ -38,13 +44,12 @@ target_compile_definitions(qmmf_camera_adaptor PRIVATE
 )
 
 install(TARGETS qmmf_camera_adaptor DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata qmmf_utils pthread dl
-hardware qmmf_memory_interface)
+target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata qmmf_utils pthread dl qmmf_memory_interface)
 if(HAVE_ANDROID_UTILS)
-target_link_libraries(qmmf_camera_adaptor log binder utils cutils)
+target_link_libraries(qmmf_camera_adaptor log binder utils cutils hardware)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(qmmf_camera_adaptor propertyvault)
+target_link_libraries(qmmf_camera_adaptor propertyvault camera_hardware)
 endif()
 
 if(NOT CAMERA_CLIENT_DISABLED)

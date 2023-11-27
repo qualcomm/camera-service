@@ -26,7 +26,9 @@
 #ifndef CAMERA3INTERNALTYPES_H_
 #define CAMERA3INTERNALTYPES_H_
 
+#include <atomic>
 #include <map>
+#include <vector>
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
 
@@ -50,12 +52,12 @@ typedef struct : public camera3_stream_t {
 
 typedef struct CaptureRequest_t {
   CameraMetadata metadata;
-  Vector<Camera3Stream *> streams;
+  std::vector<Camera3Stream *> streams;
   CaptureResultExtras resultExtras;
   Camera3InputStream *input;
 } CaptureRequest;
 
-typedef List<CaptureRequest> RequestList;
+typedef std::vector<CaptureRequest> RequestList;
 
 struct PendingRequest {
   int64_t shutterTS;
@@ -65,7 +67,7 @@ struct PendingRequest {
   bool isMetaPresent;
   int buffersRemaining;
   CameraMetadata pendingMetadata;
-  Vector<camera3_stream_buffer_t> pendingBuffers;
+  std::vector<camera3_stream_buffer_t> pendingBuffers;
 
   struct PartialResult {
     bool partial3AReceived;
@@ -77,7 +79,7 @@ struct PendingRequest {
   PendingRequest()
       : shutterTS(0),
         sensorTS(0),
-        status(OK),
+        status(0),
         isMetaPresent(false),
         buffersRemaining(0) {}
 
@@ -85,7 +87,7 @@ struct PendingRequest {
       : shutterTS(0),
         sensorTS(0),
         resultExtras(extras),
-        status(OK),
+        status(0),
         isMetaPresent(false),
         buffersRemaining(numBuffers) {}
 };

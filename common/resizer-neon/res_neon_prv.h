@@ -35,7 +35,6 @@
 #include <mutex>
 #include <vector>
 #include <map>
-#include <utils/Timers.h>
 
 #include "common/utils/qmmf_condition.h"
 
@@ -90,7 +89,7 @@ class NeonThrdArgs {
 
   static const std::map<ResMethod, pfunc> func_y_;
   static const std::map<ResMethod, pfunc> func_uv_;
-  static const nsecs_t kFrameTimeout  = 5000000000; // 5s.
+  static const int64_t kFrameTimeout  = 5000000000; // 5s.
 
  protected:
   static void *NeonThreadYPass(void* arg);

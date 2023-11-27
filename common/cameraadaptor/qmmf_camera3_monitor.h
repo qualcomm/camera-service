@@ -27,14 +27,16 @@
 #ifndef CAMERA3MONITOR_H_
 #define CAMERA3MONITOR_H_
 
+#include <map>
+#include <vector>
+
 #include <pthread.h>
 #include <functional>
-#include <utils/Vector.h>
-#include <utils/KeyedVector.h>
 
 #include "common/utils/qmmf_thread.h"
-
+#ifdef HAVE_ANDROID_UTILS
 using namespace android;
+#endif // HAVE_ANDROID_UTILS
 
 namespace qmmf {
 
@@ -78,7 +80,7 @@ class Camera3Monitor : public ThreadHelper {
   };
   pthread_mutex_t input_lock_;
   pthread_cond_t input_signal_;
-  Vector<StateTransition> input_queue_;
+  std::vector<StateTransition> input_queue_;
   bool monitor_updated_;
   bool exit_pending_;
 
@@ -86,9 +88,9 @@ class Camera3Monitor : public ThreadHelper {
 
   pthread_mutex_t lock_;
   int32_t next_monitor_;
-  KeyedVector<int32_t, MonitorState> monitor_states_;
+  std::map<int32_t, MonitorState> monitor_states_;
   MonitorState composite_state_;
-  Vector<MonitorState> updated_states_;
+  std::vector<MonitorState> updated_states_;
 
   static const int64_t WAIT_TIMEOUT = 250000000LL;  // 250 ms
 };

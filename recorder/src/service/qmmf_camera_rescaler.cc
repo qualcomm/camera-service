@@ -76,10 +76,8 @@
 
 #include "common/resizer-neon/qmmf_resizer_neon.h"
 #include "common/resizer-c2d/qmmf_resizer_c2d.h"
-#ifndef CAMERA_HAL1_SUPPORT
 #ifdef ENABLE_RESCALER_FASTCV
 #include "common/resizer-fastCV/qmmf_resizer_fastCV.h"
-#endif
 #endif
 
 namespace qmmf {
@@ -95,7 +93,7 @@ using ::std::chrono::duration_cast;
 CameraRescalerBase::CameraRescalerBase()
     :CameraRescalerThread() {
   QMMF_INFO("%s: Enter", __func__);
-  char prop[PROPERTY_VALUE_MAX];
+  char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
 #ifdef ENABLE_RESCALER_NEON
   property_get("persist.qmmf.rescaler.type", prop, "Neon");
@@ -105,7 +103,6 @@ CameraRescalerBase::CameraRescalerBase()
   property_get("persist.qmmf.rescaler.type", prop, "FastCV");
 #endif
   std::string name = prop;
-#ifndef CAMERA_HAL1_SUPPORT
   if (name == "Neon") {
 #ifdef ENABLE_RESCALER_NEON
       rescaler_ = new NEONResizer();
@@ -119,13 +116,6 @@ CameraRescalerBase::CameraRescalerBase()
     rescaler_ = new C2DResizer();
 #endif
   }
-#else
-  if (name == "Neon") {
-    rescaler_ = new NEONResizer();
-  } else {
-    rescaler_ = new C2DResizer();
-  }
-#endif
 
   memset(prop, 0, sizeof(prop));
   property_get("persist.qipcam.rescaler.perf", prop, "0");
@@ -152,21 +142,21 @@ status_t CameraRescalerBase::Validate(const uint32_t& width,
                                       const BufferFormat& fmt) {
   if (rescaler_ == nullptr) {
     QMMF_ERROR("%s: Missing Rescaler engine!!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   if (rescaler_->ValidateOutput(width, height, fmt) != RESIZER_STATUS_OK) {
     QMMF_ERROR("%s: Validation Error!!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescalerBase::ReturnBufferToBufferPool(
     const StreamBuffer &buffer) {
   status_t ret = ReturnBufferLocked(buffer);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s: Failed to return buffer to memory pool", __func__);
   }
   return ret;
@@ -224,7 +214,7 @@ bool CameraRescalerBase::ThreadLoop() {
 
   QMMF_DEBUG("%s: Thread map", __func__);
   auto ret = MapBuf(out_buffer);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: fail to map in_buffer", __func__);
     ReturnBufferToBufferPool(out_buffer);
     ReturnBufferToProducer(in_buffer);
@@ -274,7 +264,7 @@ status_t CameraRescalerBase::MapBuf(StreamBuffer& buffer) {
 
   if (buffer.fd == -1) {
     QMMF_ERROR("%s: Error Invalid FD", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   QMMF_DEBUG("%s: buffer.fd=%d buffer.size=%d", __func__,
@@ -286,7 +276,7 @@ status_t CameraRescalerBase::MapBuf(StreamBuffer& buffer) {
     if (vaaddr == MAP_FAILED) {
         QMMF_ERROR("%s: ION mmap failed: error(%s):(%d)", __func__,
             strerror(errno), errno);
-        return BAD_VALUE;
+        return -EINVAL;
     }
     buffer.data = vaaddr;
     map_data_t map;
@@ -298,7 +288,7 @@ status_t CameraRescalerBase::MapBuf(StreamBuffer& buffer) {
     buffer.data = mapped_buffs_[buffer.fd].addr;
   }
 
-  return NO_ERROR;
+  return 0;
 }
 
 void CameraRescalerBase::UnMapBufs() {
@@ -316,9 +306,9 @@ void CameraRescalerBase::UnMapBufs() {
 status_t CameraRescalerBase::Configure(const ResizerCrop& config_data) {
   auto ret = rescaler_->Configure(config_data);
   if (ret != RESIZER_STATUS_OK) {
-    return BAD_VALUE;
+    return -EINVAL;
   }
-  return NO_ERROR;
+  return 0;
 }
 
 int32_t CameraRescalerThread::Run(const std::string &name) {
@@ -437,7 +427,7 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
                                           uint32_t height,
                                           int32_t  format,
                                           const CameraExtraParam& extra_param) {
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
 
   init_params_.width = width;
   init_params_.height = height;
@@ -453,7 +443,7 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
       }
     } else {
       QMMF_ERROR("%s: Invalid EIS mode received", __func__);
-      return BAD_VALUE;
+      return -EINVAL;
     }
   }
 
@@ -467,7 +457,7 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
       }
     } else {
       QMMF_ERROR("%s: Invalid LDC mode received", __func__);
-      return BAD_VALUE;
+      return -EINVAL;
     }
   }
 
@@ -482,14 +472,14 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
     mem_alloc_slots_ = new IBufferHandle[buffer_cnt_];
     if (mem_alloc_slots_ == nullptr) {
       QMMF_ERROR("%s: Unable to allocate buffer handles!", __func__);
-      ret = NO_MEMORY;
+      ret = -ENOMEM;
       goto FAIL;
     }
   } else {
     mem_alloc_slots_ = nullptr;
   }
 
-  return NO_ERROR;
+  return 0;
 
 FAIL:
   if (nullptr != alloc_device_interface_) {
@@ -503,7 +493,7 @@ status_t CameraRescalerMemPool::ReturnBufferLocked(const StreamBuffer &buffer) {
 
   if (pending_buffer_count_ == 0) {
     QMMF_ERROR("%s: Not expecting any buffers!", __func__);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -511,26 +501,26 @@ status_t CameraRescalerMemPool::ReturnBufferLocked(const StreamBuffer &buffer) {
   if (mem_alloc_buffers_.find(buffer.handle) == mem_alloc_buffers_.end()) {
     QMMF_ERROR("%s: Buffer %p returned that wasn't allocated by this node",
         __func__, buffer.handle);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   mem_alloc_buffers_.at(buffer.handle) = true;
   --pending_buffer_count_;
 
   wait_for_buffer_.Signal();
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescalerMemPool::GetFreeOutputBuffer(StreamBuffer* buffer) {
 
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   std::unique_lock<std::mutex> lock(buffer_lock_);
 
   buffer->fd = -1;
 
   if (mem_alloc_slots_ == nullptr) {
     QMMF_ERROR("%s: Error mem alloc slots!", __func__);
-    return NO_ERROR;
+    return 0;
   }
 
   while (pending_buffer_count_ == buffer_cnt_) {
@@ -544,7 +534,7 @@ status_t CameraRescalerMemPool::GetFreeOutputBuffer(StreamBuffer* buffer) {
     }
   }
   ret = GetBufferLocked(buffer);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s: Failed to retrieve output buffer", __func__);
   }
 
@@ -552,7 +542,7 @@ status_t CameraRescalerMemPool::GetFreeOutputBuffer(StreamBuffer* buffer) {
 }
 
 status_t CameraRescalerMemPool::GetBufferLocked(StreamBuffer* buffer) {
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   int32_t idx = -1;
   IBufferHandle handle = nullptr;
 
@@ -578,7 +568,7 @@ status_t CameraRescalerMemPool::GetBufferLocked(StreamBuffer* buffer) {
   } else if ((nullptr == handle) &&
              (buffers_allocated_ < buffer_cnt_)) {
     ret = AllocHWMemBuffer(handle);
-    if (NO_ERROR != ret) {
+    if (0 != ret) {
       return ret;
     }
     idx = buffers_allocated_;
@@ -590,13 +580,13 @@ status_t CameraRescalerMemPool::GetBufferLocked(StreamBuffer* buffer) {
   if ((nullptr == handle) || (0 > idx)) {
     QMMF_ERROR("%s: Unable to allocate or find a free buffer!",
                __func__);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
 
   if (nullptr != buffer) {
     buffer->handle = mem_alloc_slots_[idx];
     ret = PopulateBufferMeta(buffer->info, buffer->handle);
-    if (NO_ERROR != ret) {
+    if (0 != ret) {
       QMMF_ERROR("%s: Failed to populate buffer meta info", __func__);
       return ret;
     }
@@ -621,7 +611,7 @@ status_t CameraRescalerMemPool::PopulateBufferMeta(BufferMeta &info,
   if (MemAllocError::kAllocOk != ret) {
     QMMF_ERROR("%s: Unable to query stride&scanline: %d\n", __func__,
       (int32_t) ret);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   ret = alloc_device_interface_->Perform(handle,
@@ -630,7 +620,7 @@ status_t CameraRescalerMemPool::PopulateBufferMeta(BufferMeta &info,
   if (MemAllocError::kAllocOk != ret) {
     QMMF_ERROR("%s: Unable to query stride&scanline: %d\n", __func__,
       (int32_t) ret);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   switch (handle->GetFormat()) {
@@ -712,10 +702,10 @@ status_t CameraRescalerMemPool::PopulateBufferMeta(BufferMeta &info,
     default:
       QMMF_ERROR("%s: Unsupported format: %d", __func__,
                  handle->GetFormat());
-      return NAME_NOT_FOUND;
+      return -ENOENT;
   }
 
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescalerMemPool::AllocHWMemBuffer(IBufferHandle &buf) {
@@ -753,7 +743,7 @@ status_t CameraRescalerMemPool::AllocHWMemBuffer(IBufferHandle &buf) {
     static_cast<int>(width), static_cast<int>(height), format, usage, &stride);
   if (MemAllocError::kAllocOk != ret) {
     QMMF_ERROR("%s: Failed to allocate alloc buffer", __func__);
-    return NO_MEMORY;
+    return -ENOMEM;
   }
 #ifndef DISABLE_RESCALER_COLORSPACE
   int32_t color_space = ITU_R_601_FR;
@@ -763,17 +753,17 @@ status_t CameraRescalerMemPool::AllocHWMemBuffer(IBufferHandle &buf) {
   auto status = setMetaData(priv_handle, UPDATE_COLOR_SPACE,
                     static_cast<void *>(&color_space));
 
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s  setMetaData Failed: (%d)", __func__, status);
     return status;
   }
 #endif
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescalerMemPool::FreeHWMemBuffer(IBufferHandle buf) {
   MemAllocError ret = alloc_device_interface_->FreeBuffer(buf);
-  return ret == MemAllocError::kAllocOk ? NO_ERROR : BAD_VALUE;
+  return ret == MemAllocError::kAllocOk ? 0 : -EINVAL;
 }
 
 CameraRescaler::CameraRescaler()
@@ -781,29 +771,27 @@ CameraRescaler::CameraRescaler()
     is_stop_(false) {
   QMMF_INFO("%s: Enter", __func__);
 
-  BufferConsumerImpl<CameraRescaler> *impl;
-  impl = new BufferConsumerImpl<CameraRescaler>(this);
-  buffer_consumer_impl_ = impl;
+  buffer_consumer_impl_ =
+      std::make_shared<BufferConsumerImpl<CameraRescaler>>(this);
 
-  BufferProducerImpl<CameraRescaler> *producer_impl;
-  producer_impl = new BufferProducerImpl<CameraRescaler>(this);
-  buffer_producer_impl_ = producer_impl;
+  buffer_producer_impl_ =
+      std::make_shared<BufferProducerImpl<CameraRescaler>>(this);
 
   QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 CameraRescaler::~CameraRescaler() {
   QMMF_INFO("%s: Enter", __func__);
-  buffer_producer_impl_.clear();
-  buffer_consumer_impl_.clear();
+  buffer_producer_impl_.reset();
+  buffer_consumer_impl_.reset();
   QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 
-status_t CameraRescaler::AddConsumer(const sp<IBufferConsumer>& consumer) {
+status_t CameraRescaler::AddConsumer(const std::shared_ptr<IBufferConsumer>& consumer) {
   if (consumer.get() == nullptr) {
     QMMF_ERROR("%s: Input consumer is nullptr", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   buffer_producer_impl_->AddConsumer(consumer);
@@ -811,24 +799,24 @@ status_t CameraRescaler::AddConsumer(const sp<IBufferConsumer>& consumer) {
   QMMF_VERBOSE("%s: Consumer(%p) has been added.", __func__,
       consumer.get());
 
-  return NO_ERROR;
+  return 0;
 }
 
 uint32_t CameraRescaler::GetNumConsumer() {
   return buffer_producer_impl_->GetNumConsumer();
 }
 
-status_t CameraRescaler::RemoveConsumer(sp<IBufferConsumer>& consumer) {
+status_t CameraRescaler::RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer) {
   if(buffer_producer_impl_->GetNumConsumer() == 0) {
     QMMF_ERROR("%s: There are no connected consumers!", __func__);
-    return INVALID_OPERATION;
+    return -ENOSYS;
   }
   buffer_producer_impl_->RemoveConsumer(consumer);
 
-  return NO_ERROR;
+  return 0;
 }
 
-sp<IBufferConsumer>& CameraRescaler::GetConsumer() {
+std::shared_ptr<IBufferConsumer>& CameraRescaler::GetConsumer() {
   return buffer_consumer_impl_;
 }
 
@@ -852,7 +840,7 @@ void CameraRescaler::NotifyBufferReturned(const StreamBuffer& buffer) {
 }
 
 status_t CameraRescaler::NotifyBufferToClient(StreamBuffer &buffer) {
-  status_t ret = NO_ERROR;
+  status_t ret = 0;
   std::lock_guard<std::mutex> lock(consumer_lock_);
   if(buffer_producer_impl_->GetNumConsumer() > 0) {
     buffer_producer_impl_->NotifyBuffer(buffer);
@@ -866,16 +854,16 @@ status_t CameraRescaler::NotifyBufferToClient(StreamBuffer &buffer) {
 
 status_t CameraRescaler::ReturnBufferToProducer(StreamBuffer &buffer) {
   QMMF_DEBUG("%s: Enter", __func__);
-  const sp<IBufferConsumer> consumer = buffer_consumer_impl_;
+  const std::shared_ptr<IBufferConsumer> consumer = buffer_consumer_impl_;
   if (consumer.get() == nullptr) {
     QMMF_ERROR("%s: Failed to retrieve buffer consumer for camera(%d)!",
                __func__, buffer.camera_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   consumer->GetProducerHandle()->NotifyBufferReturned(buffer);
 
   QMMF_DEBUG("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescaler::Start() {
@@ -885,7 +873,7 @@ status_t CameraRescaler::Start() {
   QMMF_INFO("%s: Start thread", __func__);
   Run(LOG_TAG);
   QMMF_INFO("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 status_t CameraRescaler::Stop() {
@@ -900,7 +888,7 @@ status_t CameraRescaler::Stop() {
   UnMapBufs();
   QMMF_INFO("%s: unmap done", __func__);
   QMMF_INFO("%s: Exit", __func__);
-  return NO_ERROR;
+  return 0;
 }
 
 bool CameraRescaler::IsStop() {
@@ -915,12 +903,12 @@ status_t CameraRescaler::Init(const uint32_t& width, const uint32_t& height,
 
   if ((width == 0) || (height == 0)) {
     QMMF_ERROR("%s: Invalid dimensions: %ux%u!", __func__, width, height);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
-  if (Validate(width, height, fmt) != NO_ERROR) {
+  if (Validate(width, height, fmt) != 0) {
     QMMF_ERROR("%s: Error: Unsupported in params.!!!", __func__);
-    return BAD_VALUE;
+    return -EINVAL;
   }
 
   auto format = Common::FromQmmfToHalFormat(fmt);

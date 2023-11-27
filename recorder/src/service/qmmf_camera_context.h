@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -63,6 +63,7 @@
 
 #pragma once
 
+#include <list>
 #include <mutex>
 
 #include <qmmf-sdk/qmmf_recorder_params.h>
@@ -140,10 +141,10 @@ class CameraContext : public CameraInterface {
   status_t DeleteStream(const uint32_t track_id) override;
 
   status_t AddConsumer(const uint32_t& track_id,
-                       sp<IBufferConsumer>& consumer) override;
+                       std::shared_ptr<IBufferConsumer>& consumer) override;
 
   status_t RemoveConsumer(const uint32_t& track_id,
-                          sp<IBufferConsumer>& consumer) override;
+                          std::shared_ptr<IBufferConsumer>& consumer) override;
 
   status_t StartStream(const uint32_t track_id) override;
 
@@ -446,9 +447,9 @@ class CameraPort {
   status_t Resume();
 
   // Apis to Add/Remove consumer at run time.
-  status_t AddConsumer(sp<IBufferConsumer>& consumer);
+  status_t AddConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
-  status_t RemoveConsumer(sp<IBufferConsumer>& consumer);
+  status_t RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
 
   void NotifyBufferReturned(const StreamBuffer& buffer);
 
@@ -487,7 +488,7 @@ class CameraPort {
 
  private:
 
-  bool IsConsumerConnected(sp<IBufferConsumer>& consumer);
+  bool IsConsumerConnected(std::shared_ptr<IBufferConsumer>& consumer);
 
   void StreamCallback(StreamBuffer buffer);
 
@@ -497,7 +498,7 @@ class CameraPort {
 
   void GetReprocInputBuffer(StreamBuffer &buffer);
 
-  sp<IBufferProducer>         buffer_producer_impl_;
+  std::shared_ptr<IBufferProducer>         buffer_producer_impl_;
   CameraStreamParameters      cam_stream_params_;
   CameraInputStreamParameters input_stream_params_;
   bool                        ready_to_start_;
@@ -507,9 +508,9 @@ class CameraPort {
   bool                   aec_converged_;
   int64_t                aec_timestamp_;
 
-  std::map<uintptr_t, sp<IBufferConsumer> >consumers_;
+  std::map<uintptr_t, std::shared_ptr<IBufferConsumer> >consumers_;
 
-  sp<IBufferConsumer>    consumer_;
+  std::shared_ptr<IBufferConsumer>    consumer_;
 
   std::mutex             consumer_lock_;
   std::mutex             stop_lock_;
@@ -566,7 +567,7 @@ class ZslPort : public CameraPort {
 
   int32_t         input_stream_id_ = -1;
   std::mutex      zsl_queue_lock_;
-  std::list<ZSLEntry>  zsl_queue_;
+  std::vector<ZSLEntry>  zsl_queue_;
   ZSLEntry        zsl_input_buffer_ = {};
   bool            zsl_running_ = false;
   uint32_t        zsl_queue_depth_ = 0;

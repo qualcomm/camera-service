@@ -66,10 +66,23 @@
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_remote_cb.h"
 
+#ifndef HAVE_BINDER
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <iostream>
+#include <sstream>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#include "common/proto/qmmf.pb.h"
+#endif // !HAVE_BINDER
+
 namespace qmmf {
 
 namespace recorder {
 
+#ifdef HAVE_BINDER
 RemoteCallBack::RemoteCallBack(const uint32_t client_id,
                                const sp<IRecorderServiceCallback>&
                                   remote_client)
@@ -79,6 +92,17 @@ RemoteCallBack::RemoteCallBack(const uint32_t client_id,
   QMMF_INFO("%s: Enter ", __func__);
   QMMF_INFO("%s: Exit client_id(%d) (0x%p)", __func__, client_id, this);
 }
+#else
+RemoteCallBack::RemoteCallBack(const uint32_t client_id,
+                               const std::shared_ptr<IRecorderServiceCallback>&
+                               remote_client)
+    : client_cb_handle_(remote_client)
+    , client_id_(client_id) {
+
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit client_id(%d) (0x%p)", __func__, client_id, this);
+}
+#endif // HAVE_BINDER
 
 RemoteCallBack::~RemoteCallBack() {
 

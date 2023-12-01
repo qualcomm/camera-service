@@ -20,6 +20,9 @@ check_include_file("display/media/mmm_color_fmt.h" HAVE_MMM_COLOR_FMT_H)
 include(CheckIncludeFile)
 check_include_file("adreno/c2d2.h" RESIZER_C2D_ENABLED)
 
+# Check whether android utilities are present.
+check_include_file("cutils/properties.h" HAVE_ANDROID_UTILS)
+
 # Check whether JPEGEncoder header is present.
 include(CheckIncludeFileCXX)
 check_include_file_cxx("chicdk/chiofflinepostprocintf.h" HAVE_CHI_OFFLINE_POST_PROC_INTF_H)
@@ -57,6 +60,10 @@ endif()
 
 if (RESIZER_NEON_ENABLED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_RESCALER_NEON")
+endif()
+
+if(HAVE_ANDROID_UTILS)
+add_compile_definitions(HAVE_ANDROID_UTILS)
 endif()
 
 add_subdirectory(qmmf-server)

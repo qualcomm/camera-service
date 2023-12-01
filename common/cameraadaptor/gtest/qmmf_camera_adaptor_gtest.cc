@@ -64,7 +64,11 @@
 #include <inttypes.h>
 #include <sys/time.h>
 #include <math.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <log/log.h>
+#else
+#include <log.h>
+#endif
 
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include "common/utils/qmmf_common_utils.h"

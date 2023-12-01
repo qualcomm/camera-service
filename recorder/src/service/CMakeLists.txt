@@ -88,9 +88,15 @@ target_include_directories(qmmf_recorder_service
 
 install(TARGETS qmmf_recorder_service DESTINATION lib OPTIONAL)
 if (NOT CAMERA_HAL1_SUPPORT)
-target_link_libraries(qmmf_recorder_service dl log utils cutils binder
-  pthread camera_metadata hardware qmmf_recorder_client
-  qmmf_utils qmmf_camera_adaptor )
+target_link_libraries(qmmf_recorder_service dl pthread camera_metadata
+  hardware qmmf_recorder_client qmmf_utils qmmf_camera_adaptor )
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_recorder_service log utils cutils binder)
+else()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
+target_link_libraries(qmmf_recorder_service propertyvault)
+endif()
+
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_service camera_client )
 endif()
@@ -113,9 +119,15 @@ target_link_libraries(
 )
 endif()
 else()
-target_link_libraries(qmmf_recorder_service dl log utils cutils binder
-  pthread hardware qmmf_recorder_client qmmf_utils
-  qmmf_memory_interface qmmf_common_resizer_neon qmmf_common_resizer_c2d)
+target_link_libraries(qmmf_recorder_service dl pthread camera_metadata hardware
+  qmmf_recorder_client qmmf_utils qmmf_memory_interface
+  qmmf_common_resizer_neon qmmf_common_resizer_c2d)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_recorder_service log utils cutils binder)
+else()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
+target_link_libraries(qmmf_recorder_service propertyvault)
+endif()
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_service camera_client )
 endif()

@@ -34,7 +34,11 @@
 #include <cstdlib>
 #include <cmath>
 
+#ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
+#else
+#include "properties.h"
+#endif
 
 #include "common/utils/qmmf_log.h"
 

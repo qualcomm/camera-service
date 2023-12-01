@@ -79,7 +79,11 @@
 #include <binder/MemoryBase.h>
 #include <binder/MemoryHeapBase.h>
 #include <utils/RefBase.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
+#else
+#include "properties.h"
+#endif
 #include <hardware/hardware.h>
 #include <utils/Timers.h>
 #include <hardware/camera.h>

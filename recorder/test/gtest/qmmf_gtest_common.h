@@ -76,7 +76,11 @@
 #include <sys/time.h>
 #include <chrono>
 #include <condition_variable>
+#ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
+#else
+#include "properties.h"
+#endif
 #include <random>
 #include <fstream>
 #include <utils/Errors.h>

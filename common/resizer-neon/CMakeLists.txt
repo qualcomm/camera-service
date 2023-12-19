@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.1)
+
+project(qmmf_common_resizer_neon)
+
+if (NOT RESIZER_NEON_ENABLED)
+set(exclude EXCLUDE_FROM_ALL)
+endif()
+
+add_library(qmmf_common_resizer_neon SHARED ${exclude}
+${CMAKE_CURRENT_SOURCE_DIR}/res_neon.cc
+${CMAKE_CURRENT_SOURCE_DIR}/qmmf_resizer_neon.cc
+)
+
+target_include_directories(qmmf_common_resizer_neon
+ PRIVATE ${TOP_DIRECTORY})
+
+target_include_directories(qmmf_common_resizer_neon
+ PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
+
+# Headers path for msm-5.4 media on qrbx210 targets.
+target_include_directories(qmmf_common_resizer_neon
+ PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include/vidc>)
+
+target_include_directories(qmmf_common_resizer_neon
+ PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+install(TARGETS qmmf_common_resizer_neon DESTINATION lib OPTIONAL)
+target_link_libraries(qmmf_common_resizer_neon log utils cutils pthread qmmf_utils)

@@ -1,0 +1,181 @@
+/*
+ * Copyright (c) 2018, 2019, The Linux Foundation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of The Linux Foundation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *
+ *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifdef TARGET_USES_GRALLOC1
+#include "qmmf_gralloc1_interface.h"
+#elif TARGET_USES_GRALLOC2
+#include "qmmf_gralloc2_interface.h"
+#elif TARGET_USES_GBM
+#include "qmmf_gbm_interface.h"
+#else
+#include "qmmf_gralloc_interface.h"
+#endif
+#include "qmmf_memory_interface.h"
+#include "common/utils/qmmf_log.h"
+
+const int IMemAllocUsage::kHwCameraZsl          = (1 << 0);
+const int IMemAllocUsage::kPrivateAllocUbwc     = (1 << 1);
+const int IMemAllocUsage::kPrivateAllocP010     = (1 << 2);
+const int IMemAllocUsage::kPrivateAllocTP10     = (1 << 3);
+const int IMemAllocUsage::kPrivateIommUHeap     = (1 << 4);
+const int IMemAllocUsage::kPrivateMmHeap        = (1 << 5);
+const int IMemAllocUsage::kPrivateUncached      = (1 << 6);
+const int IMemAllocUsage::kProtected            = (1 << 7);
+const int IMemAllocUsage::kSwReadOften          = (1 << 8);
+const int IMemAllocUsage::kSwWriteOften         = (1 << 9);
+const int IMemAllocUsage::kVideoEncoder         = (1 << 10);
+const int IMemAllocUsage::kHwFb                 = (1 << 11);
+const int IMemAllocUsage::kHwTexture            = (1 << 12);
+const int IMemAllocUsage::kHwRender             = (1 << 13);
+const int IMemAllocUsage::kHwComposer           = (1 << 14);
+const int IMemAllocUsage::kHwCameraRead         = (1 << 15);
+const int IMemAllocUsage::kHwCameraWrite        = (1 << 16);
+const int IMemAllocUsage::kPrivateAllocHEIF     = (1 << 17);
+
+IAllocDevice *AllocDeviceFactory::CreateAllocDevice() {
+#ifdef TARGET_USES_GRALLOC1
+  return new Gralloc1Device;
+#elif TARGET_USES_GRALLOC2
+  return new Gralloc2Device;
+#elif TARGET_USES_GBM
+  return GBMDevice::CreateGBMDevice();
+#else
+  return new GrallocDevice;
+#endif
+}
+
+void AllocDeviceFactory::DestroyAllocDevice(IAllocDevice* alloc_device_interface) {
+#if TARGET_USES_GBM
+  GBMDevice::DestroyGBMDevice();
+#else
+  delete alloc_device_interface;
+#endif
+}
+
+const IMemAllocUsage &AllocUsageFactory::GetAllocUsage() {
+#ifdef TARGET_USES_GRALLOC1
+  static const Gralloc1Usage x = Gralloc1Usage();
+#elif TARGET_USES_GRALLOC2
+  static const Gralloc2Usage x = Gralloc2Usage();
+#elif TARGET_USES_GBM
+  static const GBMUsage x = GBMUsage();
+#else
+  static const GrallocUsage x = GrallocUsage();
+#endif
+  return x;
+}
+
+#ifdef TARGET_USES_GRALLOC1
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  Gralloc1Buffer *b = static_cast<Gralloc1Buffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+gralloc1_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const Gralloc1Device &b = static_cast<const Gralloc1Device &>(handle);
+  return b.GetDevice();
+}
+
+#elif TARGET_USES_GRALLOC2
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  const Gralloc2Buffer *b = static_cast<const Gralloc2Buffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+gralloc2_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const Gralloc2Device &b = static_cast<const Gralloc2Device &>(handle);
+  return b.GetDevice();
+}
+
+#elif TARGET_USES_GBM
+struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle) {
+  GBMBuffer *b = static_cast<GBMBuffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+struct gbm_device *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const GBMDevice &b = static_cast<const GBMDevice &>(handle);
+  return b.GetDevice();
+}
+
+buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle) {
+  GBMBuffer *b = static_cast<GBMBuffer *>(handle);
+  assert(b != nullptr);
+  return b->RepackToGralloc();
+}
+
+#else
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  GrallocBuffer *b = static_cast<GrallocBuffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+alloc_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const GrallocDevice &b = static_cast<const GrallocDevice &>(handle);
+  return b.GetDevice();
+}
+#endif

@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.1)
+
+project(qmmf_camera_adaptor_gtest)
+
+set(CMAKE_CXX_STANDARD 14)
+
+if (NOT CAMERAADAPTOR_GTEST_ENABLED)
+set(exclude EXCLUDE_FROM_ALL)
+endif()
+
+add_executable(qmmf_camera_adaptor_gtest ${exclude} qmmf_camera_adaptor_gtest.cc)
+add_dependencies(qmmf_camera_adaptor_gtest qmmf_camera_adaptor)
+
+target_include_directories(qmmf_camera_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY})
+
+target_include_directories(qmmf_camera_adaptor_gtest
+ PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
+
+target_include_directories(qmmf_camera_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY}/common/cameraadaptor)
+
+target_include_directories(qmmf_camera_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+install(TARGETS qmmf_camera_adaptor_gtest DESTINATION bin OPTIONAL)
+target_link_libraries(qmmf_camera_adaptor_gtest log cutils utils gtest gtest_main camera_metadata qmmf_camera_adaptor)
+if(NOT CAMERA_CLIENT_DISABLED)
+target_link_libraries(qmmf_camera_adaptor_gtest camera_client)
+endif()
+
+add_executable(qmmf_ccamera_dual_adaptor_gtest ${exclude} qmmf_dual_camera_adaptor_gtest.cc)
+add_dependencies(qmmf_ccamera_dual_adaptor_gtest qmmf_camera_adaptor)
+
+target_include_directories(qmmf_ccamera_dual_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY})
+
+target_include_directories(qmmf_ccamera_dual_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY}/common/cameraadaptor)
+
+target_include_directories(qmmf_ccamera_dual_adaptor_gtest
+ PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
+
+target_include_directories(qmmf_ccamera_dual_adaptor_gtest
+ PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+install(TARGETS qmmf_ccamera_dual_adaptor_gtest DESTINATION bin OPTIONAL)
+target_link_libraries(qmmf_ccamera_dual_adaptor_gtest log cutils utils gtest gtest_main camera_metadata qmmf_camera_adaptor)
+if(NOT CAMERA_CLIENT_DISABLED)
+target_link_libraries(qmmf_ccamera_dual_adaptor_gtest camera_client)
+endif()

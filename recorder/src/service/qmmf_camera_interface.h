@@ -128,7 +128,7 @@ class CameraInterface {
 
   /// Image Capture
   virtual status_t CaptureImage(const SnapshotType type, const uint32_t n_images,
-                                const std::vector<::camera::CameraMetadata> &meta,
+                                const std::vector<CameraMetadata> &meta,
                                 const StreamSnapshotCb& cb) = 0;
 
   /// Abort ongoing Image Capture. This blocking API and returns when
@@ -164,18 +164,18 @@ class CameraInterface {
   virtual status_t ResumeStream(const uint32_t track_id) = 0;
 
   /// Set camera parameters
-  virtual status_t SetCameraParam(const ::camera::CameraMetadata &meta) = 0;
+  virtual status_t SetCameraParam(const CameraMetadata &meta) = 0;
 
   /// Return camera parameters
-  virtual status_t GetCameraParam(::camera::CameraMetadata &meta) = 0;
+  virtual status_t GetCameraParam(CameraMetadata &meta) = 0;
 
   /// Set camera session parameters
-  virtual status_t SetCameraSessionParam(const ::camera::CameraMetadata &meta) = 0;
+  virtual status_t SetCameraSessionParam(const CameraMetadata &meta) = 0;
 
   /// Return default capture parameters
-  virtual status_t GetDefaultCaptureParam(::camera::CameraMetadata &meta) = 0;
+  virtual status_t GetDefaultCaptureParam(CameraMetadata &meta) = 0;
 
-  virtual status_t GetCameraCharacteristics(::camera::CameraMetadata &meta) = 0;
+  virtual status_t GetCameraCharacteristics(CameraMetadata &meta) = 0;
 
   /// Return All Image Capture buffers
   virtual status_t ReturnAllImageCaptureBuffers() = 0;

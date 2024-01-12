@@ -239,7 +239,7 @@ status_t CameraSource::StopCamera(const uint32_t camera_id) {
 status_t CameraSource::CaptureImage(const uint32_t camera_id,
                                     const SnapshotType type,
                                     const uint32_t n_images,
-                                    const std::vector<::camera::CameraMetadata> &meta,
+                                    const std::vector<CameraMetadata> &meta,
                                     const SnapshotCb& cb) {
 
   QMMF_DEBUG("%s: Enter", __func__);
@@ -701,7 +701,7 @@ status_t CameraSource::ReturnTrackBuffer(const uint32_t track_id,
 }
 
 status_t CameraSource::SetCameraParam(const uint32_t camera_id,
-                                      const ::camera::CameraMetadata &meta) {
+                                      const CameraMetadata &meta) {
 
   active_cameras_lock_.lock();
   if (active_cameras_.count(camera_id) == 0) {
@@ -717,7 +717,7 @@ status_t CameraSource::SetCameraParam(const uint32_t camera_id,
 }
 
 status_t CameraSource::GetCameraParam(const uint32_t camera_id,
-                                      ::camera::CameraMetadata &meta) {
+                                      CameraMetadata &meta) {
 
   active_cameras_lock_.lock();
   if (active_cameras_.count(camera_id) == 0) {
@@ -733,7 +733,7 @@ status_t CameraSource::GetCameraParam(const uint32_t camera_id,
 }
 
 status_t CameraSource::SetCameraSessionParam(const uint32_t camera_id,
-                                             const ::camera::CameraMetadata &meta) {
+                                             const CameraMetadata &meta) {
 
   active_cameras_lock_.lock();
   if (active_cameras_.count(camera_id) == 0) {
@@ -765,7 +765,7 @@ status_t CameraSource::SetSHDR(const uint32_t camera_id,
 }
 
 status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
-                                              ::camera::CameraMetadata &meta) {
+                                              CameraMetadata &meta) {
 
   active_cameras_lock_.lock();
   if (active_cameras_.count(camera_id) == 0) {
@@ -781,7 +781,7 @@ status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
 }
 
 status_t CameraSource::GetCameraCharacteristics(const uint32_t camera_id,
-                                                ::camera::CameraMetadata &meta) {
+                                                CameraMetadata &meta) {
 
   active_cameras_lock_.lock();
   if (active_cameras_.count(camera_id) == 0) {

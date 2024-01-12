@@ -82,11 +82,9 @@
 
 #include <pthread.h>
 #include <hardware/hardware.h>
-#include <camera/CameraMetadata.h>
 #include <utils/KeyedVector.h>
 #include <utils/List.h>
 #include <utils/RefBase.h>
-#include <camera/VendorTagDescriptor.h>
 #include <mutex>
 
 #ifdef TARGET_USES_GBM
@@ -95,6 +93,8 @@
 #include <fcntl.h>
 #endif
 
+#include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf_camera3_types.h"
 #include "qmmf_camera3_internal_types.h"
 #include "qmmf_camera3_stream.h"
@@ -145,7 +145,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t CreateInputStream(
       const CameraInputStreamParameters &inputConfiguration);
 
-  int32_t CreateDefaultRequest(int templateId, ::camera::CameraMetadata *request);
+  int32_t CreateDefaultRequest(int templateId, CameraMetadata *request);
   int32_t SubmitRequest(Camera3Request request, bool streaming = false,
                         int64_t *lastFrameNumber = NULL);
   int32_t SubmitRequestList(std::list<Camera3Request> requests,
@@ -154,7 +154,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t ReturnStreamBuffer(StreamBuffer buffer);
   int32_t CancelRequest(int requestId, int64_t *lastFrameNumber = NULL);
 
-  int32_t GetCameraInfo(uint32_t idx, ::camera::CameraMetadata *info);
+  int32_t GetCameraInfo(uint32_t idx, CameraMetadata *info);
   int32_t GetNumberOfCameras() { return number_of_cameras_; }
   const std::vector<int32_t> GetRequestIds(){ return current_request_ids_; }
   int32_t WaitUntilIdle();
@@ -162,7 +162,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t Flush(int64_t *lastFrameNumber = NULL);
   int32_t Prepare(int streamId);
   int32_t TearDown(int streamId);
-  int32_t SetCameraSessionParam(const ::camera::CameraMetadata &meta);
+  int32_t SetCameraSessionParam(const CameraMetadata &meta);
 
   static int32_t LoadHWModule(const char *moduleId,
                               const struct hw_module_t **pHmi);
@@ -184,7 +184,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   friend class Camera3Gtest;
   friend class DualCamera3Gtest;
 
-  int32_t AddRequestListLocked(const List<const ::camera::CameraMetadata> &requests,
+  int32_t AddRequestListLocked(const List<const CameraMetadata> &requests,
                                bool streaming, int64_t *lastFrameNumber = NULL);
 
   void HandleCaptureResult(const camera3_capture_result *result);
@@ -202,9 +202,9 @@ class Camera3DeviceClient : public camera3_callback_ops,
   void ReturnOutputBuffers(const camera3_stream_buffer_t *outputBuffers,
                            size_t numBuffers, int64_t timestamp,
                            int64_t frame_number);
-  void SendCaptureResult(::camera::CameraMetadata &pendingMetadata,
+  void SendCaptureResult(CameraMetadata &pendingMetadata,
                          CaptureResultExtras &resultExtras,
-                         ::camera::CameraMetadata &collectedPartialResult,
+                         CameraMetadata &collectedPartialResult,
                          uint32_t frameNumber);
 
   void NotifyStatus(bool idle);
@@ -244,7 +244,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t MarkPendingRequest(uint32_t frameNumber, int32_t numBuffers,
                              CaptureResultExtras resultExtras);
 
-  bool HandlePartialResult(uint32_t frameNumber, const ::camera::CameraMetadata &partial,
+  bool HandlePartialResult(uint32_t frameNumber, const CameraMetadata &partial,
                            const CaptureResultExtras &resultExtras);
 
   /**Not allowed */
@@ -252,16 +252,16 @@ class Camera3DeviceClient : public camera3_callback_ops,
   Camera3DeviceClient &operator=(const Camera3DeviceClient &);
 
   template <typename T>
-  bool QueryPartialTag(const ::camera::CameraMetadata &result, int32_t tag, T *value,
+  bool QueryPartialTag(const CameraMetadata &result, int32_t tag, T *value,
                        uint32_t frameNumber);
   template <typename T>
-  bool UpdatePartialTag(::camera::CameraMetadata &result, int32_t tag, const T *value,
+  bool UpdatePartialTag(CameraMetadata &result, int32_t tag, const T *value,
                         uint32_t frameNumber);
 
-  int32_t GetRequestListLocked(const List<const ::camera::CameraMetadata> &metadataList,
+  int32_t GetRequestListLocked(const List<const CameraMetadata> &metadataList,
                                RequestList *requestList,
                                RequestList *requestListReproc);
-  int32_t GenerateCaptureRequestLocked(const ::camera::CameraMetadata &request,
+  int32_t GenerateCaptureRequestLocked(const CameraMetadata &request,
                                        CaptureRequest &captureRequest);
 
   uint32_t GetOpMode();
@@ -287,14 +287,14 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int next_stream_id_;
   bool reconfig_;
 
-  ::camera::CameraMetadata request_templates_[CAMERA3_TEMPLATE_COUNT];
+  CameraMetadata request_templates_[CAMERA3_TEMPLATE_COUNT];
   static const int32_t JPEG_BUFFER_SIZE_MIN =
       256 * 1024 + sizeof(camera3_jpeg_blob);
 
   camera_module_t *camera_module_;
   camera3_device_t *device_;
   uint32_t number_of_cameras_;
-  ::camera::CameraMetadata device_info_;
+  CameraMetadata device_info_;
   IAllocDevice* alloc_device_interface_;
 
   Vector<int32_t> repeating_requests_;
@@ -327,12 +327,12 @@ class Camera3DeviceClient : public camera3_callback_ops,
   Camera3InputStream input_stream_;
   uint32_t batch_size_;
   static std::mutex vendor_tag_mutex_;
-  static sp<::camera::VendorTagDescriptor> vendor_tag_desc_;
+  static std::shared_ptr<VendorTagDescriptor> vendor_tag_desc_;
   static uint32_t client_count_;
   std::atomic<bool> is_camera_device_available_;
 
   CamOperationMode cam_opmode_;
-  ::camera::CameraMetadata session_metadata_;
+  CameraMetadata session_metadata_;
 };
 
 }  // namespace cameraadaptor ends here

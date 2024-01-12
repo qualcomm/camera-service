@@ -114,7 +114,7 @@ target_link_libraries(
 endif()
 else()
 target_link_libraries(qmmf_recorder_service dl log utils cutils binder
-  pthread camera_metadata hardware qmmf_recorder_client qmmf_utils
+  pthread hardware qmmf_recorder_client qmmf_utils
   qmmf_memory_interface qmmf_common_resizer_neon qmmf_common_resizer_c2d)
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_service camera_client )
@@ -122,4 +122,4 @@ endif()
 endif()
 
 # TODO remove this hack when camx issue with propagating c and cpp glags is solved
-target_link_libraries(qmmf_recorder_service ion)
+target_link_libraries(qmmf_recorder_service ion qmmf_camera_metadata)

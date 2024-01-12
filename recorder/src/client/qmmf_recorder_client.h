@@ -68,7 +68,7 @@
 #include <map>
 #include <mutex>
 
-#include <camera/CameraMetadata.h>
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include <qmmf-sdk/qmmf_recorder_params.h>
 #include <qmmf-sdk/qmmf_recorder_extra_param.h>
 
@@ -136,7 +136,7 @@ class RecorderClient {
   status_t CaptureImage(const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta,
+                        const std::vector<CameraMetadata> &meta,
                         const ImageCaptureCb &cb);
 
   status_t ConfigImageCapture(const uint32_t camera_id,
@@ -151,21 +151,21 @@ class RecorderClient {
   status_t ReturnImageCaptureBuffer(const uint32_t camera_id,
                                     const BufferDescriptor &buffer);
 
-  status_t SetCameraParam(const uint32_t camera_id, const ::camera::CameraMetadata &meta);
+  status_t SetCameraParam(const uint32_t camera_id, const CameraMetadata &meta);
 
-  status_t GetCameraParam(const uint32_t camera_id, ::camera::CameraMetadata &meta);
+  status_t GetCameraParam(const uint32_t camera_id, CameraMetadata &meta);
 
-  status_t SetCameraSessionParam(const uint32_t camera_id, const ::camera::CameraMetadata &meta);
+  status_t SetCameraSessionParam(const uint32_t camera_id, const CameraMetadata &meta);
 
   status_t SetSHDR(const uint32_t camera_id, const bool enable);
 
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta);
+                                  CameraMetadata &meta);
 
   status_t GetCameraCharacteristics(const uint32_t camera_id,
-                                    ::camera::CameraMetadata &meta);
+                                    CameraMetadata &meta);
 
-  status_t GetVendorTagDescriptor(sp<::camera::VendorTagDescriptor> &desc);
+  status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc);
 
   status_t CreateOfflineJPEG(const OfflineJpegCreateParams &params,
                              const OfflineJpegCb &cb);
@@ -196,7 +196,7 @@ class RecorderClient {
                              size_t event_data_size);
 
   void NotifyCameraResult(uint32_t camera_id,
-                          const ::camera::CameraMetadata &result);
+                          const CameraMetadata &result);
 
  private:
   typedef std::function <void(void)> NotifyServerDeathCB;
@@ -280,7 +280,7 @@ class RecorderClient {
 #endif
 
   // VendorTagDescriptor
-  sp<::camera::VendorTagDescriptor>           vendor_tag_desc_;
+  std::shared_ptr<VendorTagDescriptor>           vendor_tag_desc_;
 
   // Global mutex.
   std::mutex                        lock_;
@@ -317,7 +317,7 @@ class ServiceCallbackHandler : public BnRecorderServiceCallback {
                              size_t event_data_size) override;
 
   void NotifyCameraResult(uint32_t camera_id,
-                          const ::camera::CameraMetadata &result) override;
+                          const CameraMetadata &result) override;
 
   RecorderClient *client_;
 };

@@ -38,7 +38,7 @@ target_compile_definitions(qmmf_camera_adaptor PRIVATE
 )
 
 install(TARGETS qmmf_camera_adaptor DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_camera_adaptor camera_metadata log binder qmmf_utils utils
+target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata log binder qmmf_utils utils
 cutils pthread dl hardware qmmf_memory_interface)
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_camera_adaptor camera_client)

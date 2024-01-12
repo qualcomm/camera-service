@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "VideoGTest"
@@ -1411,7 +1415,7 @@ TEST_F(VideoGtest, SessionWithThreeConcurrentCam1080pAndRawStream) {
   ASSERT_TRUE(ret == NO_ERROR);
 
   uint32_t raw_width, raw_height;
-  ::camera::CameraMetadata static_meta;
+  CameraMetadata static_meta;
   ret = recorder_.GetCameraCharacteristics(cam2_id, static_meta);
   ASSERT_TRUE(ret == NO_ERROR);
   GtestCommon::GetMaxSupportedCameraRes(static_meta, raw_width, raw_height);
@@ -1653,7 +1657,7 @@ TEST_F(VideoGtest, SessionWith1080pYUVTrackMatchCameraMetaData) {
   ASSERT_TRUE(ret == NO_ERROR);
 
   CameraResultCb result_cb = [&](uint32_t camera_id,
-                                 const ::camera::CameraMetadata &result) {
+                                 const CameraMetadata &result) {
     ResultCallbackHandlerMatchCameraMeta(camera_id, result);
   };
 
@@ -2046,7 +2050,7 @@ TEST_F(VideoGtest, SessionWith1080pTrackPartialMeta) {
   uint32_t height = 1080;
 
   CameraResultCb result_cb = [&](uint32_t camera_id,
-                                 const ::camera::CameraMetadata &result) {
+                                 const CameraMetadata &result) {
     if (result.exists(ANDROID_REQUEST_FRAME_COUNT)) {
       TEST_INFO("%s: MetaData FrameNumber=%d", __func__,
                 result.find(ANDROID_REQUEST_FRAME_COUNT).data.i32[0]);

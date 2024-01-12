@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center are provided under the following license:
+* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef CAMERA3GTEST_H_
@@ -39,8 +43,6 @@
 namespace qmmf {
 
 namespace cameraadaptor {
-
-using namespace android;
 
 typedef std::function<uint64_t(uint8_t *mappedBuffer, uint32_t width,
                                uint32_t height, uint32_t stride)> CalcSize;
@@ -110,7 +112,7 @@ class Camera3Gtest : public ::testing::Test {
 
   pthread_mutex_t meta_lock_;
   pthread_cond_t meta_cond_;
-  ::camera::CameraMetadata last_meta_;
+  CameraMetadata last_meta_;
   bool cache_last_meta_;
 
   pthread_mutex_t reprocess_lock_;

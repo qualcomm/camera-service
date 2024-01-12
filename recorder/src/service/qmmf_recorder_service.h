@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -64,9 +64,9 @@
 #pragma once
 
 #include <atomic>
-#include <camera/CameraMetadata.h>
-#include <camera/VendorTagDescriptor.h>
 
+#include "qmmf-sdk/qmmf_camera_metadata.h"
+#include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_impl.h"
 
@@ -163,7 +163,7 @@ class RecorderService : public BnInterface<IRecorderService> {
                         const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta) override;
+                        const std::vector<CameraMetadata> &meta) override;
 
   status_t ConfigImageCapture(const uint32_t client_id,
                               const uint32_t camera_id,
@@ -182,15 +182,15 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t SetCameraParam(const uint32_t client_id,
                           const uint32_t camera_id,
-                          const ::camera::CameraMetadata &meta) override;
+                          const CameraMetadata &meta) override;
 
   status_t GetCameraParam(const uint32_t client_id,
                           const uint32_t camera_id,
-                          ::camera::CameraMetadata &meta) override;
+                          CameraMetadata &meta) override;
 
   status_t SetCameraSessionParam(const uint32_t client_id,
                                  const uint32_t camera_id,
-                                 const ::camera::CameraMetadata &meta) override;
+                                 const CameraMetadata &meta) override;
 
   status_t SetSHDR(const uint32_t client_id,
                    const uint32_t camera_id,
@@ -198,11 +198,11 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
                                   const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta) override;
+                                  CameraMetadata &meta) override;
 
   status_t GetCameraCharacteristics(const uint32_t client_id,
                                     const uint32_t camera_id,
-                                    ::camera::CameraMetadata &meta) override;
+                                    CameraMetadata &meta) override;
 
   status_t CreateOfflineJPEG(const uint32_t client_id,
                              const OfflineJpegCreateParams& params) override;
@@ -220,7 +220,7 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t DisconnectInternal(const uint32_t client_id);
 
-  status_t GetVendorTagDescriptor(sp<::camera::VendorTagDescriptor> &desc) override;
+  status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) override;
 
   status_t GetUniqueClientID(uint32_t *client_id);
 

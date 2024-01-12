@@ -83,8 +83,7 @@
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
 
-#include <camera/CameraMetadata.h>
-
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "common/utils/qmmf_common_utils.h"
 
 using namespace android;
@@ -168,7 +167,7 @@ struct CameraParameters {
 };
 
 typedef struct Camera3Request_t {
-  ::camera::CameraMetadata metadata;
+  CameraMetadata metadata;
   Vector<int32_t> streamIds;
 } Camera3Request;
 
@@ -181,7 +180,7 @@ typedef struct {
 } CaptureResultExtras;
 
 typedef struct {
-  ::camera::CameraMetadata metadata;
+  CameraMetadata metadata;
   CaptureResultExtras resultExtras;
 } CaptureResult;
 

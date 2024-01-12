@@ -128,7 +128,7 @@ class CameraContext : public CameraInterface {
                               const ImageExtraParam &xtraparam) override;
 
   status_t CaptureImage(const SnapshotType type, const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta,
+                        const std::vector<CameraMetadata> &meta,
                         const StreamSnapshotCb& cb) override;
 
   status_t CancelCaptureImage(const uint32_t image_id,
@@ -153,15 +153,15 @@ class CameraContext : public CameraInterface {
 
   status_t ResumeStream(const uint32_t track_id) override;
 
-  status_t SetCameraParam(const ::camera::CameraMetadata &meta) override;
+  status_t SetCameraParam(const CameraMetadata &meta) override;
 
-  status_t GetCameraParam(::camera::CameraMetadata &meta) override;
+  status_t GetCameraParam(CameraMetadata &meta) override;
 
-  status_t SetCameraSessionParam(const ::camera::CameraMetadata &meta) override;
+  status_t SetCameraSessionParam(const CameraMetadata &meta) override;
 
-  status_t GetDefaultCaptureParam(::camera::CameraMetadata &meta) override;
+  status_t GetDefaultCaptureParam(CameraMetadata &meta) override;
 
-  status_t GetCameraCharacteristics(::camera::CameraMetadata &meta) override;
+  status_t GetCameraCharacteristics(CameraMetadata &meta) override;
 
   status_t ReturnAllImageCaptureBuffers() override;
 
@@ -195,7 +195,7 @@ class CameraContext : public CameraInterface {
   status_t CreateCaptureRequest(Camera3Request& request,
                         camera3_request_template_t template_type);
 
-  ::camera::CameraMetadata GetCameraStaticMeta();
+  CameraMetadata GetCameraStaticMeta();
 
   void SetReprocPortId( uint32_t port_id) { reproc_port_id_ = port_id; }
 
@@ -262,7 +262,7 @@ class CameraContext : public CameraInterface {
   void SendReprocRequest(StreamBuffer buffer);
 
 #ifndef FLUSH_RESTART_NOTAVAILABLE
-  status_t DisableFlushRestart(const bool& disable, ::camera::CameraMetadata& meta);
+  status_t DisableFlushRestart(const bool& disable, CameraMetadata& meta);
 #endif
 
   //Camera client callbacks.
@@ -291,11 +291,11 @@ class CameraContext : public CameraInterface {
   std::shared_ptr<CameraPort> GetPort(const uint32_t& track_id);
 
   template <typename T>
-  bool QueryPartialTag(const ::camera::CameraMetadata &result, int32_t tag, T *value,
+  bool QueryPartialTag(const CameraMetadata &result, int32_t tag, T *value,
                        uint32_t frame_number);
 
   template <typename T>
-  bool UpdatePartialTag(::camera::CameraMetadata &result, int32_t tag, const T *value,
+  bool UpdatePartialTag(CameraMetadata &result, int32_t tag, const T *value,
                         uint32_t frame_number);
 
   void HandleFinalResult(const CaptureResult &result);
@@ -313,7 +313,7 @@ class CameraContext : public CameraInterface {
   CameraClientCallbacks                 camera_callbacks_;
   uint32_t                              camera_id_;
   std::mutex                            device_access_lock_;
-  ::camera::CameraMetadata                static_meta_;
+  CameraMetadata                static_meta_;
 
   std::map<uint32_t, bool> stream_prepared_;
   QCondition               prepare_done_;
@@ -418,7 +418,7 @@ enum class PortState {
 
 struct ZSLEntry {
   StreamBuffer    buffer;
-  ::camera::CameraMetadata  result;
+  CameraMetadata  result;
   int64_t         timestamp;
 };
 

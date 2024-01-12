@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -69,7 +69,7 @@
 #include <memory>
 #include <mutex>
 
-#include <camera/CameraMetadata.h>
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
 #include "common/utils/qmmf_condition.h"
@@ -121,7 +121,7 @@ class CameraSource {
   status_t CaptureImage(const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta,
+                        const std::vector<CameraMetadata> &meta,
                         const SnapshotCb &cb);
 
   /// Configure Image Capture
@@ -169,24 +169,24 @@ class CameraSource {
                              std::vector<BnBuffer> &buffers);
 
   /// Set Camera configuration to Camera Interface
-  status_t SetCameraParam(const uint32_t camera_id, const ::camera::CameraMetadata &meta);
+  status_t SetCameraParam(const uint32_t camera_id, const CameraMetadata &meta);
 
   /// Get Camera configuration to Camera Interface
-  status_t GetCameraParam(const uint32_t camera_id, ::camera::CameraMetadata &meta);
+  status_t GetCameraParam(const uint32_t camera_id, CameraMetadata &meta);
 
   /// Set Camera Session configuration to Camera Interface
-  status_t SetCameraSessionParam(const uint32_t camera_id, const ::camera::CameraMetadata &meta);
+  status_t SetCameraSessionParam(const uint32_t camera_id, const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
   status_t SetSHDR(const uint32_t camera_id, const bool enable);
 
   /// Return default settings for Image Capture
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta);
+                                  CameraMetadata &meta);
 
   /// Return static metadata
   status_t GetCameraCharacteristics(const uint32_t camera_id,
-                                    ::camera::CameraMetadata &meta);
+                                    CameraMetadata &meta);
 
   /// UpdateTrackFrameRate
   status_t UpdateTrackFrameRate(const uint32_t track_id,

@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -74,19 +74,20 @@ namespace qmmf {
 namespace recorder {
 
 struct StreamParam {
-  uint32_t     id;
-  uint32_t     width;
-  uint32_t     height;
-  BufferFormat format;
-  float        framerate;
-  Rotation     rotation;
-  uint32_t     xtrabufs;
-  VideoFlags   flags;
+  uint32_t          id;
+  uint32_t          width;
+  uint32_t          height;
+  BufferFormat      format;
+  VideoColorimetry  colorimetry;
+  float             framerate;
+  Rotation          rotation;
+  uint32_t          xtrabufs;
+  VideoFlags        flags;
 
   StreamParam()
       :  id(0), width(0), height(0), format(BufferFormat::kUnsupported),
-         framerate(0.0), rotation(Rotation::kNone), xtrabufs(0),
-         flags(VideoFlags::kNone) {}
+         colorimetry(VideoColorimetry::kBT601), framerate(0.0),
+         rotation(Rotation::kNone), xtrabufs(0), flags(VideoFlags::kNone) {}
 };
 
 struct SnapshotParam {

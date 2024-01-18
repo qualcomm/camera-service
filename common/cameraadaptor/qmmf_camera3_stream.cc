@@ -20,7 +20,7 @@
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -110,6 +110,10 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
   camera3_stream::height = outputConfiguration.height;
   camera3_stream::format = outputConfiguration.format;
   camera3_stream::data_space = outputConfiguration.data_space;
+#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
+  camera3_stream::stream_use_case = outputConfiguration.usecase;
+  camera3_stream::dynamic_range_profile = outputConfiguration.hdrmode;
+#endif
   camera3_stream::rotation = outputConfiguration.rotation;
   camera3_stream::usage =
     AllocUsageFactory::GetAllocUsage().ToGralloc(outputConfiguration.allocFlags);

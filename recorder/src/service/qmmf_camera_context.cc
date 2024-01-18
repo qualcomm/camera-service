@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -2882,6 +2882,12 @@ status_t CameraPort::Init() {
     QMMF_INFO ("%s: track_id(0%x) total buffer count(%d)", __func__,
         params_.id, cam_stream_params_.bufferCount);
   }
+
+#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
+  if (params_.colorimetry == VideoColorimetry::kBT2100HLG) {
+    cam_stream_params_.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10;
+  }
+#endif
 
   cam_stream_params_.cb = [&] (StreamBuffer buffer) { StreamCallback(buffer); };
 

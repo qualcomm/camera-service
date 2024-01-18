@@ -1917,6 +1917,18 @@ status_t CameraContext::UpdateRequest(bool is_streaming) {
 
   size = streaming_active_requests_[0].streamIds.size();
 
+  // when camera mode is fastswitch, multiple video streams should be added or
+  // removed simultaneously, which is necessary for HFR case, since preview
+  // stream always exists, we need to cache video streams update if active
+  // request streams num is not equal to configured stream number.
+  if ((camera_parameters_.cam_opmode ==
+        CamOperationMode::kCamOperationModeFastSwitch) &&
+        (size != 0 && size != 1 && size != active_ports_number)) {
+      QMMF_INFO("%s: active_ports_number = %d, size =%d, caching this state",
+          __func__, active_ports_number, size);
+      return NO_ERROR;
+  }
+
   //TODO: this logic only works when static stream configurations are applied
   //in dynamic switch case, there will be extra streams created by application
   //so that all ports will not be ready forever

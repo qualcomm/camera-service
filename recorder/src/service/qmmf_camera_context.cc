@@ -945,7 +945,11 @@ status_t CameraContext::CreateStream(const StreamParam& param,
 
   camera_parameters_.batch_size = batch;
 
-  if ((hfr_detected_ == false) && (batch > 1)) {
+  // FIXME: HFR control and exception for fastswitch will be removed after
+  // session clean-up merged
+  if ((camera_parameters_.cam_opmode !=
+        CamOperationMode::kCamOperationModeFastSwitch) &&
+      (hfr_detected_ == false) && (batch > 1)) {
     QMMF_INFO("%s: HFR stream detected!"
         "track_id = %x", __func__, param.id);
     hfr_detected_ = true;

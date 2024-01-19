@@ -17,6 +17,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef CAMERA3INTERNALTYPES_H_
@@ -25,7 +29,8 @@
 #include <map>
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
-#include <camera/CameraMetadata.h>
+
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 
 using namespace android;
 
@@ -44,7 +49,7 @@ typedef struct : public camera3_stream_t {
 } Camera3InputStream;
 
 typedef struct CaptureRequest_t {
-  ::camera::CameraMetadata metadata;
+  CameraMetadata metadata;
   Vector<Camera3Stream *> streams;
   CaptureResultExtras resultExtras;
   Camera3InputStream *input;
@@ -59,12 +64,12 @@ struct PendingRequest {
   int status;
   bool isMetaPresent;
   int buffersRemaining;
-  ::camera::CameraMetadata pendingMetadata;
+  CameraMetadata pendingMetadata;
   Vector<camera3_stream_buffer_t> pendingBuffers;
 
   struct PartialResult {
     bool partial3AReceived;
-    ::camera::CameraMetadata composedResult;
+    CameraMetadata composedResult;
 
     PartialResult() : partial3AReceived(false) {}
   } partialResult;

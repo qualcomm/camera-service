@@ -32,8 +32,10 @@ target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_recorder_client log binder utils cutils dl
- camera_metadata)
+target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_recorder_client log binder utils cutils)
+endif()
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_client camera_client)
 endif()

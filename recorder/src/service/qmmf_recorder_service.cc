@@ -312,9 +312,9 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         data.readUint32(&type);
         data.readUint32(&n_images);
         data.readUint32(&meta_size);
-        std::vector<::camera::CameraMetadata> meta_array;
+        std::vector<CameraMetadata> meta_array;
         for (uint32_t i = 0; i < meta_size; ++i) {
-          ::camera::CameraMetadata meta;
+          CameraMetadata meta;
           camera_metadata_t *m = nullptr;
           ret = meta.readFromParcel(data, &m);
           if ((NO_ERROR != ret) || (nullptr == m)) {
@@ -389,7 +389,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         uint32_t client_id, camera_id;
         data.readUint32(&client_id);
         data.readUint32(&camera_id);
-        ::camera::CameraMetadata meta;
+        CameraMetadata meta;
         camera_metadata_t *m = nullptr;
         ret = meta.readFromParcel(data, &m);
         if ((NO_ERROR != ret) || (nullptr == m)) {
@@ -414,7 +414,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         uint32_t client_id, camera_id;
         data.readUint32(&client_id);
         data.readUint32(&camera_id);
-        ::camera::CameraMetadata meta;
+        CameraMetadata meta;
         ret = GetCameraParam(client_id, camera_id, meta);
         reply->writeInt32(ret);
         if (NO_ERROR == ret) {
@@ -432,7 +432,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         uint32_t client_id, camera_id;
         data.readUint32(&client_id);
         data.readUint32(&camera_id);
-        ::camera::CameraMetadata meta;
+        CameraMetadata meta;
         camera_metadata_t *m = nullptr;
         ret = meta.readFromParcel(data, &m);
         if ((NO_ERROR != ret) || (nullptr == m)) {
@@ -468,7 +468,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         uint32_t client_id, camera_id;
         data.readUint32(&client_id);
         data.readUint32(&camera_id);
-        ::camera::CameraMetadata meta;
+        CameraMetadata meta;
         ret = GetDefaultCaptureParam(client_id, camera_id, meta);
         reply->writeInt32(ret);
         if (NO_ERROR == ret) {
@@ -486,7 +486,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         uint32_t client_id, camera_id;
         data.readUint32(&client_id);
         data.readUint32(&camera_id);
-        ::camera::CameraMetadata meta;
+        CameraMetadata meta;
         ret = GetCameraCharacteristics(client_id, camera_id, meta);
         reply->writeInt32(ret);
         if (NO_ERROR == ret) {
@@ -501,7 +501,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
       }
       break;
       case RECORDER_GET_VENDOR_TAG_DESCRIPTOR: {
-        sp<::camera::VendorTagDescriptor> desc;
+        std::shared_ptr<VendorTagDescriptor> desc;
         ret = GetVendorTagDescriptor(desc);
         reply->writeInt32(ret);
         if (NO_ERROR == ret) {
@@ -511,7 +511,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
                        __func__, ret);
           }
         }
-        desc.clear();
+        desc.reset();
         return NO_ERROR;
       }
       break;
@@ -977,7 +977,7 @@ status_t RecorderService::CaptureImage(const uint32_t client_id,
                                        const uint32_t camera_id,
                                        const SnapshotType type,
                                        const uint32_t n_images,
-                                       const std::vector<::camera::CameraMetadata> &meta) {
+                                       const std::vector<CameraMetadata> &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1064,7 +1064,7 @@ status_t RecorderService::ReturnImageCaptureBuffer(const uint32_t client_id,
 
 status_t RecorderService::SetCameraParam(const uint32_t client_id,
                                          const uint32_t camera_id,
-                                         const ::camera::CameraMetadata &meta) {
+                                         const CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1084,7 +1084,7 @@ status_t RecorderService::SetCameraParam(const uint32_t client_id,
 
 status_t RecorderService::GetCameraParam(const uint32_t client_id,
                                          const uint32_t camera_id,
-                                         ::camera::CameraMetadata &meta) {
+                                         CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1104,7 +1104,7 @@ status_t RecorderService::GetCameraParam(const uint32_t client_id,
 
 status_t RecorderService::SetCameraSessionParam(const uint32_t client_id,
                                                 const uint32_t camera_id,
-                                                const ::camera::CameraMetadata &meta) {
+                                                const CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1144,7 +1144,7 @@ status_t RecorderService::SetSHDR(const uint32_t client_id,
 
 status_t RecorderService::GetDefaultCaptureParam(const uint32_t client_id,
                                                  const uint32_t camera_id,
-                                                 ::camera::CameraMetadata &meta) {
+                                                 CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1164,7 +1164,7 @@ status_t RecorderService::GetDefaultCaptureParam(const uint32_t client_id,
 
 status_t RecorderService::GetCameraCharacteristics(const uint32_t client_id,
                                                    const uint32_t camera_id,
-                                                   ::camera::CameraMetadata &meta) {
+                                                   CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
 
@@ -1302,9 +1302,9 @@ status_t RecorderService::DisconnectInternal(const uint32_t client_id) {
   return NO_ERROR;
 }
 
-status_t RecorderService::GetVendorTagDescriptor(sp<::camera::VendorTagDescriptor> &desc) {
+status_t RecorderService::GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) {
 
-  desc = ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+  desc = VendorTagDescriptor::getGlobalVendorTagDescriptor();
   return (desc == nullptr) ? BAD_VALUE : NO_ERROR;
 }
 

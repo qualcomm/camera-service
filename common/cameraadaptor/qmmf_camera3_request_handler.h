@@ -17,19 +17,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef CAMERA3REQUESTHANDLER_H_
 #define CAMERA3REQUESTHANDLER_H_
 
 #include <pthread.h>
 #include <hardware/hardware.h>
-#include <camera/CameraMetadata.h>
 #include <utils/KeyedVector.h>
 #include <utils/List.h>
 #include <chrono>
 #include <mutex>
 #include <thread>
 
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "common/cameraadaptor/qmmf_camera3_types.h"
 #include "common/cameraadaptor/qmmf_camera3_internal_types.h"
 #include "common/utils/qmmf_thread.h"

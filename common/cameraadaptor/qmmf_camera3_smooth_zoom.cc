@@ -31,7 +31,11 @@
 #include <stdlib.h>
 #include <math.h>
 
+#ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
+#else
+#include "properties.h"
+#endif
 #include <qmmf_camera3_utils.h>
 #include <qmmf_camera3_device_client.h>
 #include "recorder/src/service/qmmf_recorder_common.h"

@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -70,8 +70,7 @@
 #include <vector>
 #include <string>
 
-#include <camera/CameraMetadata.h>
-
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
 #include "qmmf-sdk/qmmf_recorder_extra_param.h"
 #include "qmmf-sdk/qmmf_offline_jpeg_params.h"
@@ -250,7 +249,7 @@ class Recorder {
   status_t CaptureImage(const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta,
+                        const std::vector<CameraMetadata> &meta,
                         const ImageCaptureCb &cb);
 
   /// @brief Enables clients to configure image capture parameters.
@@ -290,12 +289,12 @@ class Recorder {
   /// meta param through GetCameraParam, then update it using update
   /// function of CameraMetadata and then set this through SetCameraParam
   status_t SetCameraParam(const uint32_t camera_id,
-                          const ::camera::CameraMetadata &meta);
+                          const CameraMetadata &meta);
 
   /// Compelementary API of SetCameraParam. Clients generally calls
   /// GetCameraParam to get default camerametadata params
   status_t GetCameraParam(const uint32_t camera_id,
-                          ::camera::CameraMetadata &meta);
+                          CameraMetadata &meta);
 
   /// @brief Sets camera session parameters
   ///
@@ -304,7 +303,7 @@ class Recorder {
   /// meta param, then update it using update function of CameraMetadata and
   /// then set this through SetCameraSessionParam
   status_t SetCameraSessionParam(const uint32_t camera_id,
-                                 const ::camera::CameraMetadata &meta);
+                                 const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
   status_t SetSHDR(const uint32_t camera_id,
@@ -316,12 +315,12 @@ class Recorder {
   /// While GetCameraParam gives default params for video record. This API is
   /// applicable only for non-zsl capture.
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta);
+                                  CameraMetadata &meta);
 
   /// Clients generally calls GetCameraCharacteristics to get
   /// static camerametadata params.
   status_t GetCameraCharacteristics(const uint32_t camera_id,
-                                    ::camera::CameraMetadata &meta);
+                                    CameraMetadata &meta);
 
   /// @brief Create Offline JPEG
   ///

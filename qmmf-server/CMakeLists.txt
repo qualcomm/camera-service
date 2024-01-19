@@ -25,7 +25,13 @@ target_include_directories(qmmf-server
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf-server DESTINATION bin OPTIONAL)
-target_link_libraries(qmmf-server log cutils utils binder qmmf_recorder_service)
+target_link_libraries(qmmf-server qmmf_recorder_service)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf-server log cutils utils binder)
+else()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
+target_link_libraries(qmmf-server propertyvault)
+endif()
 
 if (TARGET_BOARD_PLATFORM STREQUAL "apq8009")
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v1.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qmmf-server.service)

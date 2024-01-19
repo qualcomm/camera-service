@@ -41,7 +41,11 @@
 #include <vector>
 #include <map>
 
+#ifdef HAVE_ANDROID_UTILS
 #include <utils/Log.h>
+#else
+#include <log.h>
+#endif
 
 namespace qmmf {
 

@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -65,12 +65,12 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <camera/CameraMetadata.h>
 #include <ios>
 #include <random>
 #include <algorithm>
 
 #include "recorder/test/gtest/qmmf_gtest_common.h"
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 
 #ifndef CAMERA_HAL1_SUPPORT
 using namespace qcamera;
@@ -741,7 +741,7 @@ void GtestCommon::SessionCallbackHandler(EventType event_type,
 }
 
 void GtestCommon::CameraResultCallbackHandler(uint32_t camera_id,
-                                   const ::camera::CameraMetadata &result) {
+                                   const CameraMetadata &result) {
   TEST_DBG(stderr,"%s: camera_id: %d\n", __func__, camera_id);
   camera_metadata_ro_entry entry;
   entry = result.find(ANDROID_CONTROL_AWB_MODE);
@@ -1037,7 +1037,7 @@ void GtestCommon::ClearSessions() {
 }
 
 void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
-                                                const ::camera::CameraMetadata &result) {
+                                                const CameraMetadata &result) {
   uint32_t meta_frame_number =
       result.find(ANDROID_REQUEST_FRAME_COUNT).data.i32[0];
   TEST_INFO("%s meta frame number =%d", __func__, meta_frame_number);
@@ -1050,7 +1050,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
   if (append) {
     // New entry, camera meta arrived first.
     auto buffer_meta_tuple = std::make_tuple(BufferDescriptor(),
-     ::camera::CameraMetadata(result), 0, 0);
+     CameraMetadata(result), 0, 0);
     buffer_metadata_map_.insert( { meta_frame_number, buffer_meta_tuple} );
   } else {
     // Buffer already arrived for this meta.
@@ -1092,7 +1092,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
   if (append) {
     // New entry, buffer arrived first.
     auto buffer_meta_tuple = std::make_tuple(BufferDescriptor(buffers[0]),
-        ::camera::CameraMetadata(), session_id, track_id);
+        CameraMetadata(), session_id, track_id);
     buffer_metadata_map_.insert( {meta_frame_number, buffer_meta_tuple} );
   } else {
     // BufferMeta already arrived for this buffer.
@@ -1118,7 +1118,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
   TEST_DBG("%s: Exit", __func__);
 }
 
-void GtestCommon::ParseFaceInfo(const ::camera::CameraMetadata &res,
+void GtestCommon::ParseFaceInfo(const CameraMetadata &res,
                                   struct FaceInfo &info) {
   camera_metadata_ro_entry rect_entry, crop_entry;
   Rect<uint32_t> rect;
@@ -1167,7 +1167,7 @@ void GtestCommon::ParseFaceInfo(const ::camera::CameraMetadata &res,
 *
 * return: true if available
 **/
-bool GtestCommon::ValidateResFromStreamConfigs(const ::camera::CameraMetadata& meta,
+bool GtestCommon::ValidateResFromStreamConfigs(const CameraMetadata& meta,
                                                 const uint32_t width,
                                                 const uint32_t height) {
   bool is_supported = false;
@@ -1234,7 +1234,7 @@ bool GtestCommon::ValidateResFromStreamConfigs(const ::camera::CameraMetadata& m
 *
 * return: true if available
 **/
-bool GtestCommon::GetMinResFromStreamConfigs(const ::camera::CameraMetadata& meta,
+bool GtestCommon::GetMinResFromStreamConfigs(const CameraMetadata& meta,
                                               uint32_t &width,
                                               uint32_t &height) {
   bool found = false;
@@ -1303,7 +1303,7 @@ bool GtestCommon::GetMinResFromStreamConfigs(const ::camera::CameraMetadata& met
 *
 * return: true if available
 **/
-bool GtestCommon::ValidateResFromProcessedSizes(const ::camera::CameraMetadata& meta,
+bool GtestCommon::ValidateResFromProcessedSizes(const CameraMetadata& meta,
                                           const uint32_t width,
                                           const uint32_t height) {
   bool is_supported = false;
@@ -1338,7 +1338,7 @@ bool GtestCommon::ValidateResFromProcessedSizes(const ::camera::CameraMetadata& 
 *
 * return: true if available
 **/
-bool GtestCommon::ValidateResFromJpegSizes(const ::camera::CameraMetadata& meta,
+bool GtestCommon::ValidateResFromJpegSizes(const CameraMetadata& meta,
                                                   const uint32_t width,
                                                   const uint32_t height) {
   bool is_supported = false;
@@ -1407,7 +1407,7 @@ bool GtestCommon::ValidateResFromJpegSizes(const ::camera::CameraMetadata& meta,
 *
 * return: true if available
 **/
-bool GtestCommon::ValidateResFromRawSizes(const ::camera::CameraMetadata& meta,
+bool GtestCommon::ValidateResFromRawSizes(const CameraMetadata& meta,
                                                     const uint32_t width,
                                                     const uint32_t height) {
   bool is_supported = false;
@@ -1492,7 +1492,7 @@ bool GtestCommon::ValidateResFromRawSizes(const ::camera::CameraMetadata& meta,
 *
 * return: true if available
 **/
-bool GtestCommon::GetMaxSupportedCameraRes(const ::camera::CameraMetadata& meta,
+bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
                                       uint32_t &width, uint32_t &height,
                                       const int32_t format) {
   bool found = false;
@@ -1594,7 +1594,7 @@ bool GtestCommon::GetMaxSupportedCameraRes(const ::camera::CameraMetadata& meta,
 *
 * return: true if available
 **/
-bool GtestCommon::GetMinSupportedCameraRes(const ::camera::CameraMetadata& meta,
+bool GtestCommon::GetMinSupportedCameraRes(const CameraMetadata& meta,
                                                   uint32_t &width,
                                                   uint32_t &height) {
   bool found = false;
@@ -1624,7 +1624,7 @@ bool GtestCommon::GetMinSupportedCameraRes(const ::camera::CameraMetadata& meta,
 }
 
 status_t GtestCommon::SetCameraFocalLength(const float focal_length) {
-  ::camera::CameraMetadata meta;
+  CameraMetadata meta;
   auto ret = recorder_.GetDefaultCaptureParam(camera_id_, meta);
   EXPECT_TRUE(ret == NO_ERROR);
 
@@ -1646,7 +1646,7 @@ status_t GtestCommon::SetCameraFocalLength(const float focal_length) {
 }
 
 status_t GtestCommon::SetCameraZoom(const float zoom) {
-  ::camera::CameraMetadata meta;
+  CameraMetadata meta;
   auto ret = recorder_.GetCameraParam(camera_id_, meta);
   EXPECT_TRUE(ret == NO_ERROR);
 
@@ -1941,8 +1941,8 @@ status_t GtestCommon::PopulateExpTables(
  * tag_id, on success, returns true and fills vendor tag_id. On failure,
  * returns false.
  */
-bool GtestCommon::VendorTagSupported(const String8& name,
-                                      const String8& section,
+bool GtestCommon::VendorTagSupported(const std::string& name,
+                                      const std::string& section,
                                       uint32_t* tag_id) {
   TEST_DBG("%s: Enter", __func__);
   bool is_available = false;
@@ -1954,7 +1954,7 @@ bool GtestCommon::VendorTagSupported(const String8& name,
   }
 
   if (nullptr == vendor_tag_desc_.get()) {
-    vendor_tag_desc_ = ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+    vendor_tag_desc_ = VendorTagDescriptor::getGlobalVendorTagDescriptor();
     if (nullptr == vendor_tag_desc_.get()) {
       TEST_ERROR("%s: Failed in fetching vendor tag descriptor", __func__);
       return false;
@@ -1967,7 +1967,7 @@ bool GtestCommon::VendorTagSupported(const String8& name,
     return false;
   } else {
     TEST_INFO("%s: name = %s, section = %s, tag_id = 0x%x",
-              __func__, name.string(), section.string(), *tag_id);
+              __func__, name.c_str(), section.c_str(), *tag_id);
     is_available = true;
   }
 
@@ -1980,9 +1980,9 @@ bool GtestCommon::VendorTagSupported(const String8& name,
  * tag_id is present in given meta, on success, returns true and fills
  * vendor tag_id. On failure, returns false.
  */
-bool GtestCommon::VendorTagExistsInMeta(const ::camera::CameraMetadata& meta,
-                                         const String8& name,
-                                         const String8& section,
+bool GtestCommon::VendorTagExistsInMeta(const CameraMetadata& meta,
+                                         const std::string& name,
+                                         const std::string& section,
                                          uint32_t* tag_id) {
   TEST_DBG("%s: Enter", __func__);
   bool is_available = false;
@@ -2117,13 +2117,13 @@ void GtestCommon::ExtractColorValues(uint32_t hex_color, RGBAValues* color) {
   color->alpha = ((hex_color) & 0xff) / 255.0;
 }
 
-status_t GtestCommon::FillCropMetadata(::camera::CameraMetadata& meta,
+status_t GtestCommon::FillCropMetadata(CameraMetadata& meta,
                                             int32_t sensor_mode_w,
                                             int32_t sensor_mode_h,
                                             int32_t crop_x, int32_t crop_y,
                                             int32_t crop_w, int32_t crop_h) {
 
-  ::camera::CameraMetadata static_meta;
+  CameraMetadata static_meta;
   auto ret = recorder_.GetCameraCharacteristics(camera_id_, static_meta);
   if (NO_ERROR != ret) {
     TEST_ERROR("%s: GetCameraCharacteristics failed!", __func__);
@@ -2165,7 +2165,7 @@ status_t GtestCommon::FillCropMetadata(::camera::CameraMetadata& meta,
 void GtestCommon::ConfigureImageParam(uint32_t img_id) {
 
   bool res_supported = false;
-  ::camera::CameraMetadata static_meta;
+  CameraMetadata static_meta;
 
   auto ret = recorder_.GetCameraCharacteristics(camera_id_, static_meta);
   ASSERT_TRUE(ret == NO_ERROR);
@@ -2211,8 +2211,8 @@ void GtestCommon::ConfigureImageParam(uint32_t img_id) {
 }
 
 void GtestCommon::TakeSnapshot() {
-  std::vector < ::camera::CameraMetadata > meta_array;
-  ::camera::CameraMetadata meta;
+  std::vector <CameraMetadata > meta_array;
+  CameraMetadata meta;
 
   auto ret = recorder_.GetDefaultCaptureParam(camera_id_, meta);
   ASSERT_TRUE(ret == NO_ERROR);

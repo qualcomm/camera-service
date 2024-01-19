@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *  
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -137,7 +137,7 @@ void RemoteCallBack::NotifyVideoTrackEvent(uint32_t session_id,
 }
 
 void RemoteCallBack::NotifyCameraResult(uint32_t camera_id,
-                                        const ::camera::CameraMetadata &result) {
+                                        const CameraMetadata &result) {
   assert(client_cb_handle_.get() != nullptr);
   client_cb_handle_->NotifyCameraResult(camera_id, result);
 }

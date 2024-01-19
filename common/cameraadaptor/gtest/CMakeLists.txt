@@ -24,7 +24,11 @@ target_include_directories(qmmf_camera_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_camera_adaptor_gtest DESTINATION bin OPTIONAL)
-target_link_libraries(qmmf_camera_adaptor_gtest log cutils utils gtest gtest_main camera_metadata qmmf_camera_adaptor)
+target_link_libraries(qmmf_camera_adaptor_gtest gtest gtest_main camera_metadata qmmf_camera_adaptor)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_camera_adaptor_gtest log cutils utils)
+endif()
+
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_camera_adaptor_gtest camera_client)
 endif()
@@ -45,7 +49,10 @@ target_include_directories(qmmf_ccamera_dual_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_ccamera_dual_adaptor_gtest DESTINATION bin OPTIONAL)
-target_link_libraries(qmmf_ccamera_dual_adaptor_gtest log cutils utils gtest gtest_main camera_metadata qmmf_camera_adaptor)
+target_link_libraries(qmmf_ccamera_dual_adaptor_gtest gtest gtest_main camera_metadata qmmf_camera_adaptor)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_ccamera_dual_adaptor_gtest log cutils utils)
+endif()
 if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_ccamera_dual_adaptor_gtest camera_client)
 endif()

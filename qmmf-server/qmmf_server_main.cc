@@ -27,6 +27,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <atomic>
 
 #include <binder/IInterface.h>
@@ -34,7 +40,11 @@
 #include <binder/ProcessState.h>
 #include <binder/IServiceManager.h>
 #include <binder/IPCThreadState.h>
+#ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
+#else
+#include "properties.h"
+#endif
 
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/service/qmmf_recorder_service.h"

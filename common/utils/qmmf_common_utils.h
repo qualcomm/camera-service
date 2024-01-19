@@ -78,11 +78,11 @@
 #include <system/graphics.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <camera/CameraMetadata.h>
 #ifndef CAMERA_HAL1_SUPPORT
 #include <hardware/camera3.h>
 #endif
 
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
 #include "common/utils/qmmf_log.h"
 #include "common/utils/qmmf_condition.h"
@@ -133,7 +133,7 @@ struct StreamBuffer {
 
 struct ReprocEntry {
   StreamBuffer    buffer;
-  ::camera::CameraMetadata  result;
+  CameraMetadata  result;
   int64_t         timestamp;
 };
 
@@ -403,7 +403,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateStreamFormat(const ::camera::CameraMetadata& meta,
+  static bool ValidateStreamFormat(const CameraMetadata& meta,
                                    const BufferFormat format,
                                    bool input = false) {
     bool is_supported = false;
@@ -473,7 +473,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateInputFormat(const ::camera::CameraMetadata& meta,
+  static bool ValidateInputFormat(const CameraMetadata& meta,
                                   const BufferFormat in_format,
                                   const BufferFormat out_format) {
     bool is_supported = false;
@@ -522,7 +522,7 @@ class Common {
   *
   * return: true if available
   **/
-  static bool ValidateResFromStreamConfigs(const ::camera::CameraMetadata& meta,
+  static bool ValidateResFromStreamConfigs(const CameraMetadata& meta,
                                            const uint32_t width,
                                            const uint32_t height) {
     bool is_supported = false;
@@ -582,7 +582,7 @@ class Common {
   *
   * return: true if available
   **/
-  static bool GetMaxResFromStreamConfigs(const ::camera::CameraMetadata& meta,
+  static bool GetMaxResFromStreamConfigs(const CameraMetadata& meta,
                                          uint32_t &width,
                                          uint32_t &height) {
     bool found = false;
@@ -638,7 +638,7 @@ class Common {
   *
   * return: true if available
   **/
-  static bool GetMinResFromStreamConfigs(const ::camera::CameraMetadata& meta,
+  static bool GetMinResFromStreamConfigs(const CameraMetadata& meta,
                                          uint32_t &width,
                                          uint32_t &height) {
     bool found = false;
@@ -697,7 +697,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateResFromProcessedSizes(const ::camera::CameraMetadata& meta,
+  static bool ValidateResFromProcessedSizes(const CameraMetadata& meta,
                                             const uint32_t width,
                                             const uint32_t height) {
     bool is_supported = false;
@@ -732,7 +732,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateResFromJpegSizes(const ::camera::CameraMetadata& meta,
+  static bool ValidateResFromJpegSizes(const CameraMetadata& meta,
                                        const uint32_t width,
                                        const uint32_t height) {
     bool is_supported = false;
@@ -793,7 +793,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateResFromRawSizes(const ::camera::CameraMetadata& meta,
+  static bool ValidateResFromRawSizes(const CameraMetadata& meta,
                                       const uint32_t width,
                                       const uint32_t height) {
     bool is_supported = false;
@@ -880,7 +880,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool ValidateResolution(const ::camera::CameraMetadata& meta,
+  static bool ValidateResolution(const CameraMetadata& meta,
                                   const BufferFormat format,
                                   const uint32_t width,
                                   const uint32_t height) {
@@ -914,7 +914,7 @@ class Common {
       default:
         QMMF_ERROR("%s: Format(%d) not supported!", __func__,
           (int32_t) format);
-        return BAD_TYPE;
+        return -1;
     }
     return is_supported;
   }
@@ -925,7 +925,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool GetMaxSupportedCameraRes(const ::camera::CameraMetadata& meta,
+  static bool GetMaxSupportedCameraRes(const CameraMetadata& meta,
       uint32_t &width, uint32_t &height,
       const BufferFormat format = BufferFormat::kRAW10) {
     bool found = false;
@@ -1014,7 +1014,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool GetMinSupportedCameraRes(const ::camera::CameraMetadata& meta,
+  static bool GetMinSupportedCameraRes(const CameraMetadata& meta,
                                       uint32_t &width,
                                       uint32_t &height) {
     bool found = false;
@@ -1049,7 +1049,7 @@ class Common {
    *
    * return: true if available
    **/
-  static bool GetSupportedCameraFormats(const ::camera::CameraMetadata& meta,
+  static bool GetSupportedCameraFormats(const CameraMetadata& meta,
                                         std::set<BufferFormat> &formats,
                                         bool input = false) {
 

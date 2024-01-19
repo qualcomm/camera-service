@@ -29,8 +29,13 @@
 
 #pragma once
 
+#ifdef HAVE_ANDROID_UTILS
 #include <utils/Log.h>
 #include <cutils/properties.h>
+#else
+#include <log.h>
+#include "properties.h"
+#endif
 
 #undef assert
 // Invalid ptr operation just to get backtraces into logcat.
@@ -65,6 +70,7 @@ extern uint32_t qmmf_log_level;
 #define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
 #define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 
+#ifdef HAVE_ANDROID_UTILS
 #ifdef LOG_LEVEL_KPI
 #include <cutils/trace.h>
 
@@ -126,6 +132,7 @@ public:
 #define QMMF_KPI_DETAIL() ({\
 DetailKpiObject a(__func__);\
 })
+#endif
 
 #else
 #define QMMF_KPI_GET_MASK   ()             do {} while (0)

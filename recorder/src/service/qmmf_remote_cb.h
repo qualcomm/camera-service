@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *  
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -99,7 +99,7 @@ class RemoteCallBack : public RefBase {
                                EventType event_type,
                                void *event_data, size_t event_data_size);
 
-    void NotifyCameraResult(uint32_t camera_id, const ::camera::CameraMetadata &result);
+    void NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result);
 
     void NotifyDeleteVideoTrack(uint32_t track_id);
 

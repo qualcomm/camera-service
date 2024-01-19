@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -266,7 +266,7 @@ status_t Recorder::DeleteVideoTrack(const uint32_t session_id,
 status_t Recorder::CaptureImage(const uint32_t camera_id,
                                 const SnapshotType type,
                                 const uint32_t n_images,
-                                const std::vector<::camera::CameraMetadata> &meta,
+                                const std::vector<CameraMetadata> &meta,
                                 const ImageCaptureCb& cb) {
 
   assert(recorder_client_ != NULL);
@@ -316,7 +316,7 @@ status_t Recorder::ReturnImageCaptureBuffer(const uint32_t camera_id,
 }
 
 status_t Recorder::SetCameraParam(const uint32_t camera_id,
-                                  const ::camera::CameraMetadata &meta) {
+                                  const CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
@@ -329,7 +329,7 @@ status_t Recorder::SetCameraParam(const uint32_t camera_id,
 }
 
 status_t Recorder::GetCameraParam(const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta) {
+                                  CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
@@ -343,7 +343,7 @@ status_t Recorder::GetCameraParam(const uint32_t camera_id,
 }
 
 status_t Recorder::SetCameraSessionParam(const uint32_t camera_id,
-                                         const ::camera::CameraMetadata &meta) {
+                                         const CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
@@ -370,7 +370,7 @@ status_t Recorder::SetSHDR(const uint32_t camera_id,
 }
 
 status_t Recorder::GetDefaultCaptureParam(const uint32_t camera_id,
-                                          ::camera::CameraMetadata &meta) {
+                                          CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
@@ -384,7 +384,7 @@ status_t Recorder::GetDefaultCaptureParam(const uint32_t camera_id,
 }
 
 status_t Recorder::GetCameraCharacteristics(const uint32_t camera_id,
-                                            ::camera::CameraMetadata &meta) {
+                                            CameraMetadata &meta) {
 
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);

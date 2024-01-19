@@ -83,6 +83,7 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <memory>
 #include <utils/String8.h>
 
 #include "recorder/src/service/qmmf_recorder_common.h"
@@ -123,7 +124,7 @@ namespace qmmf {
 namespace cameraadaptor {
 
 std::mutex Camera3DeviceClient::vendor_tag_mutex_;
-sp<::camera::VendorTagDescriptor> Camera3DeviceClient::vendor_tag_desc_ = nullptr;
+std::shared_ptr<VendorTagDescriptor> Camera3DeviceClient::vendor_tag_desc_;
 uint32_t Camera3DeviceClient::client_count_ = 0;
 
 Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
@@ -158,7 +159,7 @@ Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
       input_stream_{},
       is_camera_device_available_ (true),
       cam_opmode_ (CamOperationMode::kCamOperationModeNone),
-      session_metadata_ (::camera::CameraMetadata(128, 128)) {
+      session_metadata_ (CameraMetadata(128, 128)) {
   QMMF_GET_LOG_LEVEL();
   camera3_callback_ops::notify = &notifyFromHal;
   camera3_callback_ops::process_capture_result = &processCaptureResult;
@@ -210,9 +211,9 @@ Camera3DeviceClient::~Camera3DeviceClient() {
   {
     std::lock_guard<std::mutex> lk(vendor_tag_mutex_);
     if (--client_count_ == 0) {
-      ::camera::VendorTagDescriptor::clearGlobalVendorTagDescriptor();
+      VendorTagDescriptor::clearGlobalVendorTagDescriptor();
       if (vendor_tag_desc_.get() != nullptr)
-        vendor_tag_desc_.clear();
+        vendor_tag_desc_.reset();
     }
   }
 
@@ -263,7 +264,7 @@ int32_t Camera3DeviceClient::Initialize() {
       vendor_tag_ops_ = vendor_tag_ops_t();
       camera_module_->get_vendor_tag_ops(&vendor_tag_ops_);
 
-      res = ::camera::VendorTagDescriptor::createDescriptorFromOps(&vendor_tag_ops_,
+      res = VendorTagDescriptor::createDescriptorFromOps(&vendor_tag_ops_,
                                                          vendor_tag_desc_);
 
       if (0 != res) {
@@ -274,7 +275,7 @@ int32_t Camera3DeviceClient::Initialize() {
       }
 
       // Set the global descriptor to use with camera metadata
-      res = ::camera::VendorTagDescriptor::setAsGlobalVendorTagDescriptor(vendor_tag_desc_);
+      res = VendorTagDescriptor::setAsGlobalVendorTagDescriptor(vendor_tag_desc_);
 
       if (0 != res) {
         QMMF_ERROR(
@@ -308,9 +309,9 @@ exit:
   {
     std::lock_guard<std::mutex> lk(vendor_tag_mutex_);
     if (client_count_ == 0) {
-      ::camera::VendorTagDescriptor::clearGlobalVendorTagDescriptor();
+      VendorTagDescriptor::clearGlobalVendorTagDescriptor();
       if (vendor_tag_desc_.get() != nullptr)
-        vendor_tag_desc_.clear();
+        vendor_tag_desc_.reset();
     }
   }
 
@@ -532,9 +533,9 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
 
   if (IsInputROIMode()) {
     uint32_t tag_id = 0;
-    int32_t roienable = true;
-    const ::android::sp<::camera::VendorTagDescriptor> vtags =
-        ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+    bool roienable = true;
+    const std::shared_ptr<VendorTagDescriptor> vtags =
+        VendorTagDescriptor::getGlobalVendorTagDescriptor();
     if (vtags.get() == NULL) {
       QMMF_ERROR ("Failed to retrieve Global Vendor Tag Descriptor!");
       return -1;
@@ -947,10 +948,10 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
   //Calculate debuging buffer size of jpeg.
   uint32_t tag = 0;
 
-  sp<::camera::VendorTagDescriptor> vTags =
-      ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+  std::shared_ptr<VendorTagDescriptor> vTags =
+      VendorTagDescriptor::getGlobalVendorTagDescriptor();
 
-  ::camera::CameraMetadata::getTagFromName(
+  CameraMetadata::getTagFromName(
       "org.quic.camera.jpegdebugdata.size",vTags.get(), &tag);
 
   if (device_info_.exists(tag)) {
@@ -1026,7 +1027,7 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
 }
 
 int32_t Camera3DeviceClient::CreateDefaultRequest(int templateId,
-                                                  ::camera::CameraMetadata *request) {
+                                                  CameraMetadata *request) {
   int32_t res = 0;
   pthread_mutex_lock(&lock_);
 
@@ -1087,7 +1088,7 @@ int32_t Camera3DeviceClient::MarkPendingRequest(
 }
 
 bool Camera3DeviceClient::HandlePartialResult(
-    uint32_t frameNumber, const ::camera::CameraMetadata &partial,
+    uint32_t frameNumber, const CameraMetadata &partial,
     const CaptureResultExtras &resultExtras) {
 
   if (nullptr != client_cb_.resultCb) {
@@ -1124,7 +1125,7 @@ bool Camera3DeviceClient::HandlePartialResult(
 }
 
 template <typename T>
-bool Camera3DeviceClient::QueryPartialTag(const ::camera::CameraMetadata &result,
+bool Camera3DeviceClient::QueryPartialTag(const CameraMetadata &result,
                                           int32_t tag, T *value,
                                           uint32_t frameNumber) {
   (void)frameNumber;
@@ -1147,7 +1148,7 @@ bool Camera3DeviceClient::QueryPartialTag(const ::camera::CameraMetadata &result
 }
 
 template <typename T>
-bool Camera3DeviceClient::UpdatePartialTag(::camera::CameraMetadata &result, int32_t tag,
+bool Camera3DeviceClient::UpdatePartialTag(CameraMetadata &result, int32_t tag,
                                            const T *value,
                                            uint32_t frameNumber) {
   if (0 != result.update(tag, value, 1)) {
@@ -1231,7 +1232,7 @@ void Camera3DeviceClient::HandleCaptureResult(
   }
 
   bool isPartialResult = false;
-  ::camera::CameraMetadata collectedPartialResult;
+  CameraMetadata collectedPartialResult;
   camera_metadata_ro_entry_t entry;
   uint32_t numBuffersReturned;
 
@@ -1288,10 +1289,10 @@ void Camera3DeviceClient::HandleCaptureResult(
       camera_metadata_ro_entry entry;
       int32_t res;
 
-      sp<::camera::VendorTagDescriptor> vTags =
-          ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+      std::shared_ptr<VendorTagDescriptor> vTags =
+          VendorTagDescriptor::getGlobalVendorTagDescriptor();
 
-      ::camera::CameraMetadata::getTagFromName(
+      CameraMetadata::getTagFromName(
           "org.quic.camera.frameselection.updatedPickedFrames",
           vTags.get(), &tag);
 
@@ -1348,7 +1349,7 @@ void Camera3DeviceClient::HandleCaptureResult(
       request.pendingMetadata = result->result;
       request.partialResult.composedResult = collectedPartialResult;
     } else {
-      ::camera::CameraMetadata metadata;
+      CameraMetadata metadata;
       metadata = result->result;
       SendCaptureResult(metadata, request.resultExtras, collectedPartialResult,
                         frameNumber);
@@ -1534,8 +1535,8 @@ void Camera3DeviceClient::UpdateCameraStatus(bool status) {
 }
 
 void Camera3DeviceClient::SendCaptureResult(
-    ::camera::CameraMetadata &pendingMetadata, CaptureResultExtras &resultExtras,
-    ::camera::CameraMetadata &collectedPartialResult, uint32_t frameNumber) {
+    CameraMetadata &pendingMetadata, CaptureResultExtras &resultExtras,
+    CameraMetadata &collectedPartialResult, uint32_t frameNumber) {
   if (pendingMetadata.isEmpty()) return;
 
   if (nullptr == client_cb_.resultCb) {
@@ -1716,7 +1717,7 @@ int32_t Camera3DeviceClient::LoadHWModule(const char *moduleId,
   return status;
 }
 
-int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, ::camera::CameraMetadata *info) {
+int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
   if (NULL == info) {
     return -EINVAL;
   }
@@ -1764,7 +1765,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
     return -EINVAL;
   }
 
-  List<const ::camera::CameraMetadata> metadataRequestList;
+  List<const CameraMetadata> metadataRequestList;
   int32_t requestId = next_request_id_;
   int32_t temp_request_id = requestId;
 
@@ -1794,7 +1795,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> request
   for (std::list<Camera3Request>::iterator it = requests.begin();
        it != requests.end(); ++it) {
     Camera3Request request = *it;
-    ::camera::CameraMetadata metadata(request.metadata);
+    CameraMetadata metadata(request.metadata);
     if (metadata.isEmpty()) {
       QMMF_ERROR("%s: Camera %d: Received invalid meta.\n", __func__, id_);
       res = -EINVAL;
@@ -1873,7 +1874,7 @@ exit:
 }
 
 int32_t Camera3DeviceClient::AddRequestListLocked(
-    const List<const ::camera::CameraMetadata> &requests, bool streaming,
+    const List<const CameraMetadata> &requests, bool streaming,
     int64_t *lastFrameNumber) {
   RequestList requestList;
   RequestList requestListReproc;
@@ -1915,7 +1916,7 @@ int32_t Camera3DeviceClient::AddRequestListLocked(
 }
 
 int32_t Camera3DeviceClient::GetRequestListLocked(
-    const List<const ::camera::CameraMetadata> &metadataList,
+    const List<const CameraMetadata> &metadataList,
     RequestList *requestList,
     RequestList *requestListReproc) {
   if (requestList == NULL) {
@@ -1924,7 +1925,7 @@ int32_t Camera3DeviceClient::GetRequestListLocked(
   }
 
   int32_t burstId = 0;
-  for (List<const ::camera::CameraMetadata>::const_iterator it = metadataList.begin();
+  for (List<const CameraMetadata>::const_iterator it = metadataList.begin();
        it != metadataList.end(); ++it) {
     CaptureRequest newRequest;
     int32_t res = GenerateCaptureRequestLocked(*it, newRequest);
@@ -1955,7 +1956,7 @@ int32_t Camera3DeviceClient::GetRequestListLocked(
 }
 
 int32_t Camera3DeviceClient::GenerateCaptureRequestLocked(
-    const ::camera::CameraMetadata &request, CaptureRequest &captureRequest) {
+    const CameraMetadata &request, CaptureRequest &captureRequest) {
   int32_t res;
 
   if (state_ == STATE_NOT_CONFIGURED || reconfig_) {
@@ -2318,7 +2319,7 @@ exit:
 }
 
 int32_t Camera3DeviceClient::SetCameraSessionParam(
-    const ::camera::CameraMetadata &meta) {
+    const CameraMetadata &meta) {
   int32_t res = 0;
   pthread_mutex_lock(&lock_);
 

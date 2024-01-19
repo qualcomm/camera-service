@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center are provided under the following license:
 *
-* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -78,15 +78,10 @@
 #include <type_traits>
 #include <vector>
 
-#include <camera/CameraMetadata.h>
-
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_buffer.h"
 
-#ifndef CAMERA_METADATA_1_0_NS
-namespace camera = android;
-#else
-namespace camera = android::hardware::camera::common::V1_0::helper;
-#endif
+namespace camera = qmmf;
 
 namespace qmmf {
 
@@ -174,6 +169,11 @@ enum class VideoFlags : uint64_t {
   kUncashed = 1 << 1, /// Allocated buffers are not cached.
   kPreview  = 1 << 2, /// Indicate a preview stream
   kReproc   = 1 << 3, /// Indicate a reprocess input stream
+};
+
+enum class VideoColorimetry : uint32_t {
+  kBT601,        /// "bt601"
+  kBT2100HLG,    /// "bt2100-hlg"
 };
 
 inline VideoFlags operator | (VideoFlags lhs, VideoFlags rhs) {
@@ -270,6 +270,8 @@ struct VideoTrackParam {
   float       framerate;
   /// Video Track format
   VideoFormat format;
+  /// Video Track colorimetry
+  VideoColorimetry colorimetry;
   /// Video Track rotation angle
   Rotation    rotation;
   /// Additional buffers allocated for the track
@@ -279,10 +281,12 @@ struct VideoTrackParam {
 
   VideoTrackParam(uint32_t cam_id = 0, uint32_t w = 3840, uint32_t h = 2160,
                   float fps = 30, VideoFormat fmt = VideoFormat::kNV12,
+                  VideoColorimetry color = VideoColorimetry::kBT601,
                   Rotation rotate = Rotation::kNone, uint32_t extrabufs = 0,
                   VideoFlags flgs = VideoFlags::kNone)
       : camera_id(cam_id), width(w), height(h), framerate(fps), format(fmt),
-        rotation(rotate), xtrabufs(extrabufs), flags(flgs) {}
+        colorimetry(color), rotation(rotate), xtrabufs(extrabufs),
+        flags(flgs) {}
 
   ::std::string ToString() const {
     ::std::stringstream stream;
@@ -292,6 +296,9 @@ struct VideoTrackParam {
     stream << "framerate[" << framerate << "] ";
     stream << "format["
            << static_cast<::std::underlying_type<VideoFormat>::type>(format)
+           << "] ";
+    stream << "colorimetry["
+           << static_cast<::std::underlying_type<VideoColorimetry>::type>(colorimetry)
            << "] ";
     stream << "rotation["
            << static_cast<::std::underlying_type<Rotation>::type>(rotation)
@@ -310,7 +317,7 @@ struct VideoTrackParam {
 /// by service once there is at least one started session
 /// which includes a video track.
 typedef std::function<void(uint32_t camera_id,
-                           const ::camera::CameraMetadata &res)> CameraResultCb;
+                           const ::qmmf::CameraMetadata &res)> CameraResultCb;
 
 /// @brief For thumbnail images only kJPEG is supported
 /// For YUV and Bayer formats, quality is ignored

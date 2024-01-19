@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -73,8 +73,7 @@
 #include <tuple>
 #include <set>
 
-#include <camera/CameraMetadata.h>
-
+#include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_camera_source.h"
@@ -179,7 +178,7 @@ class RecorderImpl {
                         const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
-                        const std::vector<::camera::CameraMetadata> &meta);
+                        const std::vector<CameraMetadata> &meta);
 
   /// Configuration for Image Capture
   status_t ConfigImageCapture(const uint32_t client_id,
@@ -201,16 +200,16 @@ class RecorderImpl {
 
   /// Set Camera parameters
   status_t SetCameraParam(const uint32_t client_id,
-                          const uint32_t camera_id, const ::camera::CameraMetadata &meta);
+                          const uint32_t camera_id, const CameraMetadata &meta);
 
   /// Get Camera parameters
   status_t GetCameraParam(const uint32_t client_id,
-                          const uint32_t camera_id, ::camera::CameraMetadata &meta);
+                          const uint32_t camera_id, CameraMetadata &meta);
 
   /// Set Camera Session parameters
   status_t SetCameraSessionParam(const uint32_t client_id,
                                  const uint32_t camera_id,
-                                 const ::camera::CameraMetadata &meta);
+                                 const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
   status_t SetSHDR(const uint32_t client_id,
@@ -220,12 +219,12 @@ class RecorderImpl {
   /// Get default Capture parameters
   status_t GetDefaultCaptureParam(const uint32_t client_id,
                                   const uint32_t camera_id,
-                                  ::camera::CameraMetadata &meta);
+                                  CameraMetadata &meta);
 
   /// Get static metadata
   status_t GetCameraCharacteristics(const uint32_t client_id,
                                     const uint32_t camera_id,
-                                    ::camera::CameraMetadata &meta);
+                                    CameraMetadata &meta);
 
   status_t CreateOfflineJPEG(const uint32_t client_id,
                              const OfflineJpegCreateParams& params);
@@ -249,7 +248,7 @@ class RecorderImpl {
                         BnBuffer& buffer, BufferMeta& meta);
 
   /// Camera Result callback handler
-  void CameraResultCb(uint32_t camera_id, const ::camera::CameraMetadata &result);
+  void CameraResultCb(uint32_t camera_id, const CameraMetadata &result);
 
   /// Camera Error callback handler
   void CameraErrorCb(uint32_t camera_id, uint32_t errcode);

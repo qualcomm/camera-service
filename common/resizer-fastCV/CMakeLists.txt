@@ -21,4 +21,7 @@ target_include_directories(qmmf_common_resizer_fastcv
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_common_resizer_fastcv DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_common_resizer_fastcv log utils cutils pthread dl fastcvopt qmmf_memory_interface)
+target_link_libraries(qmmf_common_resizer_fastcv pthread dl fastcvopt qmmf_memory_interface)
+if(HAVE_ANDROID_UTILS)
+target_link_libraries(qmmf_common_resizer_fastcv log utils cutils)
+endif()

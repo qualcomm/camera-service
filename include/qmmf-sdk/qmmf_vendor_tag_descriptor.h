@@ -116,6 +116,27 @@ class VendorTagDescriptor {
         virtual status_t readFromParcel(const android::Parcel* parcel);
 #endif
         /**
+         * Read values VendorTagDescriptor object from the given Buffer.
+         *
+         * Returns OK on success, or a negative error code.
+         */
+        int32_t readFromBuffer(const uint8_t *in);
+
+         /**
+         * Calculates reguired Buffer size to store this object.
+         *
+         * Returns the size.
+         */
+        size_t getBufferSize();
+
+        /**
+         * Writes values VendorTagDescriptor object to the given Buffer.
+         *
+         * Returns OK on success, or a negative error code.
+         */
+        int32_t writeToBuffer(uint8_t out[], size_t size);
+
+        /**
          * Create a VendorTagDescriptor object from the given vendor_tag_ops_t
          * struct.
          *
@@ -162,6 +183,15 @@ class VendorTagDescriptor {
         std::vector<std::string> mSections;
     private:
         vendor_tag_ops mVendorOps;
+        struct tag_detail_raw {
+          uint32_t tag, tagType, sectionIndex;
+          size_t sztagName;
+          char tagName[1];
+        };
+        struct sect_name {
+          size_t szsectName;
+          char sectName[1];
+        };
 };
 
 } /* namespace qmmf */

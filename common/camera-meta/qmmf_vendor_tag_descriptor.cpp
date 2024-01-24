@@ -131,21 +131,17 @@ int32_t VendorTagDescriptor::createDescriptorFromOps(
     descriptor = std::make_shared<VendorTagDescriptor>(std::move(tmpDesc));
     return 0;
 }
-#ifdef HAVE_BINDER
-int32_t VendorTagDescriptor::readFromParcel(const Parcel* parcel) {
+
+int32_t VendorTagDescriptor::readFromBuffer(const uint8_t *in_buf) {
     int32_t res = 0;
-    if (parcel == NULL) {
-        QMMF_ERROR("%s: parcel argument was NULL.", __FUNCTION__);
+    if (in_buf == NULL) {
+        QMMF_ERROR("%s: in argument was NULL.", __FUNCTION__);
         return -1;
     }
 
-    int32_t tagCount = 0;
-    if ((res = parcel->readInt32(&tagCount)) != OK) {
-        QMMF_ERROR("%s: could not read tag count from parcel, %d", __FUNCTION__,
-            res);
-        return res;
-    }
-
+    const uint8_t *current = in_buf;
+    auto &tagCountPtrRef = reinterpret_cast<const uint32_t*&>(current);
+    uint32_t tagCount = *tagCountPtrRef++;
     if (tagCount < 0 || tagCount > INT32_MAX) {
         QMMF_ERROR("%s: tag count %d from vendor ops is invalid.",
             __FUNCTION__, tagCount);
@@ -153,64 +149,53 @@ int32_t VendorTagDescriptor::readFromParcel(const Parcel* parcel) {
     }
 
     std::map<uint32_t, std::forward_list<uint32_t>> sectionToTagsIndices;
-    for (int32_t i = 0; i < tagCount; ++i) {
-        int32_t tag, tagType, sectionIndex;
-        if ((res = parcel->readInt32(&tag)) != OK) {
-            QMMF_ERROR("%s: could not read tag id from parcel for index %d",
-                __FUNCTION__, i);
-            break;
-        }
-        if (tag < CAMERA_METADATA_VENDOR_TAG_BOUNDARY) {
+    for (uint32_t i = 0; i < tagCount; ++i) {
+        auto &det_raw_ptr_ref = reinterpret_cast<const tag_detail_raw*&>(
+            current);
+        auto &det_raw = *det_raw_ptr_ref++;
+        if (det_raw.tag < CAMERA_METADATA_VENDOR_TAG_BOUNDARY) {
             QMMF_ERROR("%s: vendor tag %d not in vendor tag section.",
-                __FUNCTION__, tag);
+                __FUNCTION__, det_raw.tag);
             res = -1;
             break;
         }
-        if ((res = parcel->readInt32(&tagType)) != OK) {
-            QMMF_ERROR("%s: could not read tag type from parcel for tag %d",
-                __FUNCTION__, tag);
-            break;
-        }
-        if (tagType < 0 || tagType >= NUM_TYPES) {
+        if (det_raw.tagType < 0 || det_raw.tagType >= NUM_TYPES) {
             QMMF_ERROR("%s: tag type %d from vendor ops does not exist.",
-                __FUNCTION__, tagType);
+                __FUNCTION__, det_raw.tagType);
             res = -1;
             break;
         }
-        String8 tagName = parcel->readString8();
-        if (tagName.isEmpty()) {
+        if (det_raw.sztagName == 0) {
             QMMF_ERROR("%s: parcel tag name was NULL for tag %d.",
-                __FUNCTION__, tag);
+                __FUNCTION__, det_raw.tag);
             res = -1;
             break;
         }
-        if ((res = parcel->readInt32(&sectionIndex)) != OK) {
-            QMMF_ERROR("%s: could not read section index for tag %d.",
-                __FUNCTION__, tag);
-            break;
-        }
-        tag_detail det = {{}, tagName.string(), tagType};
-        mtagArray.push_back(tag);
-        mtagArrayDetail[tag] = det;
+        current += det_raw.sztagName - 1;
+        tag_detail det = {{}, det_raw.tagName, (int32_t)det_raw.tagType};
+        mtagArray.push_back(det_raw.tag);
+        mtagArrayDetail[det_raw.tag] = det;
+        sectionToTagsIndices[det_raw.sectionIndex].push_front(det_raw.tag);
     }
 
     if (res != OK) {
+        QMMF_ERROR("%s: failed with %d.", __FUNCTION__, res);
         return res;
     }
 
-    int32_t sectionCount = 0;
+    uint32_t sectionCount = 0;
     if (tagCount > 0) {
-        if ((res = parcel->readInt32(&sectionCount)) != OK) {
-            QMMF_ERROR("%s: could not read section count for.", __FUNCTION__);
-            return res;
-        }
+        auto &sectionCountPtrRef = reinterpret_cast<const uint32_t*&>(current);
+        sectionCount = *sectionCountPtrRef++;
         mSections.resize(sectionCount);
-        for(int32_t i_section = 0; i_section < sectionCount; ++i_section) {
-            String8 sectName = parcel->readString8();
-            std::string sectName_string = sectName.string();
+        for (uint32_t i_section = 0; i_section < sectionCount; ++i_section) {
+            auto &sec_ptr_ref = reinterpret_cast<const sect_name*&>(current);
+            const auto &sec = *sec_ptr_ref++;
+            std::string sectName_string = sec.sectName;
+            current += sec.szsectName - 1;
             auto &revNamesMap = mReverseMapping[sectName_string];
             auto &sectionTags = sectionToTagsIndices[i_section];
-            for(auto &tag : sectionTags) {
+            for (auto &tag : sectionTags) {
               auto &det = mtagArrayDetail[tag];
               mReverseMapping[sectName_string][det.tagName] = tag;
               det.sectionName = sectName_string;
@@ -225,6 +210,95 @@ int32_t VendorTagDescriptor::readFromParcel(const Parcel* parcel) {
         *iter_sect++ = map_pair.first;
     }
 
+    return res;
+}
+
+int32_t VendorTagDescriptor::writeToBuffer(uint8_t out_buf[], size_t size) {
+    status_t res = OK;
+    if (out_buf==NULL) {
+        QMMF_ERROR("%s: out argument was NULL.", __FUNCTION__);
+        return -1;
+    }
+
+    uint8_t *current = out_buf;
+
+    uint32_t TagCount = mtagArray.size();
+    if ((out_buf + size) - current < sizeof(int32_t)) {
+        QMMF_ERROR("%s: buffer overflow, buffer size is %zu, offset is 0",
+            __FUNCTION__, size);
+        return -1;
+    }
+    auto &TagCountPtrRef = reinterpret_cast<int32_t*&>(current);
+    *TagCountPtrRef++ = TagCount;
+
+    uint32_t tag, sectionIndex;
+    uint32_t tagType;
+    for (size_t i = 0; i < TagCount; ++i) {
+        tag = mtagArray[i];
+        auto &det = mtagArrayDetail[(uint32_t)tag];
+        sectionIndex = std::distance(mReverseMapping.begin(),
+            mReverseMapping.find(det.sectionName));
+        tagType = det.tagType;
+        auto &det_raw_ptr_ref = reinterpret_cast<tag_detail_raw*&>(current);
+        auto &det_raw = *det_raw_ptr_ref++;
+        det_raw = tag_detail_raw{
+            tag, tagType, sectionIndex, det.tagName.size() + 1};
+        memcpy(det_raw.tagName, det.tagName.c_str(), det_raw.sztagName);
+        current += det_raw.sztagName - 1;
+    }
+
+    int32_t numSections = (int32_t)mReverseMapping.size();
+    if (numSections > 0) {
+        if ((out_buf + size) - current < sizeof(int32_t)) {
+            QMMF_ERROR("%s: buffer overflow, buffer size is %zu, offset is %zu",
+                __FUNCTION__, size, current - out_buf);
+            return -1;
+        }
+        auto &numSectionsPtrRef = reinterpret_cast<int32_t*&>(current);
+        *numSectionsPtrRef++ = numSections;
+        for (auto &pair : mReverseMapping) {
+            auto &sec_ptr_ref = reinterpret_cast<sect_name*&>(current);
+            auto &sec = *sec_ptr_ref++;
+            sec.szsectName = pair.first.size() + 1;
+            memcpy(sec.sectName, pair.first.c_str(), sec.szsectName);
+            current += sec.szsectName - 1;
+        }
+    }
+
+    if (current - out_buf > size) {
+        QMMF_ERROR("%s: buffer corruption, buffer size is %zu, offset is %zu",
+            __FUNCTION__, size, current - out_buf);
+        return -1;
+    }
+
+    return res;
+}
+
+size_t VendorTagDescriptor::getBufferSize() {
+    size_t size = mtagArray.size() * sizeof(tag_detail_raw);
+    for (const auto &tag : mtagArray)
+      size += mtagArrayDetail[tag].tagName.size();
+    size += mReverseMapping.size() * sizeof(sect_name);
+    for (const auto &pair : mReverseMapping)
+      size += pair.first.size();
+    size += sizeof(int32_t) * 2;
+    return size;
+}
+
+#ifdef HAVE_BINDER
+int32_t VendorTagDescriptor::readFromParcel(const Parcel* parcel) {
+    int32_t res = 0;
+    if (parcel == NULL) {
+        QMMF_ERROR("%s: parcel argument was NULL.", __FUNCTION__);
+        return -1;
+    }
+    const size_t len = parcel->dataAvail();
+    uint8_t *buff = new uint8_t[len];
+    if ((res = parcel->read(buff, len)) != OK ||
+        (res = readFromBuffer(buff)) != OK) {
+        QMMF_ERROR("%s: failed with %d", __FUNCTION__, res);
+    }
+    delete[] buff;
     return res;
 }
 
@@ -282,40 +356,18 @@ int VendorTagDescriptor::getTagType(uint32_t tag) const {
 #ifdef HAVE_BINDER
 int32_t VendorTagDescriptor::writeToParcel(Parcel* parcel) {
     status_t res = OK;
-    if (parcel == NULL) {
-        QMMF_ERROR("%s: parcel argument was NULL.", __FUNCTION__);
-        return -1;
-    }
-
-    int32_t TagCount = mtagArray.size();
-    if ((res = parcel->writeInt32(TagCount)) != OK) {
+    size_t len = getBufferSize();
+    uint8_t *buffer = new uint8_t[len];
+    if ((res = writeToBuffer(buffer, len)) != OK) {
+        QMMF_ERROR("%s: can't write to buffer %d, len %zu", __FUNCTION__, res,
+          len);
         return res;
     }
-
-    int32_t tag, sectionIndex;
-    int32_t tagType;
-    for (size_t i = 0; i < TagCount; ++i) {
-        tag = mtagArray[i];
-        auto &det = mtagArrayDetail[(uint32_t)tag];
-        String8 tagName{det.tagName.c_str()};
-        sectionIndex = std::distance(mReverseMapping.begin(),
-            mReverseMapping.find(det.sectionName));
-        tagType = det.tagType;
-        if ((res = parcel->writeInt32(tag)) != OK) break;
-        if ((res = parcel->writeInt32(tagType)) != OK) break;
-        if ((res = parcel->writeString8(tagName)) != OK) break;
-        if ((res = parcel->writeInt32(sectionIndex)) != OK) break;
+    if ((res = parcel->write(buffer, len)) != OK) {
+        QMMF_ERROR("%s: failed to write buffer to parcel", __FUNCTION__);
+        return res;
     }
-
-    int32_t numSections = (int32_t)mReverseMapping.size();
-    if (numSections > 0) {
-        if ((res = parcel->writeInt32(numSections)) != OK) return res;
-        for (auto &pair : mReverseMapping) {
-            if ((res = parcel->writeString8(String8{pair.first.c_str()})) != OK)
-              return res;
-        }
-    }
-
+    delete[] buffer;
     return res;
 }
 #endif

@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
  * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
@@ -245,12 +245,9 @@ class RecorderService : public IRecorderService {
   typedef std::function <void(void)> NotifyClientDeath;
   class DeathNotifier {
    public:
-    DeathNotifier() {}
+    DeathNotifier(NotifyClientDeath& cb): notify_client_death_(cb){}
 
-    void SetDeathNotifyCB(NotifyClientDeath& cb) {
-      notify_client_death_ = cb;
-    }
-    void ClientDied () {
+    void ClientDied() {
       QMMF_WARN("RecorderSerive:%s: Client Exited or Died!", __func__);
       notify_client_death_();
     }
@@ -402,7 +399,8 @@ class RecorderService : public IRecorderService {
   ThreadPool thread_pool_;
   // TODO: check how to stop server properly
   bool run_;
-  std::vector<int> client_sockets_;
+  // Map of client sockets and their client_ids .
+  std::map<int, uint32_t> client_sockets_;
 #endif // HAVE_BINDER
 
   std::mutex                   lock_;

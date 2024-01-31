@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
  * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
@@ -187,7 +187,7 @@ RecorderService::RecorderService() {
 
     if (SetupSocket() != 0) {
       QMMF_ERROR("%s: Socket Setup failed!", __func__);
-      return;
+      throw errno;
     }
 
 #endif // HAVE_BINDER
@@ -195,6 +195,7 @@ RecorderService::RecorderService() {
     if (ret != 0) {
       QMMF_ERROR("%s: Recorder Initialization failed!", __func__);
       recorder_.reset();
+      throw ret;
     }
   }
 
@@ -210,7 +211,7 @@ RecorderService::~RecorderService() {
   unlink(socket_path_.c_str());
 
   // Clean up all client sockets
-  for (auto &socket: client_sockets_) {
+  for (const auto& [socket, id]: client_sockets_) {
     close(socket);
   }
   client_sockets_.clear();
@@ -772,32 +773,36 @@ status_t RecorderService::Connect(uint32_t* client_id,
 }
 #else
 status_t RecorderService::SetupSocket() {
-  socket_path_ += "/var/run/le_cam_socket";
-  ::unlink(socket_path_.c_str());
+  socket_path_ = "/var/run/le_cam_socket";
+
+  if (unlink(socket_path_.c_str()) == -1) {
+    QMMF_WARN("%s: unlink failure for path(%s) %s, errno: %d", __func__,
+               socket_path_.c_str(), strerror(errno), errno);
+  }
 
   // Create a socket
   socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
   if (socket_ == -1) {
     QMMF_ERROR("%s: socket failure %s", __func__, strerror(errno));
-    return errno;
+    return -errno;
   }
 
   sockaddr_un addr;
   addr.sun_family = AF_UNIX;
   auto size = socket_path_.size();
-  snprintf(addr.sun_path, size, "%s", socket_path_.c_str());
-  addr.sun_path[size] = '\0';
+  snprintf(addr.sun_path, size+1, "%s", socket_path_.c_str());
+  addr.sun_path[size+1] = '\0';
 
   // Bind the socket to the address
   if (bind(socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
     QMMF_ERROR("%s: bind failure %s", __func__, strerror(errno));
-    return errno;
+    return -errno;
   }
 
   // Listen for incoming connections
   if (listen(socket_, 5) == -1) {
     QMMF_ERROR("%s: listen failure %s", __func__, strerror(errno));
-    return errno;
+    return -errno;
   }
 
   // Set the server socket to non-blocking mode
@@ -821,11 +826,10 @@ status_t RecorderService::ReadData (int socket, void *buffer, size_t size) {
 
   if (bytes_read == -1) {
     QMMF_ERROR("%s: Receive failed: %s", __func__, strerror(errno));
-    return errno;
-  } else {
-    // TODO: Death handling
-    QMMF_ERROR("%s: Connection closed: %s", __func__, strerror(errno));
-    return errno;
+    return -errno;
+  } else if (bytes_read == 0) {
+    QMMF_ERROR("%s: connection closed: %d ", __func__, socket);
+    return 0;
   }
 }
 
@@ -835,14 +839,15 @@ status_t RecorderService::SendResponse (int socket, void *buffer, size_t size) {
   if (bytesSent == -1) {
     QMMF_ERROR("%s: failed: %s", __func__, strerror(errno));
     close(socket);
-    return errno;
+    return -errno;
   }
   // TODO: Add death handling check
+
   return 0;
 }
 
 void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req_msg) {
-  QMMF_INFO("%s: received cmd:%u", __func__, req_msg.command());
+  QMMF_VERBOSE("%s: received cmd:%u", __func__, req_msg.DebugString().c_str());
 
   RecorderClientRespMsg resp_msg;
   switch (req_msg.command()) {
@@ -871,7 +876,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     uint32_t camera_id = req_msg.start_camera().camera_id();
     float framerate = req_msg.start_camera().framerate();
     bool enable_result_cb = req_msg.start_camera().enable_result_cb();
-    QMMF_INFO("Sending Message : %s", req_msg.DebugString().c_str());
     const std::string extra_data = req_msg.start_camera().extra_params();
     CameraExtraParam extra_param(extra_data.c_str(), extra_data.size());
 
@@ -950,7 +954,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     uint32_t client_id = req_msg.create_video_track().client_id();
     uint32_t session_id = req_msg.create_video_track().session_id();
     uint32_t track_id = req_msg.create_video_track().track_id();
-    QMMF_INFO("Sending Message : %s", req_msg.DebugString().c_str());
 
     VideoTrackParam video_param;
     video_param.camera_id = req_msg.create_video_track().video_params().camera_id();
@@ -980,7 +983,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     uint32_t client_id = req_msg.delete_video_track().client_id();
     uint32_t session_id = req_msg.delete_video_track().session_id();
     uint32_t track_id = req_msg.delete_video_track().track_id();
-    QMMF_INFO("Sending Message : %s", req_msg.DebugString().c_str());
 
     auto ret = DeleteVideoTrack(client_id, session_id, track_id);
     // sending response
@@ -1074,7 +1076,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     meta.clear();
     meta.append(clone_camera_metadata(meta_buffer));
 
-
     auto ret = SetCameraParam (client_id, camera_id, meta);
     // sending response
     resp_msg.set_command(
@@ -1092,7 +1093,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
         reinterpret_cast <const camera_metadata_t *> (data.data());
     meta.clear();
     meta.append(clone_camera_metadata(meta_buffer));
-
 
     auto ret = SetCameraSessionParam (client_id, camera_id, meta);
     // sending response
@@ -1151,7 +1151,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     resp_msg.set_command(
         RECORDER_SERVICE_CMDS::RECORDER_CONFIG_IMAGECAPTURE);
     resp_msg.set_status(ret);
-
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_CANCEL_IMAGECAPTURE:
@@ -1167,7 +1166,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     resp_msg.set_command(
         RECORDER_SERVICE_CMDS::RECORDER_CANCEL_IMAGECAPTURE);
     resp_msg.set_status(ret);
-
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_RETURN_IMAGECAPTURE_BUFFER:
@@ -1224,11 +1222,9 @@ void RecorderService::MainLoop() {
     FD_ZERO(&read_fds);
     FD_SET(socket_, &read_fds);
     int max_socket = socket_;
-    QMMF_INFO("%s: waiting for connection: max_socket: %d",
-          __func__, max_socket);
 
     // Add all active clients to the monitoring list
-    for (auto& socket: client_sockets_) {
+    for (const auto& [socket, id]: client_sockets_) {
       FD_SET(socket, &read_fds);
       max_socket = std::max(max_socket, socket);
     }
@@ -1241,10 +1237,9 @@ void RecorderService::MainLoop() {
 
     // Check if a new client is trying to connect
     if (FD_ISSET(socket_, &read_fds)) {
-      QMMF_INFO("%s: accepting the connection", __func__);
       int client_socket = accept(socket_, nullptr, nullptr);
       if (client_socket != -1) {
-        client_sockets_.push_back(client_socket);
+        client_sockets_.emplace(client_socket, 0);
         QMMF_INFO("%s: new client(%d) connected", __func__, client_socket);
       }
     }
@@ -1252,7 +1247,7 @@ void RecorderService::MainLoop() {
     // Check for incoming data on client sockets
     auto it = client_sockets_.begin();
     while (it != client_sockets_.end()) {
-      int client_socket = *it;
+      int client_socket = it->first;
       if (FD_ISSET(client_socket, &read_fds)) {
         char buffer[kMaxSocketBufSize] = {0};
 
@@ -1260,12 +1255,12 @@ void RecorderService::MainLoop() {
                   __func__, client_socket);
 
         auto bytes_read = ReadData(client_socket, buffer, kMaxSocketBufSize);
-        if (bytes_read < 0) {
-          QMMF_INFO("%s: remove client(%d)", __func__, client_socket);
-
+        if (bytes_read <= 0) {
           FD_CLR(client_socket, &read_fds);
+          QMMF_INFO("%s: remove client(%d)", __func__, client_socket);
           // client session destructor
           it = client_sockets_.erase(it);
+          continue;
         } else {
           // Deserialize the received data using protobuf
           RecorderClientReqMsg cmd_msg;
@@ -1350,15 +1345,16 @@ status_t RecorderService::Connect(const std::shared_ptr<IRecorderServiceCallback
 
   recorder_->RegisterClient(*client_id);
 
-  std::shared_ptr<DeathNotifier> death_notifier = std::make_shared<DeathNotifier>();
+  NotifyClientDeath notify_death = [this, capture_client_id = *client_id] {
+      ClientDeathHandler(capture_client_id);
+  };
+
+  std::shared_ptr<DeathNotifier> death_notifier =
+      std::make_shared<DeathNotifier>(notify_death);
   if (!death_notifier.get()) {
     QMMF_ERROR("%s: Unable to allocate death notifier!", __func__);
     return -ENODEV;
   }
-  NotifyClientDeath notify_death = [this, capture_client_id = *client_id] {
-      ClientDeathHandler(capture_client_id);
-  };
-  death_notifier->SetDeathNotifyCB(notify_death);
 
   death_notifier_list_.emplace(*client_id, death_notifier);
 
@@ -2052,23 +2048,23 @@ status_t RecorderServiceCallbackProxy::Init (uint32_t client_id,
   // Create a socket
   callback_socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
   if (callback_socket_ == -1) {
-    QMMF_ERROR("Stream socket failure %s", strerror(errno));
-    return errno;
+    QMMF_ERROR("Callback socket failure %s", strerror(errno));
+    return -errno;
   }
 
   // Set up server address
   struct sockaddr_un server_addr;
   server_addr.sun_family = AF_UNIX;
   auto size = socket_path.size();
-  snprintf(server_addr.sun_path, size, "%s", socket_path.c_str());
-  server_addr.sun_path[size] = '\0';
+  snprintf(server_addr.sun_path, size+1, "%s", socket_path.c_str());
+  server_addr.sun_path[size+1] = '\0';
 
   // Connect to the server
   if (connect(callback_socket_, (struct sockaddr *)&server_addr,
               sizeof(server_addr)) == -1) {
-    QMMF_ERROR("Stream socket connect failure %s", strerror(errno));
+    QMMF_ERROR("Callback socket connect failure %s", strerror(errno));
     close(callback_socket_);
-    return errno;
+    return -errno;
   }
 
   client_id_ = client_id;

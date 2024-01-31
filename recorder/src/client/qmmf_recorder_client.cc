@@ -26,7 +26,7 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center are provided under the following license:
+* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
 * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 *
@@ -137,7 +137,7 @@ class RecorderServiceProxy: public IRecorderService {
     socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socket_ == -1) {
       QMMF_ERROR("%s: sock failure %s", __func__, strerror(errno));
-      return errno;
+      return -errno;
     }
 
     // Set up server address
@@ -145,13 +145,12 @@ class RecorderServiceProxy: public IRecorderService {
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
     auto size = path.size();
-    snprintf(addr.sun_path, size, "%s", path.c_str());
-    addr.sun_path[size] = '\0';
-
+    snprintf(addr.sun_path, size+1, "%s", path.c_str());
+    addr.sun_path[size+1] = '\0';
     if (connect(socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
       close(socket_);
       QMMF_ERROR("%s: connect failure %s", __func__, strerror(errno));
-      return errno;
+      return -errno;
     }
 
     RecorderClientReqMsg cmd;
@@ -191,6 +190,7 @@ class RecorderServiceProxy: public IRecorderService {
 
     service_cb_handler_ = service_cb;
     ret = resp.status();
+    QMMF_INFO("%s: Exit ", __func__);
     return ret;
   }
 
@@ -844,7 +844,7 @@ class RecorderServiceProxy: public IRecorderService {
     ssize_t bytes_sent = send(socket_, buffer, size, 0);
     free (buffer);
     if (bytes_sent == -1) {
-      return errno;
+      return -errno;
     }
 
     QMMF_DEBUG("%s: Sent to server cmd: %u bytes:%ld",
@@ -857,7 +857,7 @@ class RecorderServiceProxy: public IRecorderService {
 
     ssize_t bytes_read = recv(socket_, buffer, sizeof(buffer), 0);
     if (bytes_read == -1) {
-      return errno;
+      return -errno;
     } else  if (bytes_read == 0) {
       return -1;
     }
@@ -2152,7 +2152,7 @@ void RecorderClient::NotifyVideoTrackData(uint32_t session_id,
         return;
       }
 
-      QMMF_INFO("%s track_id(%d): BufInfo: ion_fd(%d), "
+      QMMF_VERBOSE("%s track_id(%d): BufInfo: ion_fd(%d), "
           "vaddr(%p), size(%lu)", __func__, track_id, buffer_info.ion_fd,
            buffer_info.vaddr, buffer_info.size);
 
@@ -3194,23 +3194,23 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
   cb_socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
   if (cb_socket_ == -1) {
     QMMF_ERROR("Server: sock failure - %s", strerror(errno));
-    return errno;
+    return -errno;
   }
 
   sockaddr_un addr;
   addr.sun_family = AF_UNIX;
   auto size = socket_path_.size();
-  snprintf(addr.sun_path, size, "%s", socket_path_.c_str());
-  addr.sun_path[size] = '\0';
+  snprintf(addr.sun_path, size+1, "%s", socket_path_.c_str());
+  addr.sun_path[size+1] = '\0';
   if (bind(cb_socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
     QMMF_ERROR("Server: bind failure - %s", strerror(errno));
-    return errno;
+    return -errno;
   }
 
   // TODO: Check the max queue limit for incoming request
   if (listen(cb_socket_, 5) == -1) {
     QMMF_ERROR("%s: listen failure - %s", __func__, strerror(errno));
-    return errno;
+    return -errno;
   }
 
   server_pid_ = server_pid;
@@ -3307,7 +3307,7 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       bn_buffer.buffer_id = data.buffer().buffer_id();
       bn_buffer.flags = data.buffer().flags();
       bn_buffer.capacity = data.buffer().capacity();
-      QMMF_INFO("%s : INPARAM: buffers: %s", __func__,
+      QMMF_VERBOSE("%s : INPARAM: buffers: %s", __func__,
           bn_buffer.ToString().c_str());
 
       BufferMeta meta;
@@ -3380,7 +3380,7 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
         buffer.buffer_id = b_data.buffer_id();
         buffer.flags = b_data.flags();
         buffer.capacity = b_data.capacity();
-        QMMF_INFO("%s : INPARAM: buffers: %s", __func__,
+        QMMF_VERBOSE("%s : INPARAM: buffers: %s", __func__,
             buffer.ToString().c_str());
         buffers.push_back(buffer);
       }

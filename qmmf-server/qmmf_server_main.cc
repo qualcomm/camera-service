@@ -28,7 +28,7 @@
 */
 
 /*
- * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
@@ -84,8 +84,12 @@ int32_t main(int32_t argc, char **argv) {
   property_set(QMMF_BOOT_COMPLETE, "1");
   IPCThreadState::self()->joinThreadPool();
 #else
-  RecorderService server;
-  server.MainLoop();
+  try {
+    RecorderService server;
+    server.MainLoop();
+  } catch (int err) {
+    return err;
+  }
 #endif // HAVE_BINDER
   return 0;
 }

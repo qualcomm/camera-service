@@ -1004,7 +1004,6 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
 
   assert(JPEG_BUFFER_SIZE_MIN < maxJpegBufferSize);
 
-#ifdef HAVE_BINDER
   // Calculate final jpeg buffer size for the given resolution.
   float scaleFactor =
       ((float)(width * height)) / (maxJpegSizeWidth * maxJpegSizeHeight);
@@ -1018,15 +1017,6 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
 
   QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%d",
       __func__, scaleFactor, jpegBufferSize);
-#else
-  // TODO: Check with camera team why this required
-  float scaleFactor = 2.0;
-  ssize_t jpegBufferSize = width * height * scaleFactor;
-
-  QMMF_INFO("%s: jpegBufferSize=%d",
-      __func__, jpegBufferSize);
-#endif
-
 
   return jpegBufferSize;
 }

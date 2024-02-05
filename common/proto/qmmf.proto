@@ -363,19 +363,8 @@ message GetCameraCharacteristicsRespMsg {
   bytes meta = 1;
 }
 
- // GetVendorTagDescriptor
-message VendorTagDescriptorMsg {
-  uint32 tag = 1;
-  int32 tag_type = 2;
-  string name = 3;
-  uint32 section_index = 4;
-}
-
 message GetVendorTagDescriptorRespMsg {
-  int32 count = 1;
-  repeated VendorTagDescriptorMsg descs = 2;
-  int32 num_sections = 3;
-  repeated string sections = 4;
+  bytes descs = 2;
 }
 
 // CreateOfflineJPEG
@@ -475,8 +464,8 @@ message RecorderClientRespMsg {
     GetCameraParamRespMsg get_camera_param_resp = 5;
     GetDefaultCaptureParamRespMsg get_default_capture_param_resp = 6;
     GetCameraCharacteristicsRespMsg get_camera_characteristics_resp = 7;
-//    GetVendorTagDescriptorRespMsg get_vendor_tag_descriptor_resp = 8;
-    DummyMsg dummy_msg = 8;
+    GetVendorTagDescriptorRespMsg get_vendor_tag_descriptor_resp = 8;
+    DummyMsg dummy_msg = 9;
   }
 }
 

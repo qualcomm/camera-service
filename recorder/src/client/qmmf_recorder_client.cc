@@ -190,7 +190,6 @@ class RecorderServiceProxy: public IRecorderService {
 
     service_cb_handler_ = service_cb;
     ret = resp.status();
-    QMMF_INFO("%s: Exit ", __func__);
     return ret;
   }
 
@@ -799,26 +798,23 @@ class RecorderServiceProxy: public IRecorderService {
   }
 
   status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) {
-    // RecorderClientReqMsg cmd;
-    // cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR);
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR);
 
-    // status_t ret;
-    // ret = SendRequest(cmd);
-    // if (ret < 0)
-    //   return ret;
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
 
-    // RecorderClientRespMsg resp;
-    // ret = RecvResponse(resp);
-    // if (ret < 0)
-    //   return ret;
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
 
-    // const std::string& data = resp.get_camera_characteristics_resp().meta();
-    // const camera_metadata_t *meta_buffer = reinterpret_cast <const camera_metadata_t *> (data.data());
-    // meta.clear();
-    // meta.append(clone_camera_metadata(meta_buffer));
+    const std::string& data = resp.get_vendor_tag_descriptor_resp().descs();
+    desc->readFromBuffer(reinterpret_cast<const uint8_t *>(data.data()));
 
-    // return resp.status();
-
+    return resp.status();
   }
 
   status_t CreateOfflineJPEG(const uint32_t client_id,

@@ -178,7 +178,7 @@ int32_t VendorTagDescriptor::readFromBuffer(const uint8_t *in_buf) {
         sectionToTagsIndices[det_raw.sectionIndex].push_front(det_raw.tag);
     }
 
-    if (res != OK) {
+    if (res != 0) {
         QMMF_ERROR("%s: failed with %d.", __FUNCTION__, res);
         return res;
     }
@@ -214,7 +214,7 @@ int32_t VendorTagDescriptor::readFromBuffer(const uint8_t *in_buf) {
 }
 
 int32_t VendorTagDescriptor::writeToBuffer(uint8_t out_buf[], size_t size) {
-    status_t res = OK;
+    status_t res = 0;
     if (out_buf==NULL) {
         QMMF_ERROR("%s: out argument was NULL.", __FUNCTION__);
         return -1;

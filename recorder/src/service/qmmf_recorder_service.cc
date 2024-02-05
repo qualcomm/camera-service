@@ -847,7 +847,7 @@ status_t RecorderService::SendResponse (int socket, void *buffer, size_t size) {
 }
 
 void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req_msg) {
-  QMMF_VERBOSE("%s: received cmd:%u", __func__, req_msg.DebugString().c_str());
+  QMMF_VERBOSE("%s: received cmd:%s", __func__, req_msg.DebugString().c_str());
 
   RecorderClientRespMsg resp_msg;
   switch (req_msg.command()) {
@@ -1019,14 +1019,22 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
   }
   case RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR:
   {
-    // uint64_t vendor_tag = req_msg.get_vendor_tag_descriptor().vendor_tag();
-    // QMMF_INFO("Sending Message : %s", req_msg.DebugString());
+    std::shared_ptr<VendorTagDescriptor> desc;
+    auto ret = GetVendorTagDescriptor(desc);
 
-    // // sending response
-    // resp_msg.set_command(
-    //     RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR);
-    // resp_msg.mutable_get_vendor_tag_descriptor_resp()->set_vendortag(
-    //     "dummy tag");
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR);
+    resp_msg.set_status(ret);
+    if (ret == 0) {
+      size_t size = desc->getBufferSize();
+      QMMF_VERBOSE("%s: size: %lu", __func__, size);
+      uint8_t *data = new uint8_t[size];
+      desc->writeToBuffer (data, size);
+      std::string *data_str = new std::string(reinterpret_cast<const char *>(data), size);
+      resp_msg.mutable_get_vendor_tag_descriptor_resp()->set_allocated_descs(data_str);
+      delete[] data;
+      desc.reset();
+    }
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_CHARACTERISTICS:

@@ -1050,8 +1050,15 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
     uint32_t size = get_camera_metadata_compact_size(meta_buffer);
-    std::string *data = new std::string(reinterpret_cast<const char *>(meta_buffer), size);
-    resp_msg.mutable_get_default_capture_param_resp()->set_allocated_meta(data);
+    std::string *data = new std::string;
+    data->resize(size);
+    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    if (copy_ptr) {
+      resp_msg.mutable_get_camera_characteristics_resp()->set_allocated_meta(data);
+    } else {
+      QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+      resp_msg.set_status(-1);
+    }
     meta.unlock(meta_buffer);
     break;
   }
@@ -1062,51 +1069,69 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     CameraMetadata meta;
 
     auto ret = GetCameraParam (client_id, camera_id, meta);
+
     // sending response
     resp_msg.set_command(
         RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_PARAMS);
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
     uint32_t size = get_camera_metadata_compact_size(meta_buffer);
-    std::string *data = new std::string(reinterpret_cast<const char *>(meta_buffer), size);
-    resp_msg.mutable_get_camera_param_resp()->set_allocated_meta(data);
+    std::string *data = new std::string;
+    data->resize(size);
+    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    if (copy_ptr) {
+      resp_msg.mutable_get_camera_param_resp()->set_allocated_meta(data);
+    } else {
+      QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+      resp_msg.set_status(-1);
+    }
     meta.unlock(meta_buffer);
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_PARAMS:
   {
+
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_PARAMS);
     uint32_t client_id = req_msg.set_camera_param().client_id();
     uint32_t camera_id = req_msg.set_camera_param().camera_id();
     CameraMetadata meta;
     const std::string& data = req_msg.set_camera_param().meta();
-    const camera_metadata_t *meta_buffer =
-        reinterpret_cast <const camera_metadata_t *> (data.data());
-    meta.clear();
-    meta.append(clone_camera_metadata(meta_buffer));
-
-    auto ret = SetCameraParam (client_id, camera_id, meta);
-    // sending response
-    resp_msg.set_command(
-        RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_PARAMS);
-    resp_msg.set_status(ret);
+    uint8_t *raw_buf = new uint8_t[data.size()];
+    camera_metadata_t *meta_buffer =
+        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+    if (meta_buffer) {
+      meta.clear();
+      meta.acquire(meta_buffer);
+      auto ret = SetCameraParam (client_id, camera_id, meta);
+      resp_msg.set_status(ret);
+    } else {
+      QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+      resp_msg.set_status(-1);
+    }
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_SESSION_PARAMS:
   {
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_SESSION_PARAMS);
+
     uint32_t client_id = req_msg.set_camera_session_param().client_id();
     uint32_t camera_id = req_msg.set_camera_session_param().camera_id();
     CameraMetadata meta;
     const std::string& data = req_msg.set_camera_session_param().meta();
-    const camera_metadata_t *meta_buffer =
-        reinterpret_cast <const camera_metadata_t *> (data.data());
-    meta.clear();
-    meta.append(clone_camera_metadata(meta_buffer));
-
-    auto ret = SetCameraSessionParam (client_id, camera_id, meta);
-    // sending response
-    resp_msg.set_command(
-        RECORDER_SERVICE_CMDS::RECORDER_SET_CAMERA_SESSION_PARAMS);
-    resp_msg.set_status(ret);
+    uint8_t *raw_buf = new uint8_t[data.size()];
+    camera_metadata_t *meta_buffer =
+        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+    if (meta_buffer) {
+      meta.clear();
+      meta.acquire(meta_buffer);
+      auto ret = SetCameraSessionParam (client_id, camera_id, meta);
+      resp_msg.set_status(ret);
+    } else {
+      QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+      resp_msg.set_status(-1);
+    }
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_CAPTURE_IMAGE:
@@ -1119,10 +1144,11 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
 
     for (const auto &meta_proto: req_msg.capture_image().meta()) {
       CameraMetadata meta;
-      const camera_metadata_t *meta_buffer =
-          reinterpret_cast <const camera_metadata_t *> (meta_proto.data());
+      uint8_t *raw_buf = new uint8_t[meta_proto.size()];
+      camera_metadata_t *meta_buffer =
+          copy_camera_metadata (raw_buf, meta_proto.size(), reinterpret_cast<const camera_metadata_t *>(meta_proto.data()));
       meta.clear();
-      meta.append(clone_camera_metadata(meta_buffer));
+      meta.acquire(meta_buffer);
       meta_array.push_back(meta);
     }
 
@@ -1197,14 +1223,22 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
 
     CameraMetadata meta;
     auto ret = GetDefaultCaptureParam(client_id, camera_id, meta);
+
     // sending response
     resp_msg.set_command(
         RECORDER_SERVICE_CMDS::RECORDER_GET_DEFAULT_CAPTURE_PARAMS);
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
     uint32_t size = get_camera_metadata_compact_size(meta_buffer);
-    std::string *data = new std::string(reinterpret_cast<const char *>(meta_buffer), size);
-    resp_msg.mutable_get_default_capture_param_resp()->set_allocated_meta(data);
+    std::string *data = new std::string;
+    data->resize(size);
+    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    if (copy_ptr) {
+      resp_msg.mutable_get_default_capture_param_resp()->set_allocated_meta(data);
+    } else {
+      QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+      resp_msg.set_status(-1);
+    }
     meta.unlock(meta_buffer);
     break;
   }

@@ -197,6 +197,9 @@ class RecorderClient {
 
   void NotifyCameraResult(uint32_t camera_id,
                           const CameraMetadata &result);
+#ifndef HAVE_BINDER
+  void NotifyServerDeath();
+#endif // !HAVE_BINDER
 
  private:
   typedef std::function <void(void)> NotifyServerDeathCB;
@@ -260,6 +263,8 @@ class RecorderClient {
 #else
   std::unique_ptr<IRecorderService> recorder_service_;
   std::unique_ptr<DeathNotifier>    death_notifier_;
+  std::mutex                        disconnect_lock_;
+  QCondition                        wait_for_disconnect_;
 #endif // HAVE_BINDER
   int32_t                           ion_device_;
   uint32_t                          client_id_;
@@ -336,6 +341,9 @@ class ServiceCallbackHandler : public RecorderServiceCallbackStub {
 
   void NotifyCameraResult(uint32_t camera_id,
                           const CameraMetadata &result) override;
+#ifndef HAVE_BINDER
+  void NotifyServerDeath() override;
+#endif // !HAVE_BINDER
 
   RecorderClient *client_;
 };

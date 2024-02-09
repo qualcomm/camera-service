@@ -230,8 +230,10 @@ class RecorderServiceCallbackProxy: public IRecorderServiceCallback {
   void NotifyDeleteVideoTrack(uint32_t track_id) override;
 
  private:
-  uint32_t client_id_;
-  int32_t callback_socket_;
+  void SendCallbackData(RecorderClientCallbacksAsync& message);
+
+  uint32_t      client_id_;
+  int32_t       callback_socket_;
 };
 
 class RecorderService : public IRecorderService {
@@ -253,6 +255,8 @@ class RecorderService : public IRecorderService {
     }
     NotifyClientDeath notify_client_death_;
   };
+
+  void CheckClientDeath (const uint32_t client_id);
 
   status_t Connect (const std::shared_ptr<IRecorderServiceCallback>&
                     service_cb,
@@ -385,9 +389,10 @@ class RecorderService : public IRecorderService {
   std::map<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
 #else
   status_t SetupSocket ();
+  void ParseRequest(int client_socket, char *recv_buffer, size_t size);
   void ProcessRequest(int client_socket, RecorderClientReqMsg msg);
   status_t SetupRemoteCallback(const uint32_t client_id);
-  status_t ReadData (int client_socket, void *buffer, size_t size);
+  status_t ReadRequest (int client_socket, void *buffer, size_t size);
   status_t SendResponse (int client_socket, void *buffer, size_t size);
   // TODO: Check if unique_ptr can be used instead
   // Map of client ids and their death notifiers.
@@ -396,6 +401,7 @@ class RecorderService : public IRecorderService {
   std::map<uint32_t, std::shared_ptr<RemoteCallBack>> remote_cb_list_;
   int socket_;
   std::string socket_path_;
+  char* socket_recv_buf_;
   ThreadPool thread_pool_;
   // TODO: check how to stop server properly
   bool run_;

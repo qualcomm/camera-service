@@ -210,6 +210,8 @@ class IRecorderService : public IInterface {
 #else
 class IRecorderService {
  public:
+  virtual ~IRecorderService() {};
+
   virtual status_t Connect (const std::shared_ptr<IRecorderServiceCallback>&
                             service_cb,
                             uint32_t* client_id) = 0;
@@ -342,6 +344,8 @@ class IRecorderServiceCallback : public IInterface {
 #else
 class IRecorderServiceCallback {
  public:
+  virtual ~IRecorderServiceCallback() {};
+
   virtual status_t Init(uint32_t client_id, uint32_t server_pid = 0) = 0;
 #endif // HAVE_BINDER
 
@@ -384,29 +388,29 @@ class RecorderServiceCallbackStub : public BnInterface<IRecorderServiceCallback>
                               Parcel* reply, uint32_t flags = 0) override;
 };
 #else
-class RecorderServiceCallbackStub : public IRecorderServiceCallback,
-                                    public ThreadHelper   {
+class RecorderServiceCallbackStub : public IRecorderServiceCallback {
  public:
   RecorderServiceCallbackStub();
-  ~RecorderServiceCallbackStub();
+  virtual ~RecorderServiceCallbackStub();
   status_t Init(uint32_t client_id, uint32_t server_pid);
- protected:
-  bool ThreadLoop() override;
+  virtual void NotifyServerDeath();
  private:
   status_t ProcessCallbackMsg (RecorderClientCallbacksAsync &msg);
+  void ThreadLoop();
 
   int32_t server_pid_;
   std::string socket_path_;
   int32_t cb_socket_;
   int32_t client_socket_;
-  // TODO: check buffer size
-  char buffer_[64000] = {0};
+  char* socket_recv_buf_;
   // Map of server buffer fd to client dupped fd
   std::map<int32_t, int32_t> ion_fd_map_;
   // Map of server meta fd to client dupped meta fd
   std::map<int32_t, int32_t> meta_fd_map_;
   // lock to protect dupped fd maps
   std::mutex  fd_map_lock_;
+  std::thread callback_thread_;
+  bool run_thread_;
 };
 #endif // HAVE_BINDER
 

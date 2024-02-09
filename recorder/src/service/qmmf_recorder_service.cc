@@ -210,11 +210,13 @@ RecorderService::~RecorderService() {
   close(socket_);
   unlink(socket_path_.c_str());
 
+  run_ = false;
   // Clean up all client sockets
   for (const auto& [socket, id]: client_sockets_) {
     close(socket);
   }
   client_sockets_.clear();
+  delete[] socket_recv_buf_;
 #endif // !HAVE_BINDER
   QMMF_INFO("%s: Exit ", __func__);
   QMMF_KPI_DETAIL();
@@ -810,12 +812,14 @@ status_t RecorderService::SetupSocket() {
   fcntl(socket_, F_SETFL, flags | O_NONBLOCK);
 
   run_ = true;
+  socket_recv_buf_ = new char[kMaxSocketBufSize];
 
   QMMF_INFO("Server is listening...");
   return 0;
 }
 
-status_t RecorderService::ReadData (int socket, void *buffer, size_t size) {
+status_t RecorderService::ReadRequest (int socket, void *buffer, size_t size) {
+
   ssize_t bytes_read = recv(socket, buffer, size, 0);
 
   if (bytes_read > 0) {
@@ -829,13 +833,14 @@ status_t RecorderService::ReadData (int socket, void *buffer, size_t size) {
     return -errno;
   } else if (bytes_read == 0) {
     QMMF_ERROR("%s: connection closed: %d ", __func__, socket);
+    CheckClientDeath(client_sockets_[socket]);
     return 0;
   }
 }
 
 status_t RecorderService::SendResponse (int socket, void *buffer, size_t size) {
   ssize_t bytesSent = send(socket, buffer, size, 0);
-  QMMF_INFO("sendResponse bytes: %lu", bytesSent);
+  QMMF_INFO("sendResponse bytes: %lu, size: %lu", bytesSent, size);
   if (bytesSent == -1) {
     QMMF_ERROR("%s: failed: %s", __func__, strerror(errno));
     close(socket);
@@ -858,6 +863,9 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     resp_msg.mutable_connect_resp()->set_client_id(client_id);
     resp_msg.mutable_connect_resp()->set_server_pid(getpid());
     resp_msg.set_status(ret);
+    if (ret == 0) {
+      client_sockets_[client_socket] = client_id;
+    }
   } break;
   case RECORDER_SERVICE_CMDS::RECORDER_CALLBACK_SOCKET_READY: {
     uint32_t client_id = req_msg.callback_socket_ready().client_id();
@@ -1012,10 +1020,7 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     }
 
     auto ret = ReturnTrackBuffer(client_id, session_id, track_id, buffers);
-    // sending response
-    resp_msg.set_command(RECORDER_SERVICE_CMDS::RECORDER_RETURN_TRACKBUFFER);
-    resp_msg.set_status(ret);
-    break;
+    return;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_GET_VENDOR_TAG_DESCRIPTOR:
   {
@@ -1258,6 +1263,29 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
   free (buffer);
 }
 
+void RecorderService::ParseRequest(int client_socket,
+                                   char* recv_buf,
+                                   size_t size) {
+  size_t buf_size = size;
+  auto buf_ptr = recv_buf;
+  while (buf_size > 0) {
+    QMMF_VERBOSE("%s: buf_size: %d", __func__, buf_size);
+    uint32_t msg_size = *(reinterpret_cast<uint32_t *>(buf_ptr));
+    // Moving past the size
+    buf_ptr += 4;
+    QMMF_VERBOSE("%s: msg_size: %d", __func__, msg_size);
+    RecorderClientReqMsg msg;
+    msg.ParseFromArray(buf_ptr, msg_size);
+    // Enqueue request for processing
+    thread_pool_.Enqueue(
+        [msg, this, client_socket] { ProcessRequest(client_socket, msg); },
+        TASK_PRIORITY::NORMAL);
+    QMMF_VERBOSE("%s: Enqueued cmd: %d", __func__, msg.command());
+    buf_ptr += msg_size;
+    buf_size -= (msg_size + 4);
+  }
+}
+
 void RecorderService::MainLoop() {
   while (run_) {
     fd_set read_fds;
@@ -1291,26 +1319,22 @@ void RecorderService::MainLoop() {
     while (it != client_sockets_.end()) {
       int client_socket = it->first;
       if (FD_ISSET(client_socket, &read_fds)) {
-        char buffer[kMaxSocketBufSize] = {0};
 
         QMMF_INFO("%s: Waiting for data from client(%d)",
                   __func__, client_socket);
 
-        auto bytes_read = ReadData(client_socket, buffer, kMaxSocketBufSize);
+        auto bytes_read =
+            ReadRequest(client_socket, socket_recv_buf_, kMaxSocketBufSize);
         if (bytes_read <= 0) {
           FD_CLR(client_socket, &read_fds);
           QMMF_INFO("%s: remove client(%d)", __func__, client_socket);
           // client session destructor
           it = client_sockets_.erase(it);
           continue;
-        } else {
-          // Deserialize the received data using protobuf
-          RecorderClientReqMsg cmd_msg;
-          cmd_msg.ParseFromArray(buffer, bytes_read);
-          thread_pool_.Enqueue(
-              [cmd_msg, this, client_socket] { ProcessRequest(client_socket, cmd_msg); },
-              TASK_PRIORITY::NORMAL);
         }
+        // Deserialize the received data using protobuf
+        ParseRequest(client_socket, socket_recv_buf_, bytes_read);
+        memset(socket_recv_buf_, 0, bytes_read);
       }
       ++it;
     }
@@ -2077,6 +2101,15 @@ status_t RecorderService::GetUniqueClientID(uint32_t *client_id) {
 }
 
 #ifndef HAVE_BINDER
+ void RecorderService::CheckClientDeath (const uint32_t client_id) {
+  QMMF_INFO("%s: Enter ", __func__);
+
+  if (death_notifier_list_.count(client_id) != 0) {
+    death_notifier_list_[client_id]->ClientDied();
+  }
+  QMMF_INFO("%s: Exit ", __func__);
+ }
+
 status_t RecorderServiceCallbackProxy::Init (uint32_t client_id,
                                              uint32_t server_pid) {
   QMMF_INFO("%s: Enter ", __func__);
@@ -2114,6 +2147,24 @@ status_t RecorderServiceCallbackProxy::Init (uint32_t client_id,
   return 0;
 }
 
+void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync& message) {
+  QMMF_DEBUG("%s Enter ", __func__);
+  uint8_t offset = 4;
+  auto msg_size = message.ByteSizeLong();
+  auto buf_size = msg_size + offset;
+  void *buffer = malloc(buf_size);
+  *(static_cast<uint32_t *>(buffer)) = msg_size;
+  message.SerializeToArray(buffer+offset, msg_size);
+  ssize_t bytesSent = send(callback_socket_, buffer, buf_size, 0);
+  QMMF_VERBOSE("%s bytesSent: %u, size: %u", __func__, bytesSent, buf_size);
+  if (bytesSent == -1) {
+    QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);
+    close (callback_socket_);
+  }
+  free (buffer);
+  QMMF_DEBUG("%s Exit ", __func__);
+}
+
 void RecorderServiceCallbackProxy::NotifyRecorderEvent(EventType event, void *payload, size_t size) {
 
   QMMF_DEBUG("%s Enter ", __func__);
@@ -2125,17 +2176,7 @@ void RecorderServiceCallbackProxy::NotifyRecorderEvent(EventType event, void *pa
     reinterpret_cast<const char*>(payload), size);
   event_msg->set_allocated_event_msg(data);
 
-  auto msg_size = async_msg.ByteSizeLong();
-  void *buffer = malloc(size);
-  async_msg.SerializeToArray(buffer, msg_size);
-  ssize_t bytesSent = send(callback_socket_, buffer, msg_size, 0);
-  QMMF_VERBOSE("%s bytesSent: %u", __func__, bytesSent);
-  if (bytesSent == -1) {
-    QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);
-    close (callback_socket_);
-  }
-
-  free (buffer);
+  SendCallbackData(async_msg);
 
   QMMF_DEBUG("%s Exit ", __func__);
 }
@@ -2149,7 +2190,6 @@ void RecorderServiceCallbackProxy::NotifySnapshotData(uint32_t camera_id, uint32
                         BnBuffer& bn_buffer, BufferMeta& meta) {
   QMMF_VERBOSE("%s: Enter camera_id(%u), imgcount(%u)",
       __func__, camera_id, imgcount);
-
   RecorderClientCallbacksAsync async_msg;
   async_msg.set_cmd(RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SNAPSHOT_DATA);
   NotifySnapshotDataMsg *snapshot_msg = async_msg.mutable_snapshot_data();
@@ -2179,17 +2219,8 @@ void RecorderServiceCallbackProxy::NotifySnapshotData(uint32_t camera_id, uint32
     info->set_size(p_info.size);
   }
 
-  auto size = async_msg.ByteSizeLong();
-  void *buffer = malloc(size);
-  async_msg.SerializeToArray(buffer, size);
-  ssize_t bytesSent = send(callback_socket_, buffer, size, 0);
-  QMMF_VERBOSE("%s bytesSent: %u", __func__, bytesSent);
-  if (bytesSent == -1) {
-    QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);
-    close (callback_socket_);
-  }
+  SendCallbackData(async_msg);
 
-  free (buffer);
   QMMF_VERBOSE("%s: Exit camera_id(%u), imgcount(%u)",
       __func__, camera_id, imgcount);
 }
@@ -2243,17 +2274,9 @@ void RecorderServiceCallbackProxy::NotifyVideoTrackData(uint32_t session_id, uin
     }
     *nvt->mutable_metas()->Add() = meta;
   }
-  auto size = async_msg.ByteSizeLong();
-  void *buffer = malloc(size);
-  async_msg.SerializeToArray(buffer, size);
-  ssize_t bytesSent = send(callback_socket_, buffer, size, 0);
-  QMMF_VERBOSE("%s bytesSent: %u", __func__, bytesSent);
-  if (bytesSent == -1) {
-    QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);
-    close (callback_socket_);
-  }
 
-  free (buffer);
+  SendCallbackData(async_msg);
+
   QMMF_VERBOSE("%s: Exit client_id(%u), session_id(%u), track_id(%u)",
       __func__, client_id_, session_id, track_id);
 }

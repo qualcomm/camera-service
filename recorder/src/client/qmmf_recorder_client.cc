@@ -125,10 +125,12 @@ class RecorderServiceProxy: public IRecorderService {
  public:
   RecorderServiceProxy() {}
   ~RecorderServiceProxy() {
-    if (socket_ == -1) {
+    QMMF_DEBUG("%s: Enter", __func__);
+    if (socket_ != -1) {
       close(socket_);
     }
     service_cb_handler_.reset();
+    QMMF_DEBUG("%s: Exit", __func__);
   }
 
   status_t Connect (const std::shared_ptr<IRecorderServiceCallback>& service_cb,
@@ -484,16 +486,13 @@ class RecorderServiceProxy: public IRecorderService {
     }
 
     status_t ret;
-    ret = SendRequest(cmd);
-    if (ret < 0)
-      return ret;
-
     RecorderClientRespMsg resp;
-    ret = RecvResponse(resp);
-    if (ret < 0)
-      return ret;
-
-    ret = resp.status();
+    {
+      std::lock_guard<std::mutex> lock(socket_lock_);
+      ret = SendRequest(cmd);
+      if (ret < 0)
+        return ret;
+    }
     return ret;
   }
 
@@ -861,19 +860,21 @@ class RecorderServiceProxy: public IRecorderService {
   }
  private:
   status_t SendRequest(RecorderClientReqMsg &cmd) {
-    auto size = cmd.ByteSizeLong();
-    void *buffer = malloc(size);
-    cmd.SerializeToArray(buffer, size);
-    QMMF_VERBOSE("%s: SerializeToArray size: %lu", __func__, size);
+    uint8_t offset = 4;
+    auto msg_size = cmd.ByteSizeLong();
+    auto buf_size = msg_size + offset;
+    void *buffer = malloc(buf_size);
+    *(static_cast<uint32_t *>(buffer)) = msg_size;
+    cmd.SerializeToArray(buffer+offset, msg_size);
 
-    ssize_t bytes_sent = send(socket_, buffer, size, 0);
+    ssize_t bytes_sent = send(socket_, buffer, buf_size, 0);
     free (buffer);
     if (bytes_sent == -1) {
       return -errno;
     }
 
-    QMMF_DEBUG("%s: Sent to server cmd: %u bytes:%ld",
-        __func__, cmd.command(), bytes_sent);
+    QMMF_DEBUG("%s: Sent to server cmd: %u, buf_size:%ld, bytes:%ld",
+        __func__, cmd.command(), buf_size, bytes_sent);
     return 0;
   }
 
@@ -896,6 +897,7 @@ class RecorderServiceProxy: public IRecorderService {
 
   std::shared_ptr<IRecorderServiceCallback> service_cb_handler_;
   int socket_;
+  std::mutex socket_lock_;
 };
 #endif // HAVE_BINDER
 
@@ -1039,7 +1041,12 @@ status_t RecorderClient::Disconnect() {
 #ifdef HAVE_BINDER
   recorder_service_->asBinder(recorder_service_)->
       unlinkToDeath(death_notifier_);
-#endif
+#else
+  {
+    std::unique_lock<std::mutex> lock(disconnect_lock_);
+    wait_for_disconnect_.Signal();
+  }
+#endif // HAVE_BINDER
 
   recorder_service_.reset();
   death_notifier_.reset();
@@ -2042,6 +2049,23 @@ void RecorderClient::ServiceDeathHandler() {
   QMMF_INFO("%s Exit ", __func__);
 }
 
+#ifndef HAVE_BINDER
+void RecorderClient::NotifyServerDeath() {
+  std::unique_lock<std::mutex> lock(disconnect_lock_);
+  std::chrono::nanoseconds wait_time(kWaitDelay);
+  // Waiting for 2 secs to see if the socket gracefully closed during Disconnect
+  auto ret = wait_for_disconnect_.WaitFor(lock, wait_time);
+  if (ret != 0) {
+    QMMF_ERROR("%s: Wait for disconnect timed out! Server has died!", __func__);
+    if (nullptr == death_notifier_.get()) {
+      death_notifier_->ServerDied();
+    }
+  } else {
+    QMMF_INFO("%s: Server is alive, nop!", __func__);
+  }
+}
+#endif // !HAVE_BINDER
+
 void RecorderClient::NotifyRecorderEvent(EventType event, void *payload,
                                          size_t size) {
 
@@ -2760,6 +2784,15 @@ ServiceCallbackHandler::~ServiceCallbackHandler() {
     QMMF_DEBUG("%s Exit ", __func__);
 }
 
+#ifndef HAVE_BINDER
+void ServiceCallbackHandler::NotifyServerDeath() {
+  QMMF_DEBUG("%s Enter ", __func__);
+  assert(client_ != nullptr);
+  client_->NotifyServerDeath();
+  QMMF_DEBUG("%s Exit ", __func__);
+}
+#endif // !HAVE_BINDER
+
 void ServiceCallbackHandler::NotifyRecorderEvent(EventType event, void *payload,
                                                  size_t size) {
   QMMF_DEBUG("%s Enter ", __func__);
@@ -2800,7 +2833,7 @@ void ServiceCallbackHandler::NotifyVideoTrackData(uint32_t session_id,
   QMMF_VERBOSE("%s Enter ", __func__);
   assert(client_ != nullptr);
   client_->NotifyVideoTrackData(session_id, track_id, bn_buffers, metas);
-  QMMF_DEBUG("%s Exit ", __func__);
+  QMMF_VERBOSE("%s Exit ", __func__);
 }
 
 void ServiceCallbackHandler::NotifyVideoTrackEvent(uint32_t session_id,
@@ -3173,6 +3206,7 @@ RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
   QMMF_INFO("%s: Enter", __func__);
   cb_socket_ = -1;
   client_socket_ = -1;
+  socket_recv_buf_ = new char[kMaxSocketBufSize];
   QMMF_INFO("%s: Exit", __func__);
 }
 
@@ -3192,6 +3226,11 @@ RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
     meta_fd_map_.clear();
   }
 
+  run_thread_ = false;
+  if (callback_thread_.joinable()) {
+    callback_thread_.join();
+  }
+
   if (cb_socket_ != -1) {
     close(cb_socket_);
     cb_socket_ = -1;
@@ -3199,10 +3238,11 @@ RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
 
   if (client_socket_ != -1 ) {
     shutdown(client_socket_, SHUT_RDWR);
-    RequestExitAndWait();
     close(client_socket_);
     client_socket_ = -1;
   }
+
+  delete[] socket_recv_buf_;
 
   QMMF_INFO("%s: Exit", __func__);
 }
@@ -3240,54 +3280,67 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
 
   server_pid_ = server_pid;
 
-  auto ret = Run ("RecorderServiceCallbackStub-Thread");
-  if (ret != 0) {
-    QMMF_ERROR("%s: failed to start RecorderServiceCallbackStub thread", __func__);
-    return ret;
+  run_thread_ = true;
+  try {
+    callback_thread_ = std::thread(&RecorderServiceCallbackStub::ThreadLoop, this);
+    QMMF_VERBOSE("%s: Callback thread spawned!", __func__);
+  } catch(const std::system_error& e) {
+    QMMF_ERROR("%s: error creating callback thread - %s", __func__, e.what());
+    return e.code().value();
   }
 
   QMMF_INFO("%s: Exit: Server is listening on %s", __func__, socket_path_.c_str());
   return 0;
 }
 
-bool RecorderServiceCallbackStub::ThreadLoop () {
+void RecorderServiceCallbackStub::ThreadLoop () {
+  QMMF_INFO("%s: waiting for connection on %d", __func__, cb_socket_);
 
-  if (cb_socket_ != -1 && client_socket_ == -1) {
-    QMMF_INFO("%s: waiting for connection on %d", __func__, cb_socket_);
-    client_socket_ = accept(cb_socket_, nullptr, nullptr);
-    if (client_socket_ == -1) {
-      QMMF_ERROR("%s: accept failure %s", __func__, strerror(errno));
-      close(cb_socket_);
-      unlink(socket_path_.c_str());
-      return false;
+  client_socket_ = accept(cb_socket_, nullptr, nullptr);
+  if (client_socket_ == -1) {
+    QMMF_ERROR("%s: accept failure %s", __func__, strerror(errno));
+    close(cb_socket_);
+    unlink(socket_path_.c_str());
+    return;
+  }
+
+  QMMF_INFO("%s: connection accepted new fd %d", __func__, client_socket_);
+  while (run_thread_) {
+    ssize_t bytes_read = recv(client_socket_, socket_recv_buf_, kMaxSocketBufSize, 0);
+    QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
+
+    if (bytes_read < 0) {
+      QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));
+      break;
+    } else if (bytes_read == 0) {
+      QMMF_ERROR("%s: connection closed", __func__);
+      NotifyServerDeath();
+      break;
     }
-    QMMF_INFO("%s: connection accepted new fd %d", __func__, client_socket_);
-  }
 
-  ssize_t bytes_read = recv(client_socket_, buffer_, sizeof(buffer_), 0);
-  QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
-
-  if (bytes_read > 0) {
-    buffer_[bytes_read] = '\0';
-    RecorderClientCallbacksAsync msg;
-    msg.ParseFromArray(buffer_, bytes_read);
-    auto ret = ProcessCallbackMsg(msg);
-    QMMF_VERBOSE("%s: Processed cmd: %d", __func__, msg.cmd());
-    if (ret != 0) {
-      QMMF_ERROR("%s: ProcessCallbackMsg failed %s", __func__, strerror(errno));
-      return false;
+    ssize_t buf_size = bytes_read;
+    auto buf_ptr = socket_recv_buf_;
+    while (buf_size > 0) {
+      QMMF_VERBOSE("%s: buf_size: %d", __func__, buf_size);
+      uint32_t msg_size = *(reinterpret_cast<uint32_t *>(buf_ptr));
+      // Moving past the size
+      buf_ptr += 4;
+      QMMF_VERBOSE("%s: msg_size: %d", __func__, msg_size);
+      RecorderClientCallbacksAsync msg;
+      msg.ParseFromArray(buf_ptr, msg_size);
+      auto ret = ProcessCallbackMsg(msg);
+      QMMF_VERBOSE("%s: Processed cmd: %d", __func__, msg.cmd());
+      if (ret != 0) {
+        QMMF_ERROR("%s: ProcessCallbackMsg failed %s", __func__, strerror(errno));
+        break;
+      } else {
+        buf_ptr += msg_size;
+        buf_size -= (msg_size + 4);
+      }
     }
+    memset(socket_recv_buf_, 0, bytes_read);
   }
-
-  if (bytes_read == -1) {
-    QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));
-    return false;
-  } else if (bytes_read == 0) {
-    QMMF_ERROR("%s: connection closed", __func__);
-    return false;
-  }
-
-  return true;
+  QMMF_INFO("%s: Exit %d", __func__, cb_socket_);
 }
 
 status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
@@ -3447,6 +3500,12 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
 
   return -1;
 }
+
+void RecorderServiceCallbackStub::NotifyServerDeath() {
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
+}
+
 #endif // HAVE_BINDER
 }; //namespace qmmf
 

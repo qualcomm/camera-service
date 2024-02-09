@@ -143,7 +143,7 @@ class RecorderServiceProxy: public IRecorderService {
     }
 
     // Set up server address
-    std::string path{"/var/run/le_cam_socket"};
+    std::string path{"/tmp/socket/cam_server/le_cam_socket"};
     sockaddr_un addr;
     addr.sun_family = AF_UNIX;
     auto size = path.size();
@@ -3251,7 +3251,7 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
   QMMF_INFO("%s: Enter", __func__);
 
   std:;stringstream path;
-  path << "/var/run/le_cam_client." << client_id << ".sock";
+  path << "/tmp/socket/cam_server/le_cam_client." << client_id << ".sock";
   socket_path_ = path.str();
   ::unlink(socket_path_.c_str());
 

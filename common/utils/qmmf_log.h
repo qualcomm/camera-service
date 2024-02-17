@@ -27,6 +27,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* ​​​​​Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #pragma once
 
 #ifdef HAVE_ANDROID_UTILS
@@ -35,6 +40,9 @@
 #else
 #include <log.h>
 #include "properties.h"
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 #undef assert
@@ -49,7 +57,7 @@
   } \
 } while (0)
 
-// #define LOG_LEVEL_KPI
+#define LOG_LEVEL_KPI
 
 // INFO, ERROR and WARN logs are enabled by default
 #define QMMF_INFO(fmt, args...)  ALOGI(fmt, ##args)
@@ -88,29 +96,72 @@ extern uint32_t qmmf_log_level;
 
 
 #ifdef LOG_LEVEL_KPI
-#include <cutils/trace.h>
 
-#define BASE_KPI_FLAG   1
-#define DETAIL_KPI_FLAG 2
+#define DEFAULT_KPI_FLAG   0
+#define BASE_KPI_FLAG      1
+#define DETAIL_KPI_FLAG    2
+#define FTRACE_BUFFER_SIZE 512
 
 extern volatile uint32_t kpi_debug_level;
+extern int ftrace_fd;
+
+static inline int get_ftrace_fd(void) {
+  if (ftrace_fd <0) {
+    ftrace_fd = open("/sys/kernel/debug/tracing/trace_marker", O_WRONLY);
+  }
+  return ftrace_fd;
+}
+
+static inline void ftrace_write(const char *log, size_t len) {
+  auto fd = get_ftrace_fd();
+  write(fd, log, len);
+}
+
+static inline void ftrace_begin(const char* name) {
+  char buffer[FTRACE_BUFFER_SIZE+1];
+  buffer[FTRACE_BUFFER_SIZE] = 0;
+  size_t len;
+  len = snprintf(buffer, FTRACE_BUFFER_SIZE, "B|%s\n", name);
+  ftrace_write(buffer, len);
+}
+
+static inline void ftrace_end() {
+  ftrace_write("E|\n", 3);
+}
+
+static inline void ftrace_async_begin(const char* name, int32_t cookie) {
+  char buffer[FTRACE_BUFFER_SIZE+1];
+  buffer[FTRACE_BUFFER_SIZE] = 0;
+  size_t len;
+  len = snprintf(buffer, FTRACE_BUFFER_SIZE, "S|%s|%d\n", name, cookie);
+  ftrace_write(buffer, len);
+}
+
+static inline void ftrace_async_end(const char* name, int32_t cookie) {
+  char buffer[FTRACE_BUFFER_SIZE+1];
+  buffer[FTRACE_BUFFER_SIZE] = 0;
+  size_t len;
+  len = snprintf(buffer, FTRACE_BUFFER_SIZE, "E|%s|%d\n", name, cookie);
+  ftrace_write(buffer, len);
+}
 
 #define QMMF_KPI_GET_MASK() ({\
 char prop[PROP_VALUE_MAX];\
-property_get("persist.qmmf.kpi.debug", prop, std::to_string(BASE_KPI_FLAG).c_str()); \
+property_get("persist.qmmf.kpi.debug", prop,\
+  std::to_string(DEFAULT_KPI_FLAG).c_str()); \
 kpi_debug_level = atoi (prop);})
 
 class BaseKpiObject {
 public:
     BaseKpiObject(const char* str) {
         if (kpi_debug_level >= BASE_KPI_FLAG) {
-            atrace_begin(ATRACE_TAG_ALWAYS, str);
+            ftrace_begin(str);
         }
     }
 
     ~BaseKpiObject() {
         if (kpi_debug_level >= BASE_KPI_FLAG) {
-            atrace_end(ATRACE_TAG_ALWAYS);
+            ftrace_end();
         }
     }
 };
@@ -121,13 +172,13 @@ BaseKpiObject a(__func__);\
 
 #define QMMF_KPI_ASYNC_BEGIN(name, cookie) ({\
 if (kpi_debug_level >= BASE_KPI_FLAG) { \
-     atrace_async_begin(ATRACE_TAG_ALWAYS, name, cookie); \
+    ftrace_async_begin(name, cookie); \
 }\
 })
 
 #define QMMF_KPI_ASYNC_END(name, cookie) ({\
 if (kpi_debug_level >= BASE_KPI_FLAG) { \
-     atrace_async_end(ATRACE_TAG_ALWAYS, name, cookie); \
+    ftrace_async_end(name, cookie); \
 }\
 })
 
@@ -135,12 +186,12 @@ class DetailKpiObject {
 public:
     DetailKpiObject(const char* str) {
         if (kpi_debug_level >= DETAIL_KPI_FLAG) {
-            atrace_begin(ATRACE_TAG_ALWAYS, str);
+            ftrace_begin(str);
         }
     }
     ~DetailKpiObject() {
         if (kpi_debug_level >= DETAIL_KPI_FLAG) {
-            atrace_end(ATRACE_TAG_ALWAYS);
+            ftrace_end();
         }
     }
 };

@@ -188,8 +188,8 @@ Camera3DeviceClient::~Camera3DeviceClient() {
   prepare_handler_.Clear();
   prepare_handler_.RequestExit();
 
-  for (uint32_t i = 0; i < streams_.size(); i++) {
-    Camera3Stream *stream = streams_[i];
+  for (auto &camstream : streams_) {
+    Camera3Stream *stream = camstream.second;
     delete stream;
   }
   streams_.clear();
@@ -560,9 +560,10 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
     streams.push_back(&input_stream_);
   }
 
-  for (size_t i = 0; i < streams_.size(); i++) {
+  for (auto &stream : streams_)
+  {
     camera3_stream_t *outputStream;
-    outputStream = streams_[i]->BeginConfigure();
+    outputStream = stream.second->BeginConfigure();
     if (outputStream == NULL) {
       QMMF_ERROR("%s: Can't start stream configuration\n", __func__);
       return -ENOSYS;
@@ -580,8 +581,9 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   }
 #endif
   if (res == -EINVAL) {
-    for (uint32_t i = 0; i < streams_.size(); i++) {
-      Camera3Stream *stream = streams_[i];
+    for (auto &outstream : streams_)
+    {
+      Camera3Stream *stream = outstream.second;
       if (stream->IsConfigureActive()) {
         res = stream->AbortConfigure();
         if (0 != res) {
@@ -602,8 +604,9 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
     return res;
   }
 
-  for (uint32_t i = 0; i < streams_.size(); i++) {
-    Camera3Stream *outputStream = streams_[i];
+  for (auto &outstream : streams_)
+  {
+    Camera3Stream *outputStream = outstream.second;
     if (outputStream->IsConfigureActive()) {
       res = outputStream->EndConfigure();
       if (0 != res) {
@@ -2165,8 +2168,8 @@ int32_t Camera3DeviceClient::WaitUntilDrainedLocked() {
   int32_t res = WaitUntilStateThenRelock(false, WAIT_FOR_SHUTDOWN);
   if (0 != res) {
     SET_ERR_L("Error waiting for HAL to drain: %s (%d)", strerror(-res), res);
-    for (uint32_t i = 0; i < streams_.size(); i++) {
-      streams_[i]->PrintBuffersInfo();
+    for (auto &camstream : streams_) {
+      camstream.second->PrintBuffersInfo();
     }
     if (input_stream_.stream_id != -1) {
       QMMF_ERROR("%s: Input Stream: dim: %ux%u, fmt: %d "

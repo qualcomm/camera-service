@@ -185,6 +185,10 @@ RecorderService::RecorderService() {
         return remote_cb_list_[id];
     };
 
+    run_ = false;
+    socket_recv_buf_ = nullptr;
+    socket_ = -1;
+
     if (SetupSocket() != 0) {
       QMMF_ERROR("%s: Socket Setup failed!", __func__);
       throw errno;
@@ -1034,6 +1038,12 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
       size_t size = desc->getBufferSize();
       QMMF_VERBOSE("%s: size: %lu", __func__, size);
       uint8_t *data = new uint8_t[size];
+
+      if (!data) {
+        QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
+        return;
+      }
+
       desc->writeToBuffer (data, size);
       std::string *data_str = new std::string(reinterpret_cast<const char *>(data), size);
       resp_msg.mutable_get_vendor_tag_descriptor_resp()->set_allocated_descs(data_str);
@@ -1255,6 +1265,12 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
 
   auto size = resp_msg.ByteSizeLong();
   void *buffer = malloc(size);
+
+  if (!buffer) {
+    QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
+    return;
+  }
+
   resp_msg.SerializeToArray(buffer, size);
 
   if (SendResponse(client_socket, buffer, size) > 0)
@@ -2153,6 +2169,12 @@ void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync
   auto msg_size = message.ByteSizeLong();
   auto buf_size = msg_size + offset;
   void *buffer = malloc(buf_size);
+
+  if (!buffer) {
+    QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
+    return;
+  }
+
   *(static_cast<uint32_t *>(buffer)) = msg_size;
   message.SerializeToArray(buffer+offset, msg_size);
   ssize_t bytesSent = send(callback_socket_, buffer, buf_size, 0);

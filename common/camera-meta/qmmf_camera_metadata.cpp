@@ -344,7 +344,7 @@ bool CameraMetadata::exists(uint32_t tag) const {
 
 camera_metadata_entry_t CameraMetadata::find(uint32_t tag) {
     status_t res;
-    camera_metadata_entry entry;
+    camera_metadata_entry entry = {};
     if (mLocked) {
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         entry.count = 0;
@@ -753,7 +753,7 @@ status_t CameraMetadata::getTagFromName(const char *name,
         for (candidateTag = tagBegin; candidateTag < tagEnd; ++candidateTag) {
             const char *tagName = get_camera_metadata_tag_name(candidateTag);
 
-            if (strcmp(nameTagName, tagName) == 0) {
+            if (tagName != NULL && strcmp(nameTagName, tagName) == 0) {
                 QMMF_VERBOSE("%s: Found matched tag '%s' (%d)",
                       __FUNCTION__, tagName, candidateTag);
                 break;

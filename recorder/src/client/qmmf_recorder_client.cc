@@ -757,6 +757,8 @@ class RecorderServiceProxy: public IRecorderService {
   status_t SetSHDR(const uint32_t client_id,
                    const uint32_t camera_id,
                    const bool enable) {
+    // To be implemented
+    return -EPERM;
   }
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
@@ -848,16 +850,21 @@ class RecorderServiceProxy: public IRecorderService {
 
   status_t CreateOfflineJPEG(const uint32_t client_id,
                              const OfflineJpegCreateParams &params) {
-
+    // To be implemented
+    return -EPERM;
   }
 
   status_t EncodeOfflineJPEG(const uint32_t client_id,
                              const BnBuffer& in_buf,
                              const BnBuffer& out_buf,
                              const OfflineJpegMeta& meta) {
+    // To be implemented
+    return -EPERM;
   }
 
   status_t DestroyOfflineJPEG(const uint32_t client_id) {
+    // To be implemented
+    return -EPERM;
   }
  private:
   status_t SendRequest(RecorderClientReqMsg &cmd) {
@@ -865,6 +872,12 @@ class RecorderServiceProxy: public IRecorderService {
     auto msg_size = cmd.ByteSizeLong();
     auto buf_size = msg_size + offset;
     void *buffer = malloc(buf_size);
+
+    if (!buffer) {
+      QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
+      return -ENOMEM;
+    }
+
     *(static_cast<uint32_t *>(buffer)) = msg_size;
     cmd.SerializeToArray(buffer+offset, msg_size);
 
@@ -3367,7 +3380,7 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t camera_id = data.camera_id();
       uint32_t count = data.img_count();
       BnBuffer bn_buffer;
-      int32_t dup_buf_fd, dup_meta_fd;
+      int32_t dup_buf_fd, dup_meta_fd = 0;
       dup_buf_fd = syscall(SYS_pidfd_getfd,
                 syscall(SYS_pidfd_open, server_pid_, 0),
                 data.buffer().ion_fd(),
@@ -3420,7 +3433,7 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
         BnBuffer buffer;
         ion_fd = b_data.ion_fd();
         meta_fd = b_data.ion_meta_fd();
-        { 
+        {
           std::lock_guard<std::mutex> l(fd_map_lock_);
           if (ion_fd > 0) {
             if (ion_fd_map_.count(ion_fd) != 0) {
@@ -3466,7 +3479,7 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
 
       std::vector<BufferMeta> metas;
       for (auto &&m_data : data.metas()) {
-        BufferMeta meta;
+        BufferMeta meta = {};
         meta.format = static_cast<BufferFormat>(m_data.format());
         meta.n_planes = m_data.n_planes();
         for (auto i = 0; i < meta.n_planes; i++) {

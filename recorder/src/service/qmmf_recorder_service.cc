@@ -779,7 +779,7 @@ status_t RecorderService::Connect(uint32_t* client_id,
 }
 #else
 status_t RecorderService::SetupSocket() {
-  socket_path_ = "/var/run/le_cam_socket";
+  socket_path_ = "/tmp/socket/cam_server/le_cam_socket";
 
   if (unlink(socket_path_.c_str()) == -1) {
     QMMF_WARN("%s: unlink failure for path(%s) %s, errno: %d", __func__,
@@ -2131,7 +2131,7 @@ status_t RecorderServiceCallbackProxy::Init (uint32_t client_id,
   QMMF_INFO("%s: Enter ", __func__);
 
   std::stringstream ss;
-  ss << "/var/run/le_cam_client." << client_id << ".sock";
+  ss << "/tmp/socket/cam_server/le_cam_client." << client_id << ".sock";
   std::string socket_path = ss.str();
 
   QMMF_INFO("Connecting to... %s", socket_path.c_str());

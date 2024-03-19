@@ -26,7 +26,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-# Copyright (c) 2022-23 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 
 [Unit]
@@ -34,8 +34,11 @@ Description= Camera Server Service
 SourcePath=/usr/bin/cam-server
 
 [Service]
+User=system
+Group=video
 Restart=always
 EnvironmentFile=/etc/cam-server-env
+ExecStartPre=/bin/mkdir -p /tmp/socket/cam_server
 ExecStart=/usr/bin/cam-server
 
 [Install]

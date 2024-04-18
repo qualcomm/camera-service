@@ -3272,7 +3272,7 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
   // Create a socket
   cb_socket_ = socket(AF_UNIX, SOCK_STREAM, 0);
   if (cb_socket_ == -1) {
-    QMMF_ERROR("Server: sock failure - %s", strerror(errno));
+    QMMF_ERROR("%s: sock failure - %s", __func__, strerror(errno));
     return -errno;
   }
 
@@ -3282,7 +3282,13 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
   snprintf(addr.sun_path, size+1, "%s", socket_path_.c_str());
   addr.sun_path[size+1] = '\0';
   if (bind(cb_socket_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-    QMMF_ERROR("Server: bind failure - %s", strerror(errno));
+    QMMF_ERROR("%s: bind failure - %s", __func__, strerror(errno));
+    return -errno;
+  }
+
+  // Set permissions for the callback socket
+  if (chmod(addr.sun_path, 0666) == -1) {
+    QMMF_ERROR("%s: chmod failure - %s", __func__, strerror(errno));
     return -errno;
   }
 

@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -1805,7 +1805,7 @@ status_t RecorderService::ConfigImageCapture(const uint32_t client_id,
     return -ENODEV;
   }
 
-  auto ret = recorder_->ConfigImageCapture(client_id, camera_id, image_id, 
+  auto ret = recorder_->ConfigImageCapture(client_id, camera_id, image_id,
                                            param, xtrapram);
   if (ret != 0) {
     QMMF_ERROR("%s: ConfigImageCapture failed!", __func__);
@@ -2198,6 +2198,14 @@ void RecorderServiceCallbackProxy::NotifyRecorderEvent(EventType event, void *pa
     reinterpret_cast<const char*>(payload), size);
   event_msg->set_allocated_event_msg(data);
 
+  if (REMAP_ALL_BUFFERS == static_cast<uint32_t>(event)) {
+    std::lock_guard<std::mutex> l(track_buffers_lock_);
+    for (auto& iter : track_buffers_map_) {
+      uint32_t track_id = iter.first;
+      track_buffers_map_.erase(track_id);
+    }
+  }
+
   SendCallbackData(async_msg);
 
   QMMF_DEBUG("%s Exit ", __func__);
@@ -2267,8 +2275,37 @@ void RecorderServiceCallbackProxy::NotifyVideoTrackData(uint32_t session_id, uin
     QMMF_VERBOSE("%s: INPARAM: buffers[%s]", __func__,
                   buffer.ToString().c_str());
     BufferInfoMsg buffer_info;
-    buffer_info.set_ion_fd(buffer.ion_fd);
-    buffer_info.set_ion_meta_fd(buffer.ion_meta_fd);
+    bool ismapped = false;
+    {
+      std::lock_guard<std::mutex> l(track_buffers_lock_);
+      auto& buffer_ids = track_buffers_map_[track_id];
+
+      // If ION fd has already been sent to client, no binder packing is
+      // required, only index would be sufficient for client to get mapped
+      // buffer from his own map.
+      ismapped = (buffer_ids.count(buffer.buffer_id) != 0);
+
+      QMMF_VERBOSE("%s: ion_fd=%d meta_fd=%d buffer_id=%d ismapped:%d",
+          __func__, buffer.ion_fd, buffer.ion_meta_fd, buffer.buffer_id, ismapped);
+    }
+
+    if (ismapped) {
+      buffer_info.set_ion_fd(-1);
+      buffer_info.set_ion_meta_fd(-1);
+    } else {
+      buffer_info.set_ion_fd(buffer.ion_fd);
+      buffer_info.set_ion_meta_fd(buffer.ion_meta_fd);
+
+      {
+        std::lock_guard<std::mutex> l(track_buffers_lock_);
+        auto& buffer_ids = track_buffers_map_[track_id];
+        buffer_ids.emplace(buffer.buffer_id);
+      }
+
+      QMMF_VERBOSE("%s: ion_fd=%d meta_fd=%d buffer_id=%d mapping:%d", __func__,
+          buffer.ion_fd, buffer.ion_meta_fd, buffer.buffer_id, true);
+    }
+
     buffer_info.set_img_id(buffer.img_id);
     buffer_info.set_size(buffer.size);
     buffer_info.set_timestamp(buffer.timestamp);
@@ -2314,6 +2351,10 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(uint32_t camera_id, const 
 }
 
 void RecorderServiceCallbackProxy::NotifyDeleteVideoTrack(uint32_t track_id) {
+  QMMF_VERBOSE("%s: Enter", __func__);
+  std::lock_guard<std::mutex> l(track_buffers_lock_);
+  track_buffers_map_.erase(track_id);
+  QMMF_VERBOSE("%s: Exit", __func__);
 }
 #endif // !HAVE_BINDER
 

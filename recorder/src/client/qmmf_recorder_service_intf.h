@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -403,12 +403,6 @@ class RecorderServiceCallbackStub : public IRecorderServiceCallback {
   int32_t cb_socket_;
   int32_t client_socket_;
   char* socket_recv_buf_;
-  // Map of server buffer fd to client dupped fd
-  std::map<int32_t, int32_t> ion_fd_map_;
-  // Map of server meta fd to client dupped meta fd
-  std::map<int32_t, int32_t> meta_fd_map_;
-  // lock to protect dupped fd maps
-  std::mutex  fd_map_lock_;
   std::thread callback_thread_;
   bool run_thread_;
 };

@@ -3227,19 +3227,6 @@ RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
 RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
   QMMF_INFO("%s: Enter", __func__);
 
-  if (!ion_fd_map_.empty()) {
-    for (const auto& [fd, dup_fd] : ion_fd_map_ ) {
-      close(dup_fd);
-    }
-    ion_fd_map_.clear();
-  }
-  if (!meta_fd_map_.empty()) {
-    for (const auto& [fd, dup_fd] : meta_fd_map_ ) {
-      close(dup_fd);
-    }
-    meta_fd_map_.clear();
-  }
-
   run_thread_ = false;
   if (callback_thread_.joinable()) {
     callback_thread_.join();
@@ -3437,38 +3424,23 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       int32_t ion_fd, meta_fd, dup_buf_fd, dup_meta_fd;
       for (auto &&b_data : data.buffers()) {
         BnBuffer buffer;
-        ion_fd = b_data.ion_fd();
-        meta_fd = b_data.ion_meta_fd();
-        {
-          std::lock_guard<std::mutex> l(fd_map_lock_);
-          if (ion_fd > 0) {
-            if (ion_fd_map_.count(ion_fd) != 0) {
-              // Buffer is already mapped to the client
-              dup_buf_fd = ion_fd_map_.at(ion_fd);
-            } else {
-              // New buffer, map it to the client
-              dup_buf_fd = syscall(SYS_pidfd_getfd,
-                        syscall(SYS_pidfd_open, server_pid_, 0),
-                        ion_fd,
-                        0);
-              ion_fd_map_[ion_fd] = dup_buf_fd;
-            }
-          }
+        ion_fd = dup_buf_fd = b_data.ion_fd();
+        meta_fd = dup_meta_fd = b_data.ion_meta_fd();
 
-          if (meta_fd > 0) {
-            if (meta_fd_map_.count(meta_fd) != 0) {
-              // Meta buffer is already mapped to the client
-              dup_meta_fd = meta_fd_map_.at(meta_fd);
-            } else {
-              // New meta buffer, map it to the client
-              dup_meta_fd = syscall(SYS_pidfd_getfd,
-                        syscall(SYS_pidfd_open, server_pid_, 0),
-                        meta_fd,
-                        0);
-              meta_fd_map_[meta_fd] = dup_meta_fd;
-            }
-          }
+        if (ion_fd > 0) {
+          // New buffer, map it to the client
+          dup_buf_fd = syscall(SYS_pidfd_getfd,
+              syscall(SYS_pidfd_open, server_pid_, 0), ion_fd, 0);
+          QMMF_VERBOSE("%s : ION fd(%d) is duped.", __func__, ion_fd);
         }
+
+        if (meta_fd > 0) {
+          // New meta buffer, map it to the client
+          dup_meta_fd = syscall(SYS_pidfd_getfd,
+              syscall(SYS_pidfd_open, server_pid_, 0), meta_fd, 0);
+          QMMF_VERBOSE("%s : meta fd(%d) is duped.", __func__, meta_fd);
+        }
+
         buffer.ion_fd = dup_buf_fd;
         buffer.ion_meta_fd = dup_meta_fd;
         buffer.img_id = b_data.img_id();

@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *  
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -171,6 +171,13 @@ void RemoteCallBack::NotifyDeleteVideoTrack(uint32_t track_id) {
   assert(client_cb_handle_.get() != nullptr);
   client_cb_handle_->NotifyDeleteVideoTrack(track_id);
 }
+
+void RemoteCallBack::NotifyCancelCaptureImage() {
+
+  assert(client_cb_handle_.get() != nullptr);
+  client_cb_handle_->NotifyCancelCaptureImage();
+}
+
 
 }; // namespace recorder
 

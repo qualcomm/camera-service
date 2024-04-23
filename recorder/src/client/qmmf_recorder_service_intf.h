@@ -378,6 +378,10 @@ class IRecorderServiceCallback {
   // this method.
   virtual void NotifyDeleteVideoTrack(uint32_t track_id
       __attribute__((__unused__))) {}
+
+  // This method is not exposed to client as a callback, it is just to update
+  // internal data structure
+  virtual void NotifyCancelCaptureImage() {}
 };
 
 //This class is responsible to provide callbacks from recoder service.

@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *  
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -111,6 +111,8 @@ class RemoteCallBack {
     void NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result);
 
     void NotifyDeleteVideoTrack(uint32_t track_id);
+
+    void NotifyCancelCaptureImage();
 
     uint32_t GetClientId() { return client_id_; }
 

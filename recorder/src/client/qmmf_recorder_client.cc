@@ -1537,6 +1537,22 @@ status_t RecorderClient::CancelCaptureImage(const uint32_t camera_id,
     return -ENODEV;
   }
   assert(client_id_ > 0);
+
+  {
+    std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
+
+    for (auto& pair : snapshot_buffers_) {
+      auto& buffer_info = pair.second;
+
+      QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)", __func__,
+              buffer_info.ion_fd, buffer_info.vaddr, buffer_info.size);
+
+      UnmapBuffer(buffer_info);
+    }
+
+    snapshot_buffers_.clear();
+  }
+
   auto ret = recorder_service_->CancelCaptureImage(client_id_, camera_id,
                                                    image_id, cache);
   if(0 != ret) {
@@ -1553,22 +1569,6 @@ status_t RecorderClient::ReturnImageCaptureBuffer(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   if (!CheckServiceStatus()) {
     return -ENODEV;
-  }
-
-  {
-    // Unmap buffer from client process.
-    std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
-    if (snapshot_buffers_.count(buffer.fd) == 0) {
-      QMMF_ERROR("%s Invalid buffer fd(%d)!", __func__, buffer.fd);
-      return -EINVAL;
-    }
-    auto buffer_info = snapshot_buffers_[buffer.fd];
-
-    QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)", __func__,
-              buffer_info.ion_fd, buffer_info.vaddr, buffer_info.size);
-
-    UnmapBuffer(buffer_info);
-    snapshot_buffers_.erase(buffer.fd);
   }
 
   QMMF_DEBUG("%s Returning buf_id(%d) back to service!", __func__,
@@ -1912,9 +1912,9 @@ status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
 
   vaddr = mmap(NULL, info.size, PROT_READ | PROT_WRITE, MAP_SHARED,
                info.ion_fd, 0);
-  if (nullptr == vaddr) {
+  if (vaddr == MAP_FAILED) {
     QMMF_ERROR("%s Failed to map ion_fd %d : %d[%s]!", __func__, info.ion_fd,
-               -errno, strerror(errno));
+        -errno, strerror(errno));
     return -ENOMEM;
   }
 
@@ -2119,22 +2119,36 @@ void RecorderClient::NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
   QMMF_DEBUG("%s Enter ", __func__);
 
   assert(image_capture_cb_ != nullptr);
-  assert(bn_buffer.ion_fd > 0);
-  assert(bn_buffer.buffer_id > 0);
 
   BufferInfo buffer_info {};
-  buffer_info.ion_fd      = bn_buffer.ion_fd;
-  buffer_info.ion_meta_fd = bn_buffer.ion_meta_fd;
-  buffer_info.size        = bn_buffer.capacity;
+  buffer_info.size = bn_buffer.capacity;
 
-  auto ret = MapBuffer(buffer_info, meta);
-  if (0 != ret) {
-    QMMF_ERROR("%s Failed to map buffer!", __func__);
-    return;
-  }
   {
     std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
-    snapshot_buffers_.emplace(bn_buffer.ion_fd, buffer_info);
+    if (snapshot_buffers_.count(bn_buffer.buffer_id) != 0) {
+      buffer_info = snapshot_buffers_[bn_buffer.buffer_id];
+
+      bn_buffer.ion_fd = buffer_info.ion_fd;
+      bn_buffer.ion_meta_fd = buffer_info.ion_meta_fd;
+
+      QMMF_VERBOSE("%s Buffer is already mapped! buffer_id(%d):ion_fd(%d):"
+          "vaddr(%p)",  __func__, bn_buffer.buffer_id,
+          buffer_info.ion_fd, buffer_info.vaddr);
+    } else {
+      buffer_info.ion_fd      = bn_buffer.ion_fd;
+      buffer_info.ion_meta_fd = bn_buffer.ion_meta_fd;
+
+      auto ret = MapBuffer(buffer_info, meta);
+      if (0 != ret) {
+        QMMF_ERROR("%s Failed to map buffer!", __func__);
+        return;
+      }
+      snapshot_buffers_.emplace(bn_buffer.buffer_id, buffer_info);
+
+      QMMF_VERBOSE("%s BufInfo: ion_fd(%d), "
+          "vaddr(%p), size(%lu)", __func__, buffer_info.ion_fd,
+          buffer_info.vaddr, buffer_info.size);
+    }
   }
 
   BufferDescriptor buffer {};
@@ -3373,16 +3387,18 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t camera_id = data.camera_id();
       uint32_t count = data.img_count();
       BnBuffer bn_buffer;
-      int32_t dup_buf_fd, dup_meta_fd = 0;
-      dup_buf_fd = syscall(SYS_pidfd_getfd,
-                syscall(SYS_pidfd_open, server_pid_, 0),
-                data.buffer().ion_fd(),
-                0);
+      int32_t dup_buf_fd = -1, dup_meta_fd = -1;
+      int32_t ion_fd = data.buffer().ion_fd();
+      int32_t meta_fd = data.buffer().ion_meta_fd();
 
-      dup_meta_fd = syscall(SYS_pidfd_getfd,
-                syscall(SYS_pidfd_open, server_pid_, 0),
-                data.buffer().ion_meta_fd(),
-                0);
+      if (ion_fd > 0)
+        dup_buf_fd = syscall(SYS_pidfd_getfd,
+            syscall(SYS_pidfd_open, server_pid_, 0), ion_fd, 0);
+
+      if (meta_fd > 0)
+        dup_meta_fd = syscall(SYS_pidfd_getfd,
+            syscall(SYS_pidfd_open, server_pid_, 0), meta_fd, 0);
+
       bn_buffer.ion_fd = dup_buf_fd;
       bn_buffer.ion_meta_fd = dup_meta_fd;
       bn_buffer.img_id = data.buffer().img_id();
@@ -3421,11 +3437,11 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t session_id = data.session_id();
       uint32_t track_id = data.track_id();
       std::vector<BnBuffer> buffers;
-      int32_t ion_fd, meta_fd, dup_buf_fd, dup_meta_fd;
+      int32_t ion_fd, meta_fd, dup_buf_fd = -1, dup_meta_fd = -1;
       for (auto &&b_data : data.buffers()) {
         BnBuffer buffer;
-        ion_fd = dup_buf_fd = b_data.ion_fd();
-        meta_fd = dup_meta_fd = b_data.ion_meta_fd();
+        ion_fd = b_data.ion_fd();
+        meta_fd = b_data.ion_meta_fd();
 
         if (ion_fd > 0) {
           // New buffer, map it to the client

@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -435,6 +435,12 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
                usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {
       gbm_format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
     }
+  }
+
+  // TODO: to be updated in to_gbm_ map post confirmation
+  // from camera team for all LE SPs
+  if (gbm_format == GBM_FORMAT_YCbCr_420_888) {
+    gbm_format = GBM_FORMAT_NV21_ZSL;
   }
 
   if (gbm_format == GBM_FORMAT_YCbCr_420_888 &&

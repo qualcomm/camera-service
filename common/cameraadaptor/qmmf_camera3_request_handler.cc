@@ -17,7 +17,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
+
 #include <qmmf_camera3_utils.h>
 #include <qmmf_camera3_device_client.h>
 #include <qmmf_camera3_request_handler.h>
@@ -64,6 +69,9 @@ Camera3RequestHandler::Camera3RequestHandler(Camera3Monitor &monitor)
 
 Camera3RequestHandler::~Camera3RequestHandler() {
   RequestExitAndWait();
+
+  if (!input_buffer_map_.empty())
+    input_buffer_map_.clear();
 
   if (0 <= monitor_id_) {
     monitor_.ReleaseMonitor(monitor_id_);
@@ -233,6 +241,30 @@ void Camera3RequestHandler::TogglePause(bool pause, bool &pending_request) {
   pthread_mutex_unlock(&pause_lock_);
 }
 
+int32_t
+Camera3RequestHandler::CreateInputBuffer(uint32_t frameNumber,
+    camera3_stream_buffer_t **input_buffer) {
+  camera3_stream_buffer_t *in_buffer = new camera3_stream_buffer_t();
+  if (in_buffer == NULL)
+    return -1;
+  pthread_mutex_lock(&input_buffer_map_lock_);
+  input_buffer_map_.emplace(frameNumber, in_buffer);
+  *input_buffer = in_buffer;
+  pthread_mutex_unlock(&input_buffer_map_lock_);
+  return 0;
+}
+
+void Camera3RequestHandler::DeleteInputBuffer(uint32_t frameNumber) {
+  pthread_mutex_lock(&input_buffer_map_lock_);
+  camera3_stream_buffer_t *input_stream_buffer = input_buffer_map_[frameNumber];
+  input_buffer_map_.erase(frameNumber);
+
+  if (input_stream_buffer)
+    delete (input_stream_buffer);
+
+  pthread_mutex_unlock(&input_buffer_map_lock_);
+}
+
 void Camera3RequestHandler::RequestExit() {
   ThreadHelper::RequestExit();
 
@@ -355,7 +387,6 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
 
   int32_t res = 0;
   camera3_capture_request_t request = camera3_capture_request_t();
-  camera3_stream_buffer_t input_buffer = camera3_stream_buffer_t();
   request.frame_number = nextRequest.resultExtras.frameNumber;
   request.input_buffer = nullptr;
   std::vector<camera3_stream_buffer_t> outputBuffers;
@@ -416,13 +447,19 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
 #endif
     nextRequest.input->buffers_map.insert(
     std::make_pair(in_buf_handle, in_buf.handle));
+    res = CreateInputBuffer(request.frame_number, &request.input_buffer);
+    if (0 != res) {
+      SIG_ERROR("%s: Unable to create input buffer for request %d : %s (%d)",
+              __func__, request.frame_number, strerror(-res), res);
+      HandleErrorRequest(request, nextRequest, outputBuffers);
+      return res;
+    }
 
-    input_buffer.buffer = &GetGrallocBufferHandle(in_buf.handle);
-    input_buffer.acquire_fence = -1;
-    input_buffer.release_fence = -1;
-    input_buffer.status = CAMERA3_BUFFER_STATUS_OK;
-    input_buffer.stream = nextRequest.input;
-    request.input_buffer = &input_buffer;
+    request.input_buffer->buffer = &GetGrallocBufferHandle(in_buf.handle);
+    request.input_buffer->acquire_fence = -1;
+    request.input_buffer->release_fence = -1;
+    request.input_buffer->status = CAMERA3_BUFFER_STATUS_OK;
+    request.input_buffer->stream = nextRequest.input;
     totalNumBuffers++;
   }
 

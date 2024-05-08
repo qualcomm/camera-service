@@ -2048,6 +2048,11 @@ void GtestCommon::SetCameraExtraParam(CameraExtraParam &param) {
     EISSetup eis_mode;
     eis_mode.enable = true;
     param.Update(QMMF_EIS, eis_mode);
+#ifdef EIS_MODES_ENABLE
+    EISModeSetup eis_new_mode;
+    eis_new_mode.mode = EisMode::kEisSingleStream;
+    param.Update(QMMF_EIS_MODE, eis_new_mode);
+#endif // EIS_MODES_ENABLE
   }
   if (is_shdr_on_) {
     // Enable HDR

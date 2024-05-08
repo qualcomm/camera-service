@@ -105,6 +105,10 @@
 #define QCAMERA3_SENSORMODE_FPS_DEFAULT_INDEX (0x0)
 #define FORCE_SENSORMODE_ENABLE               (1 << 24)
 #define EIS_ENABLE                            (0xF200)
+#ifdef EIS_MODES_ENABLE
+#define EIS_SINGLE_STREAM_ENABLE              (0xF200)
+#define EIS_DUAL_STREAM_ENABLE                (0xF400)
+#endif // EIS_MODES_ENABLE
 #define LDC_ENABLE                            (0xF800)
 #define LCAC_ENABLE                           (0x100000)
 #define IFE_DIRECT_STREAM                     (1 << 25)
@@ -2419,7 +2423,17 @@ uint32_t Camera3DeviceClient::GetOpMode() {
   if (hfr_mode_enabled_) {
     operation_mode |= CAMERA3_STREAM_CONFIGURATION_CONSTRAINED_HIGH_SPEED_MODE;
   }
+
+#ifdef EIS_MODES_ENABLE
   // Handle EIS mode
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kEISSingleStream)) {
+    operation_mode |= EIS_SINGLE_STREAM_ENABLE;
+  }
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kEISDualStream)) {
+    operation_mode |= EIS_DUAL_STREAM_ENABLE;
+  }
+#endif // EIS_MODES_ENABLE
+
   if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kEIS)) {
     operation_mode |= EIS_ENABLE;
   }

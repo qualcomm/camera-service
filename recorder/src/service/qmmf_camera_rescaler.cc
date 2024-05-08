@@ -447,6 +447,22 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
     }
   }
 
+#ifdef EIS_MODES_ENABLE
+  if (extra_param.Exists(QMMF_EIS_MODE)) {
+    size_t entry_count = extra_param.EntryCount(QMMF_EIS_MODE);
+    if (entry_count == 1) {
+      EISModeSetup eis_mode;
+      extra_param.Fetch(QMMF_EIS_MODE, eis_mode, 0);
+      if (eis_mode.mode == EisMode::kEisSingleStream) {
+        is_eis_on_ = true;
+      }
+    } else {
+      QMMF_ERROR("%s: Invalid EIS mode received", __func__);
+      return -EINVAL;
+    }
+  }
+#endif // EIS_MODES_ENABLE
+
   if (extra_param.Exists(QMMF_LDC)) {
     size_t entry_count = extra_param.EntryCount(QMMF_LDC);
     if (entry_count == 1) {

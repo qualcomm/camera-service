@@ -339,6 +339,33 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
     }
   }
 
+#ifdef EIS_MODES_ENABLE
+  if (extra_param.Exists(QMMF_EIS_MODE)) {
+    size_t entry_count = extra_param.EntryCount(QMMF_EIS_MODE);
+    if (entry_count == 1) {
+      EISModeSetup eis_mode;
+      extra_param.Fetch(QMMF_EIS_MODE, eis_mode, 0);
+      if (eis_mode.mode == EisMode::kEisOff) {
+        QMMF_INFO("%s: EIS is disabled", __func__);
+      } else if (eis_mode.mode == EisMode::kEisSingleStream) {
+        QMMF_INFO("%s: EIS on single stream is ON..", __func__);
+        camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kEISSingleStream);
+      } else if (eis_mode.mode == EisMode::kEisDualStream) {
+        QMMF_INFO("%s: EIS on dual stream is ON..", __func__);
+        camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kEISDualStream);
+      } else {
+        QMMF_ERROR("%s: Invalid EIS mode %d",
+              __func__, eis_mode.mode);
+      }
+    } else {
+      QMMF_ERROR("%s: Invalid EIS mode received", __func__);
+      return -EINVAL;
+    }
+  }
+#endif // EIS_MODES_ENABLE
+
   if (extra_param.Exists(QMMF_LDC)) {
     size_t entry_count = extra_param.EntryCount(QMMF_LDC);
     if (entry_count == 1) {

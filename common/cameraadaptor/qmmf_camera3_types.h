@@ -105,6 +105,10 @@ enum class CamFeatureFlag : uint32_t {
   kForceSensorMode = 1 << 4,   /// Force Sensor Mode is on.
   kIFEDirectStream = 1 << 5,   /// IFE Direct Stream is on.
   kInputROIEnable  = 1 << 6,   /// Input ROI reprocess is on.
+#ifdef EIS_MODES_ENABLE
+  kEISSingleStream = 1 << 7,   /// EIS Single Stream is on.
+  kEISDualStream = 1 << 8,     /// EIS Dual Stream is on.
+#endif // EIS_MODES_ENABLE
 };
 
 enum class CamOperationMode {

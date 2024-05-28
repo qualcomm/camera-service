@@ -109,6 +109,13 @@ enum class CamFeatureFlag : uint32_t {
   kEISSingleStream = 1 << 7,   /// EIS Single Stream is on.
   kEISDualStream = 1 << 8,     /// EIS Dual Stream is on.
 #endif // EIS_MODES_ENABLE
+#ifdef VHDR_MODES_ENABLE
+  kSHDRRaw = 1 << 9,          /// Raw SHDR line interleaved mode with 2 frame
+  kSHDRYUV = 1 << 10,          /// YUV SHDR virtual channel mode with 2 frames
+  kSHDRSwitchOn = 1 << 11,     /// SHDR switch is on
+  kQBCHDRVideo = 1 << 12,    /// QBC (in sensor) HDR on video stream is on
+  kQBCHDRSnapshot = 1 << 13,   /// QBC (in sensor) HDR on snapshot is on
+#endif // VHDR_MODES_ENABLE
 };
 
 enum class CamOperationMode {

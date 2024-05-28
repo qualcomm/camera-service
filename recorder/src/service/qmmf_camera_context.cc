@@ -290,11 +290,48 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
     if (entry_count == 1) {
       VideoHDRMode vid_hdr_mode;
       extra_param.Fetch(QMMF_VIDEO_HDR_MODE, vid_hdr_mode, 0);
+#ifdef VHDR_MODES_ENABLE
+      switch (vid_hdr_mode.mode) {
+        case VHDRMode::kVHDROff:
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw));
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot));
+          break;
+        case VHDRMode::kSHDRRaw:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw);
+          break;
+        case VHDRMode::kSHDRYuv:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV);
+          break;
+        case VHDRMode::kSHDRSwitchEnable:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn);
+          break;
+        case VHDRMode::kQBCHDRVideo:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo);
+          break;
+        case VHDRMode::kQBCHDRSnapshot:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot);
+          break;
+      }
+#else
       if (vid_hdr_mode.enable == true) {
         QMMF_INFO("%s: HDR is ON..", __func__);
         camera_parameters_.cam_feature_flags |=
             static_cast<uint32_t>(CamFeatureFlag::kHDR);
       }
+#endif // VHDR_MODES_ENABLE
     } else {
       QMMF_ERROR("%s: Invalid hdr mode received", __func__);
       return -EINVAL;
@@ -357,7 +394,7 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
             static_cast<uint32_t>(CamFeatureFlag::kEISDualStream);
       } else {
         QMMF_ERROR("%s: Invalid EIS mode %d",
-              __func__, eis_mode.mode);
+              __func__, static_cast<int32_t>(eis_mode.mode));
       }
     } else {
       QMMF_ERROR("%s: Invalid EIS mode received", __func__);
@@ -1395,6 +1432,97 @@ std::vector<int32_t>& CameraContext::GetSupportedFps() {
   return supported_fps_;
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t CameraContext::SetVHDR(const int32_t mode) {
+
+  QMMF_DEBUG("%s: Enter", __func__);
+  int32_t is_raw = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw));
+  int32_t is_yuv = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
+  int32_t is_switch = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+  int32_t is_qbc_vid = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
+  int32_t is_qbc_snap = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot));
+
+  if (mode == static_cast<int32_t>(VHDRMode::kVHDROff)) {
+    if (!is_raw && !is_yuv && !is_switch && !is_qbc_vid && !is_qbc_snap) {
+      QMMF_DEBUG("%s: VHDR is already disabled", __func__);
+      return 0;
+    }
+  }
+
+  // Reset all modes
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw));
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot));
+
+  if (mode == static_cast<int32_t>(VHDRMode::kSHDRRaw)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw);
+    if (is_raw) {
+      QMMF_DEBUG("%s: SHDR mode is already RAW", __func__);
+      return 0;
+    }
+  } else if (mode == static_cast<int32_t>(VHDRMode::kSHDRYuv)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV);
+    if (is_yuv) {
+      QMMF_DEBUG("%s: SHDR mode is already YUV", __func__);
+      return 0;
+    }
+  } else if (mode == static_cast<int32_t>(VHDRMode::kSHDRSwitchEnable)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn);
+    if (is_switch) {
+      QMMF_DEBUG("%s: SHDR switch is already enabled", __func__);
+      return 0;
+    }
+  } else if (mode == static_cast<int32_t>(VHDRMode::kQBCHDRVideo)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo);
+    if (is_qbc_vid) {
+      QMMF_DEBUG("%s: QBC HDR mode is already video", __func__);
+      return 0;
+    }
+  } else if (mode == static_cast<int32_t>(VHDRMode::kQBCHDRSnapshot)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot);
+    if (is_qbc_snap) {
+      QMMF_DEBUG("%s: QBC HDR mode is already snapshot", __func__);
+      return 0;
+    }
+  }
+
+  if (!streaming_active_requests_[0].streamIds.size()) {
+    QMMF_DEBUG("%s: No active streams. Update only cam params.", __func__);
+    return 0;
+  }
+
+  PauseActiveStreams();
+
+  {
+    std::lock_guard<std::mutex> lock(device_access_lock_);
+    camera_device_->UpdateCameraParams(camera_parameters_);
+
+    QMMF_DEBUG("%s: SHDR enable: %d", __func__, mode);
+  }
+
+  ResumeActiveStreams();
+
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
+}
+#else
 status_t CameraContext::SetSHDR(const bool enable) {
 
   QMMF_DEBUG("%s: Enter", __func__);
@@ -1434,6 +1562,7 @@ status_t CameraContext::SetSHDR(const bool enable) {
   QMMF_DEBUG("%s: Exit", __func__);
   return 0;
 }
+#endif // VHDR_MODES_ENABLE
 
 bool CameraContext::IsRawOnly(const int32_t format) {
   switch(format) {

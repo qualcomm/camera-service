@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* ​​​​​Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
@@ -80,16 +80,20 @@ extern uint32_t qmmf_log_level;
 #define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
 #define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 #else
+#define QMMF_INFO(fmt, args...)  syslog (LOG_INFO, "[INFO]: %s : " fmt, LOG_TAG, ##args)
+#define QMMF_WARN(fmt, args...)  syslog (LOG_WARNING, "[WARN]: %s : " fmt, LOG_TAG, ##args)
+#define QMMF_ERROR(fmt, args...) syslog (LOG_ERROR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
+
 #define QMMF_DEBUG(fmt, args...)                \
   ({                                            \
      if (qmmf_log_level > 0) {                  \
-       syslog (LOG_DEBUG, LOG_TAG fmt, ##args); \
+       syslog (LOG_DEBUG, "[DEBUG]: %s : " fmt, LOG_TAG, ##args); \
      }                                          \
   })
 #define QMMF_VERBOSE(fmt, args...)               \
   ({                                             \
      if (qmmf_log_level > 1) {                   \
-       syslog (LOG_NOTICE, LOG_TAG fmt, ##args); \
+       syslog (LOG_NOTICE, "[VERBOSE]: %s : " fmt, LOG_TAG, ##args); \
      }                                           \
   })
 #endif // HAVE_ANDROID_UTILS

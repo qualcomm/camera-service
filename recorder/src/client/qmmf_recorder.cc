@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -353,6 +353,21 @@ status_t Recorder::SetCameraSessionParam(const uint32_t camera_id,
   return ret;
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t Recorder::SetVHDR(const uint32_t camera_id,
+                           const int32_t mode) {
+
+  QMMF_INFO("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->SetVHDR(camera_id, mode);
+  if (0 != ret) {
+      QMMF_ERROR("%s: SetVHDR failed!", __func__);
+  }
+
+  QMMF_INFO("%s: Exit", __func__);
+  return ret;
+}
+#else
 status_t Recorder::SetSHDR(const uint32_t camera_id,
                            const bool enable) {
 
@@ -366,6 +381,7 @@ status_t Recorder::SetSHDR(const uint32_t camera_id,
   QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
+#endif // VHDR_MODES_ENABLE
 
 status_t Recorder::GetDefaultCaptureParam(const uint32_t camera_id,
                                           CameraMetadata &meta) {

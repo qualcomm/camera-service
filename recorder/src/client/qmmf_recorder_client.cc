@@ -754,11 +754,27 @@ class RecorderServiceProxy: public IRecorderService {
     return ret;
   }
 
-  status_t SetSHDR(const uint32_t client_id,
+  status_t SetVHDR(const uint32_t client_id,
                    const uint32_t camera_id,
-                   const bool enable) {
-    // To be implemented
-    return -EPERM;
+                   const int32_t mode) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_SET_VHDR);
+    cmd.mutable_set_vhdr()->set_client_id(client_id);
+    cmd.mutable_set_vhdr()->set_camera_id(camera_id);
+    cmd.mutable_set_vhdr()->set_mode(mode);
+
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0)
+      return ret;
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0)
+      return ret;
+
+    ret = resp.status();
+    return ret;
   }
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
@@ -1636,6 +1652,25 @@ status_t RecorderClient::SetCameraSessionParam(const uint32_t camera_id,
   return ret;
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t RecorderClient::SetVHDR(const uint32_t camera_id,
+                                 const int32_t mode) {
+
+  QMMF_DEBUG("%s Enter ", __func__);
+
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!CheckServiceStatus()) {
+    return -ENODEV;
+  }
+  assert(client_id_ > 0);
+  auto ret = recorder_service_->SetVHDR(client_id_, camera_id, mode);
+  if (0 != ret) {
+    QMMF_ERROR("%s SetVHDR failed!", __func__);
+  }
+  QMMF_DEBUG("%s Exit ", __func__);
+  return ret;
+}
+#else
 status_t RecorderClient::SetSHDR(const uint32_t camera_id,
                                  const bool enable) {
 
@@ -1653,6 +1688,7 @@ status_t RecorderClient::SetSHDR(const uint32_t camera_id,
   QMMF_DEBUG("%s Exit ", __func__);
   return ret;
 }
+#endif // VHDR_MODES_ENABLE
 
 status_t RecorderClient::GetDefaultCaptureParam(const uint32_t camera_id,
                                                 CameraMetadata &meta) {

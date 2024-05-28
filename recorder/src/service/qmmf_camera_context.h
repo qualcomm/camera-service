@@ -171,7 +171,11 @@ class CameraContext : public CameraInterface {
 
   std::vector<int32_t>& GetSupportedFps() override;
 
+#ifdef VHDR_MODES_ENABLE
+  status_t SetVHDR(const int32_t mode) override;
+#else
   status_t SetSHDR(const bool enable) override;
+#endif // VHDR_MODES_ENABLE
 
   status_t ReturnStreamBuffer(StreamBuffer buffer);
 

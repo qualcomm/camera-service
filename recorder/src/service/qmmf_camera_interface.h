@@ -188,7 +188,11 @@ class CameraInterface {
   virtual std::vector<int32_t>& GetSupportedFps() = 0;
 
   /// Set Camera SHDR mode
+#ifdef VHDR_MODES_ENABLE
+  virtual status_t SetVHDR(const int32_t mode) = 0;
+#else
   virtual status_t SetSHDR(const bool enable) = 0;
+#endif // VHDR_MODES_ENABLE
 };
 
 }; //namespace recorder.

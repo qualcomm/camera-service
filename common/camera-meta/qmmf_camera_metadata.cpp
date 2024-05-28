@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -180,11 +180,11 @@ status_t CameraMetadata::sort() {
 status_t CameraMetadata::checkType(uint32_t tag, uint8_t expectedType) {
     int tagType = get_camera_metadata_tag_type(tag);
     if (tagType == -1) {
-        QMMF_ERROR("Update metadata entry: Unknown tag %d", tag);
+        QMMF_ERROR("Update metadata entry: Unknown tag %u", tag);
         return -ENOSYS;
     }
     if ( tagType != expectedType) {
-        QMMF_ERROR("Mismatched tag type when updating entry %s (%d) of type %s; "
+        QMMF_ERROR("Mismatched tag type when updating entry %s (%u) of type %s; "
                 "got type %s data instead ",
                 get_camera_metadata_tag_name(tag), tag,
                 camera_metadata_type_names[tagType],
@@ -295,7 +295,7 @@ status_t CameraMetadata::updateImpl(uint32_t tag, const void *data,
     }
     int type = get_camera_metadata_tag_type(tag);
     if (type == -1) {
-        QMMF_ERROR("%s: Tag %d not found", __FUNCTION__, tag);
+        QMMF_ERROR("%s: Tag %u not found", __FUNCTION__, tag);
         return -EINVAL;
     }
     // Safety check - ensure that data isn't pointing to this metadata, since
@@ -327,7 +327,7 @@ status_t CameraMetadata::updateImpl(uint32_t tag, const void *data,
     }
 
     if (res != 0) {
-        QMMF_ERROR("%s: Unable to update metadata entry %s.%s (%x): %s (%d)",
+        QMMF_ERROR("%s: Unable to update metadata entry %s.%s (%x): %s (%u)",
                 __FUNCTION__, get_camera_metadata_section_name(tag),
                 get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
     }
@@ -380,7 +380,7 @@ status_t CameraMetadata::erase(uint32_t tag) {
     if (res == -ENOENT) {
         return 0;
     } else if (res != 0) {
-        QMMF_ERROR("%s: Error looking for entry %s.%s (%x): %s %d",
+        QMMF_ERROR("%s: Error looking for entry %s.%s (%x): %s %u",
                 __FUNCTION__,
                 get_camera_metadata_section_name(tag),
                 get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
@@ -388,7 +388,7 @@ status_t CameraMetadata::erase(uint32_t tag) {
     }
     res = delete_camera_metadata_entry(mBuffer, entry.index);
     if (res != 0) {
-        QMMF_ERROR("%s: Error deleting entry %s.%s (%x): %s %d",
+        QMMF_ERROR("%s: Error deleting entry %s.%s (%x): %s %u",
                 __FUNCTION__,
                 get_camera_metadata_section_name(tag),
                 get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
@@ -754,7 +754,7 @@ status_t CameraMetadata::getTagFromName(const char *name,
             const char *tagName = get_camera_metadata_tag_name(candidateTag);
 
             if (tagName != NULL && strcmp(nameTagName, tagName) == 0) {
-                QMMF_VERBOSE("%s: Found matched tag '%s' (%d)",
+                QMMF_VERBOSE("%s: Found matched tag '%s' (%u)",
                       __FUNCTION__, tagName, candidateTag);
                 break;
             }

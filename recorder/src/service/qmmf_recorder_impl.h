@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -212,9 +212,15 @@ class RecorderImpl {
                                  const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
+#ifdef VHDR_MODES_ENABLE
+  status_t SetVHDR(const uint32_t client_id,
+                   const uint32_t camera_id,
+                   const int32_t mode);
+#else
   status_t SetSHDR(const uint32_t client_id,
                    const uint32_t camera_id,
                    const bool enable);
+#endif // VHDR_MODES_ENABLE
 
   /// Get default Capture parameters
   status_t GetDefaultCaptureParam(const uint32_t client_id,

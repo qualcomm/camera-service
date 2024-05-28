@@ -336,11 +336,11 @@ message GetCameraParamRespMsg {
   bytes meta = 1;
 }
 
-// SetSHDR
-message SetSHDRReqMsg {
+// SetVHDR
+message SetVHDRReqMsg {
   uint32 client_id = 1;
   uint32 camera_id = 2;
-  bool enable = 3;
+  int32 mode = 3;
 }
 
 // GetDefaultCaptureParam
@@ -411,7 +411,7 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_SET_CAMERA_PARAMS = 20;
   RECORDER_GET_CAMERA_PARAMS = 21;
   RECORDER_SET_CAMERA_SESSION_PARAMS = 22;
-  RECORDER_SET_SHDR = 23;
+  RECORDER_SET_VHDR = 23;
   RECORDER_GET_DEFAULT_CAPTURE_PARAMS = 24;
   RECORDER_GET_CAMERA_CHARACTERISTICS = 25;
   RECORDER_GET_VENDOR_TAG_DESCRIPTOR = 26;
@@ -444,7 +444,7 @@ message RecorderClientReqMsg {
     SetCameraParamReqMsg set_camera_param = 19;
     GetCameraParamReqMsg get_camera_param = 20;
     SetCameraSessionParamReqMsg set_camera_session_param = 21;
-    SetSHDRReqMsg set_shdr = 22;
+    SetVHDRReqMsg set_vhdr = 22;
     GetDefaultCaptureParamReqMsg get_default_capture_param = 23;
     GetCameraCharacteristicsReqMsg get_camera_characteristics = 24;
     CreateOfflineJPEGReqMsg create_offline_jpeg = 25;

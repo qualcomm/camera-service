@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -132,6 +132,23 @@ enum class CamOpMode {
   kFastSwitch,
 };
 
+#ifdef VHDR_MODES_ENABLE
+enum class VHDRMode {
+  /**< VDHR is disabled */
+  kVHDROff,
+  /**< Raw SHDR line interleaved mode with 2 frame */
+  kSHDRRaw,
+  /**< YUV SHDR virtual channel mode with 2 frames */
+  kSHDRYuv,
+  /**< SHDR mode switch enable */
+  kSHDRSwitchEnable,
+  /**< QBC HDR video mode */
+  kQBCHDRVideo,
+  /**< QBC HDR snapshot mode */
+  kQBCHDRSnapshot,
+};
+#endif // VHDR_MODES_ENABLE
+
 struct SourceVideoTrack : DataTagBase {
   int32_t source_track_id;  // Default: -1
   SourceVideoTrack()
@@ -168,10 +185,17 @@ struct SnapshotZslSetup : DataTagBase {
 };
 
 struct VideoHDRMode : DataTagBase {
+#ifdef VHDR_MODES_ENABLE
+  VHDRMode mode;  // Default: disable HDR
+  VideoHDRMode()
+    : DataTagBase(QMMF_VIDEO_HDR_MODE),
+      mode(VHDRMode::kVHDROff) {}
+#else
   bool enable;  // Default: false to disable HDR
   VideoHDRMode()
     : DataTagBase(QMMF_VIDEO_HDR_MODE),
       enable(false) {}
+#endif // VHDR_MODES_ENABLE
 };
 
 struct TrackCrop : DataTagBase {

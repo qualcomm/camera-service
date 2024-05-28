@@ -1149,6 +1149,21 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     }
     break;
   }
+  case RECORDER_SERVICE_CMDS::RECORDER_SET_VHDR:
+  {
+    uint32_t client_id, camera_id;
+    int32_t mode;
+    client_id = req_msg.set_vhdr().client_id();
+    camera_id = req_msg.set_vhdr().camera_id();
+    mode = req_msg.set_vhdr().mode();
+    auto ret = SetVHDR(client_id, camera_id, mode);
+
+    // sending response
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_SET_VHDR);
+    resp_msg.set_status(ret);
+    break;
+  }
   case RECORDER_SERVICE_CMDS::RECORDER_CAPTURE_IMAGE:
   {
     uint32_t client_id = req_msg.capture_image().client_id();
@@ -1919,6 +1934,27 @@ status_t RecorderService::SetCameraSessionParam(const uint32_t client_id,
   return 0;
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t RecorderService::SetVHDR(const uint32_t client_id,
+                                     const uint32_t camera_id,
+                                     const int32_t mode) {
+
+  QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
+
+  if (!IsRecorderInitialized()) {
+    QMMF_ERROR("%s: Recorder not initialized!", __func__);
+    return -ENODEV;
+  }
+
+  auto ret = recorder_->SetVHDR(client_id, camera_id, mode);
+  if (ret != 0) {
+    QMMF_ERROR("%s: GetCameraParam failed!", __func__);
+    return ret;
+  }
+  QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
+  return 0;
+}
+#else
 status_t RecorderService::SetSHDR(const uint32_t client_id,
                                      const uint32_t camera_id,
                                      const bool enable) {
@@ -1938,6 +1974,7 @@ status_t RecorderService::SetSHDR(const uint32_t client_id,
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
+#endif // VHDR_MODES_ENABLE
 
 status_t RecorderService::GetDefaultCaptureParam(const uint32_t client_id,
                                                  const uint32_t camera_id,

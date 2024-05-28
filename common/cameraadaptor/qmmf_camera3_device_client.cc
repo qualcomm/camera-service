@@ -537,22 +537,79 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   session_metadata_.update(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
                             frame_rate_range_, 2);
 
-  if (IsInputROIMode()) {
-    uint32_t tag_id = 0;
-    uint8_t roienable = true;
-    const std::shared_ptr<VendorTagDescriptor> vtags =
-        VendorTagDescriptor::getGlobalVendorTagDescriptor();
-    if (vtags.get() == NULL) {
-      QMMF_ERROR ("Failed to retrieve Global Vendor Tag Descriptor!");
-      return -1;
-    }
+  const std::shared_ptr<VendorTagDescriptor> vtags =
+      VendorTagDescriptor::getGlobalVendorTagDescriptor();
+  if (vtags.get() == NULL) {
+    QMMF_ERROR ("Failed to retrieve Global Vendor Tag Descriptor!");
+    return -1;
+  }
 
+  uint32_t tag_id = 0;
+  if (IsInputROIMode()) {
+    uint8_t roienable = true;
     session_metadata_.getTagFromName(
         "org.codeaurora.qcamera3.sessionParameters.MultiRoIEnable",
         vtags.get(), &tag_id);
 
     session_metadata_.update(tag_id, &roienable, 1);
   }
+
+#ifdef VHDR_MODES_ENABLE
+  int32_t shdr_mode = 0;
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw)) {
+    shdr_mode = 1;
+  } else if (cam_feature_flags_ &
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV)) {
+    shdr_mode = 2;
+  }
+
+  // SHDR modes
+  res = session_metadata_.getTagFromName(
+      "org.codeaurora.qcamera3.sessionParameters.SWSHDRType",
+      vtags.get(), &tag_id);
+  if (res == 0) {
+    QMMF_VERBOSE("%s: Setting SWSHDRType to %d\n", __func__, shdr_mode);
+    session_metadata_.update(tag_id, &shdr_mode, 1);
+  } else {
+    QMMF_WARN("%s: Failed to get session parameter SWSHDRType", __func__);
+  }
+
+  // SHDR switch
+  uint8_t shdr_switch = false;
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn)) {
+    shdr_switch = true;
+  }
+
+  res = session_metadata_.getTagFromName(
+      "org.codeaurora.qcamera3.sessionParameters.SHDRSwitchEnable",
+      vtags.get(), &tag_id);
+  if (res == 0) {
+    QMMF_VERBOSE("%s: Setting SHDRSwitchEnable to %u\n", __func__, shdr_switch);
+    session_metadata_.update(tag_id, &shdr_switch, 1);
+  } else {
+    QMMF_WARN("%s: Failed to get session parameter SHDRSwitchEnable", __func__);
+  }
+
+  // QBC HDR
+  int32_t qbc_hdr = 0;
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo)) {
+    qbc_hdr = 1;
+  } else if (cam_feature_flags_ &
+            static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot)) {
+    qbc_hdr = 2;
+  }
+
+  res = session_metadata_.getTagFromName(
+      "org.codeaurora.qcamera3.sessionParameters.selectInSensorHDR3ExpUsecase",
+      vtags.get(), &tag_id);
+  if (res == 0) {
+    QMMF_VERBOSE("%s: Setting selectInSensorHDR3ExpUsecase to %d\n", __func__, qbc_hdr);
+    session_metadata_.update(tag_id, &qbc_hdr, 1);
+  } else {
+    QMMF_WARN("%s: Failed to get session parameter selectInSensorHDR3ExpUsecase",
+         __func__);
+  }
+#endif // VHDR_MODES_ENABLE
 
   config.session_parameters = session_metadata_.getAndLock();
 #endif

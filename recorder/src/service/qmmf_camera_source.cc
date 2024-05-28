@@ -747,6 +747,23 @@ status_t CameraSource::SetCameraSessionParam(const uint32_t camera_id,
   return camera->SetCameraSessionParam(meta);
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t CameraSource::SetVHDR(const uint32_t camera_id,
+                               const int32_t mode) {
+
+  active_cameras_lock_.lock();
+  if (active_cameras_.count(camera_id) == 0) {
+    active_cameras_lock_.unlock();
+    QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
+    return -EINVAL;
+  }
+
+  auto const& camera = active_cameras_[camera_id];
+  active_cameras_lock_.unlock();
+
+  return camera->SetVHDR(mode);
+}
+#else
 status_t CameraSource::SetSHDR(const uint32_t camera_id,
                                const bool enable) {
 
@@ -762,6 +779,7 @@ status_t CameraSource::SetSHDR(const uint32_t camera_id,
 
   return camera->SetSHDR(enable);
 }
+#endif // VHDR_MODES_ENABLE
 
 status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
                                               CameraMetadata &meta) {

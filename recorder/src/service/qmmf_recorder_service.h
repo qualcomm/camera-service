@@ -360,10 +360,15 @@ class RecorderService : public IRecorderService {
   status_t SetCameraSessionParam(const uint32_t client_id,
                                  const uint32_t camera_id,
                                  const CameraMetadata &meta) override;
-
+#ifdef VHDR_MODES_ENABLE
+  status_t SetVHDR(const uint32_t client_id,
+                   const uint32_t camera_id,
+                   const int32_t mode) override;
+#else
   status_t SetSHDR(const uint32_t client_id,
                    const uint32_t camera_id,
                    const bool enable) override;
+#endif // VHDR_MODES_ENABLE
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
                                   const uint32_t camera_id,

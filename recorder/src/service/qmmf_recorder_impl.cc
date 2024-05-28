@@ -1429,6 +1429,37 @@ status_t RecorderImpl::SetCameraSessionParam(const uint32_t client_id,
   return 0;
 }
 
+#ifdef VHDR_MODES_ENABLE
+status_t RecorderImpl::SetVHDR(const uint32_t client_id,
+                               const uint32_t camera_id,
+                               const int32_t mode) {
+  QMMF_DEBUG("%s: Enter client_id(%u):camera_id(%d)", __func__,
+      client_id, camera_id);
+
+  if (!IsClientValid(client_id)) {
+    QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
+    return -EINVAL;
+  }
+
+  if (!IsCameraValid(client_id, camera_id)) {
+    QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
+        " operation not allowed!", __func__, client_id, camera_id);
+    return -ENOSYS;
+  }
+
+  assert(camera_source_ != nullptr);
+  auto ret = camera_source_->SetVHDR(camera_id, mode);
+  if (ret != 0) {
+    QMMF_ERROR("%s: client_id(%u) Failed to set HDR to TrackSource!",
+        __func__, client_id);
+    return ret;
+  }
+
+  QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
+      client_id, camera_id);
+  return 0;
+}
+#else
 status_t RecorderImpl::SetSHDR(const uint32_t client_id,
                                const uint32_t camera_id,
                                const bool enable) {
@@ -1458,6 +1489,7 @@ status_t RecorderImpl::SetSHDR(const uint32_t client_id,
       client_id, camera_id);
   return 0;
 }
+#endif // VHDR_MODES_ENABLE
 
 status_t RecorderImpl::GetDefaultCaptureParam(const uint32_t client_id,
                                               const uint32_t camera_id,

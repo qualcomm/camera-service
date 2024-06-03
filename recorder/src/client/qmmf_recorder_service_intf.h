@@ -408,7 +408,7 @@ class RecorderServiceCallbackStub : public IRecorderServiceCallback {
   status_t ProcessCallbackMsg (RecorderClientCallbacksAsync &msg);
   void ThreadLoop();
 
-  int32_t server_pid_;
+  int32_t server_fd_;
   std::string socket_path_;
   int32_t cb_socket_;
   int32_t client_socket_;

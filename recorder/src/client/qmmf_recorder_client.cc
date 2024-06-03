@@ -3271,6 +3271,7 @@ RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
   cb_socket_ = -1;
   client_socket_ = -1;
   socket_recv_buf_ = new char[kMaxSocketBufSize];
+  server_fd_ = -1;
   QMMF_INFO("%s: Exit", __func__);
 }
 
@@ -3291,6 +3292,10 @@ RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
     shutdown(client_socket_, SHUT_RDWR);
     close(client_socket_);
     client_socket_ = -1;
+  }
+
+  if (server_fd_ != -1) {
+    close(server_fd_);
   }
 
   delete[] socket_recv_buf_;
@@ -3335,7 +3340,12 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
     return -errno;
   }
 
-  server_pid_ = server_pid;
+  server_fd_ = syscall(SYS_pidfd_open, server_pid, 0);
+  if (server_fd_ == -1) {
+    QMMF_ERROR("%s: pidfd_open failed for - %d with error: %s",
+        __func__, server_pid, strerror(errno));
+    return -errno;
+  }
 
   run_thread_ = true;
   try {
@@ -3428,12 +3438,10 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       int32_t meta_fd = data.buffer().ion_meta_fd();
 
       if (ion_fd > 0)
-        dup_buf_fd = syscall(SYS_pidfd_getfd,
-            syscall(SYS_pidfd_open, server_pid_, 0), ion_fd, 0);
+        dup_buf_fd = syscall(SYS_pidfd_getfd, server_fd_, ion_fd, 0);
 
       if (meta_fd > 0)
-        dup_meta_fd = syscall(SYS_pidfd_getfd,
-            syscall(SYS_pidfd_open, server_pid_, 0), meta_fd, 0);
+        dup_meta_fd = syscall(SYS_pidfd_getfd, server_fd_, meta_fd, 0);
 
       bn_buffer.ion_fd = dup_buf_fd;
       bn_buffer.ion_meta_fd = dup_meta_fd;
@@ -3481,15 +3489,13 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
 
         if (ion_fd > 0) {
           // New buffer, map it to the client
-          dup_buf_fd = syscall(SYS_pidfd_getfd,
-              syscall(SYS_pidfd_open, server_pid_, 0), ion_fd, 0);
+          dup_buf_fd = syscall(SYS_pidfd_getfd, server_fd_, ion_fd, 0);
           QMMF_VERBOSE("%s : ION fd(%d) is duped.", __func__, ion_fd);
         }
 
         if (meta_fd > 0) {
           // New meta buffer, map it to the client
-          dup_meta_fd = syscall(SYS_pidfd_getfd,
-              syscall(SYS_pidfd_open, server_pid_, 0), meta_fd, 0);
+          dup_meta_fd = syscall(SYS_pidfd_getfd, server_fd_, meta_fd, 0);
           QMMF_VERBOSE("%s : meta fd(%d) is duped.", __func__, meta_fd);
         }
 

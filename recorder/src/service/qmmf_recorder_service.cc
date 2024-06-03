@@ -1359,7 +1359,7 @@ void RecorderService::MainLoop() {
         if (bytes_read <= 0) {
           FD_CLR(client_socket, &read_fds);
           QMMF_INFO("%s: remove client(%d)", __func__, client_socket);
-          // client session destructor
+          close(client_socket);
           it = client_sockets_.erase(it);
           continue;
         }

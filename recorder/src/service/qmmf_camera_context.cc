@@ -2835,7 +2835,11 @@ status_t CameraPort::Init() {
   cam_stream_params_ = {};
   cam_stream_params_.width  = params_.width;
   cam_stream_params_.height = params_.height;
-  cam_stream_params_.format = Common::FromQmmfToHalFormat(params_.format);
+  if (context_->IsReproc() ||
+      static_cast<bool>(params_.flags & VideoFlags::kReproc))
+    cam_stream_params_.format = HAL_PIXEL_FORMAT_YCbCr_420_888;
+  else
+    cam_stream_params_.format = Common::FromQmmfToHalFormat(params_.format);
   cam_stream_params_.rotation =
       static_cast<camera3_stream_rotation_t> (params_.rotation);
 
@@ -3036,6 +3040,17 @@ status_t CameraPort::Stop() {
   aec_converged_  = false;
   port_state_ = PortState::PORT_READYTOSTOP;
 
+  if (cameraport_enable_reproc_) {
+    QMMF_VERBOSE ("%s: Freeing the Reproc Requests not submitted before stopping %d",
+      __func__, reproc_queue_.size());
+    for (ReprocEntry entry : reproc_queue_) {
+      if(entry.buffer.handle != NULL){
+        entry.buffer.in_use_camera = false;
+        entry.buffer.in_use_client = false;
+        context_->ReturnStreamBuffer(entry.buffer);
+      }
+    }
+  }
   // Stop basically removes the stream from current running capture request,
   // it doen't delete the stream.
   auto ret = context_->UpdateRequest(true);
@@ -3269,6 +3284,8 @@ void CameraPort::StreamCallback(StreamBuffer buffer) {
   if (buffer_producer_impl_->GetNumConsumer() > 0 && !skip_frame) {
     buffer_producer_impl_->NotifyBuffer(buffer);
   } else {
+    buffer.in_use_client = false;
+    buffer.in_use_camera = false;
     QMMF_VERBOSE("%s: Return buffer back to camera!", __func__);
     context_->ReturnStreamBuffer(buffer);
   }

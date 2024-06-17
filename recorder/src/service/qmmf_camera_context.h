@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -286,6 +286,8 @@ class CameraContext : public CameraInterface {
   int32_t GetROICount () { return multi_roi_count_; }
 
   std::vector<int32_t> GetROIInfo () { return multi_roi_info_; }
+
+  bool IsReproc () { return enable_reproc_; }
 
   std::function<void(StreamBuffer)> GetStreamCb(const SnapshotParam& param);
 

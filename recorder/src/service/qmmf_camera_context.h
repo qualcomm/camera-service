@@ -320,7 +320,7 @@ class CameraContext : public CameraInterface {
   CameraClientCallbacks                 camera_callbacks_;
   uint32_t                              camera_id_;
   std::mutex                            device_access_lock_;
-  CameraMetadata                static_meta_;
+  CameraMetadata                        static_meta_;
 
   std::map<uint32_t, bool> stream_prepared_;
   QCondition               prepare_done_;

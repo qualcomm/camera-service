@@ -168,7 +168,8 @@ struct SnapshotRawSetup : DataTagBase {
 
   SnapshotRawSetup()
     : DataTagBase(QMMF_SNAPSHOT_RAW_SETUP),
-      format(ImageFormat::kBayerRDI10BIT), rotation(Rotation::kNone) {}
+      format(ImageFormat::kBayerRDI10BIT), width(0), height(0),
+      rotation(Rotation::kNone) {}
 };
 
 struct SnapshotZslSetup : DataTagBase {

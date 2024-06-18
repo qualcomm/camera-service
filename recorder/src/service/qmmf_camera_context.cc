@@ -1289,7 +1289,7 @@ status_t CameraContext::SetCameraParam(const CameraMetadata &meta) {
       // startSession -> startStream to submit request.
       std::unique_lock<std::mutex> pending_frames_lock(pending_frames_lock_);
       if (streaming_request_id_ >= 0 && !continuous_mode_is_on_) {
-        int64_t last_frame_number;
+        int64_t last_frame_number = NO_IN_FLIGHT_REPEATING_FRAMES;
         int32_t ret = 0;
 
         if (!request.metadata.isEmpty()) {
@@ -2958,7 +2958,10 @@ CameraPort::CameraPort(const StreamParam& param,
       reproc_queue_{},
       reproc_input_buffer_{},
       cameraport_enable_reproc_(false),
-      camera_parameters_(camera_parameters) {
+      camera_parameters_(camera_parameters),
+      aec_converged_(false),
+      aec_timestamp_(0),
+      cam_stream_params_{} {
 
   QMMF_INFO("%s: Enter", __func__);
 

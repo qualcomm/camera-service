@@ -63,6 +63,7 @@ Camera3SmoothZoom::Camera3SmoothZoom()
       left_step_(0.0f),
       top_step_(0.0f){
   crop_current_ = {};
+  crop_target_ = {};
 
   zoom_step_size_ = Property::Get("persist.qmmf.zoom.step", 0.1);
 }

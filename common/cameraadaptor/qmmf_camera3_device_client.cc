@@ -369,7 +369,7 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
   res = GetCameraInfo(idx, &device_info_);
   if (0 != res) {
     QMMF_ERROR("%s: Error during camera static info query: %s!\n", __func__,
-               strerror(res));
+               strerror(-res));
     goto exit;
   }
 

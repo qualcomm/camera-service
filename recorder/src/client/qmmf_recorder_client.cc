@@ -2554,8 +2554,6 @@ status_t DeleteVideoTrack(const uint32_t client_id,
         android::Parcel::WritableBlob blob;
         data.writeBlob(param_size, false, &blob);
         memset(blob.data(), 0x0, param_size);
-        buffers[i].ion_fd = buffers[i].ion_fd;
-        buffers[i].ion_meta_fd = buffers[i].ion_meta_fd;
         memcpy(blob.data(), reinterpret_cast<void*>(&buffers[i]), param_size);
       }
     } else {

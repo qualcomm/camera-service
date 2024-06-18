@@ -372,7 +372,6 @@ void *CameraRescalerThread::MainLoop(void *userdata) {
 
   CameraRescalerThread *pme = reinterpret_cast<CameraRescalerThread *>(userdata);
   if (nullptr == pme) {
-    pme->running_ = false;
     return nullptr;
   }
 

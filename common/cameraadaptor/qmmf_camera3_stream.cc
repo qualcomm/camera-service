@@ -858,7 +858,7 @@ void Camera3Stream::WaitForIdle() {
         QMMF_ERROR("%s: wait for output buffer return timed out \n", __func__);
       } else {
         QMMF_ERROR("%s: Error during state change wait: %s (%d)\n", __func__,
-                   strerror(res), res);
+                   strerror(-res), res);
       }
     }
   }

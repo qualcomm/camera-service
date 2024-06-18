@@ -50,10 +50,8 @@
 // TODO: Use "libunwind" to get proper traces.
 #define assert(condition) do { \
   if (!(condition)) { \
-    int *p = 0; \
     QMMF_ERROR("assert(%s) at %s:%d", #condition, __FILE__, __LINE__); \
-    *p = 4; \
-    ALOGE("%p", p); \
+    abort(); \
   } \
 } while (0)
 

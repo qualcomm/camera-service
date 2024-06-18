@@ -151,7 +151,7 @@ bool Camera3Monitor::ThreadLoop() {
     if (0 != res) {
       if (-ETIMEDOUT != res) {
         QMMF_ERROR("%s: Error during state change wait: %s (%d)\n", __func__,
-                   strerror(res), res);
+                   strerror(-res), res);
       }
       // timeouts can occur
       break;

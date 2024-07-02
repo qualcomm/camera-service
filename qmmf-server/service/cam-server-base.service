@@ -36,6 +36,7 @@ SourcePath=/usr/bin/cam-server
 [Service]
 User=system
 Group=video
+SupplementaryGroups=system
 Restart=always
 EnvironmentFile=/etc/cam-server-env
 ExecStartPre=/bin/mkdir -p /tmp/socket/cam_server

@@ -575,9 +575,11 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   }
 
   // SHDR switch
-  uint8_t shdr_switch = false;
-  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn)) {
-    shdr_switch = true;
+  int32_t shdr_switch = 0;
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch)) {
+    shdr_switch = 1;
+  } else if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch)) {
+    shdr_switch = 2;
   }
 
   res = session_metadata_.getTagFromName(

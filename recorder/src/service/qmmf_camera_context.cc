@@ -298,7 +298,9 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
           camera_parameters_.cam_feature_flags &=
             ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
           camera_parameters_.cam_feature_flags &=
-            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch));
+          camera_parameters_.cam_feature_flags &=
+            ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch));
           camera_parameters_.cam_feature_flags &=
             ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
           camera_parameters_.cam_feature_flags &=
@@ -312,9 +314,13 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
           camera_parameters_.cam_feature_flags |=
             static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV);
           break;
-        case VHDRMode::kSHDRSwitchEnable:
+        case VHDRMode::kSHDRRawSwitchEnable:
           camera_parameters_.cam_feature_flags |=
-            static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn);
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch);
+          break;
+        case VHDRMode::kSHDRYUVSwitchEnable:
+          camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch);
           break;
         case VHDRMode::kQBCHDRVideo:
           camera_parameters_.cam_feature_flags |=
@@ -1440,15 +1446,18 @@ status_t CameraContext::SetVHDR(const int32_t mode) {
                         static_cast<uint32_t>(CamFeatureFlag::kSHDRRaw));
   int32_t is_yuv = (camera_parameters_.cam_feature_flags &
                         static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
-  int32_t is_switch = (camera_parameters_.cam_feature_flags &
-                        static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+  int32_t is_switch_shdrv2 = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch));
+  int32_t is_switch_shdrv3 = (camera_parameters_.cam_feature_flags &
+                        static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch));
   int32_t is_qbc_vid = (camera_parameters_.cam_feature_flags &
                         static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
   int32_t is_qbc_snap = (camera_parameters_.cam_feature_flags &
                         static_cast<uint32_t>(CamFeatureFlag::kQBCHDRSnapshot));
 
   if (mode == static_cast<int32_t>(VHDRMode::kVHDROff)) {
-    if (!is_raw && !is_yuv && !is_switch && !is_qbc_vid && !is_qbc_snap) {
+    if (!is_raw && !is_yuv && !is_switch_shdrv2 && !is_switch_shdrv3 &&
+            !is_qbc_vid && !is_qbc_snap) {
       QMMF_DEBUG("%s: VHDR is already disabled", __func__);
       return 0;
     }
@@ -1460,7 +1469,9 @@ status_t CameraContext::SetVHDR(const int32_t mode) {
   camera_parameters_.cam_feature_flags &=
     ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUV));
   camera_parameters_.cam_feature_flags &=
-    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn));
+    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch));
+  camera_parameters_.cam_feature_flags &=
+    ~(static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch));
   camera_parameters_.cam_feature_flags &=
     ~(static_cast<uint32_t>(CamFeatureFlag::kQBCHDRVideo));
   camera_parameters_.cam_feature_flags &=
@@ -1480,11 +1491,18 @@ status_t CameraContext::SetVHDR(const int32_t mode) {
       QMMF_DEBUG("%s: SHDR mode is already YUV", __func__);
       return 0;
     }
-  } else if (mode == static_cast<int32_t>(VHDRMode::kSHDRSwitchEnable)) {
+  } else if (mode == static_cast<int32_t>(VHDRMode::kSHDRRawSwitchEnable)) {
     camera_parameters_.cam_feature_flags |=
-      static_cast<uint32_t>(CamFeatureFlag::kSHDRSwitchOn);
-    if (is_switch) {
-      QMMF_DEBUG("%s: SHDR switch is already enabled", __func__);
+      static_cast<uint32_t>(CamFeatureFlag::kSHDRRawSwitch);
+    if (is_switch_shdrv2) {
+      QMMF_DEBUG("%s: Raw SHDR switch is already enabled", __func__);
+      return 0;
+    }
+  } else if (mode == static_cast<int32_t>(VHDRMode::kSHDRYUVSwitchEnable)) {
+    camera_parameters_.cam_feature_flags |=
+      static_cast<uint32_t>(CamFeatureFlag::kSHDRYUVSwitch);
+    if (is_switch_shdrv3) {
+      QMMF_DEBUG("%s: YUV SHDR switch is already enabled", __func__);
       return 0;
     }
   } else if (mode == static_cast<int32_t>(VHDRMode::kQBCHDRVideo)) {

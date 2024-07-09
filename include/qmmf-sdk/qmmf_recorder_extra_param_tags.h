@@ -140,8 +140,10 @@ enum class VHDRMode {
   kSHDRRaw,
   /**< YUV SHDR virtual channel mode with 2 frames */
   kSHDRYuv,
-  /**< SHDR mode switch enable */
-  kSHDRSwitchEnable,
+  /**< Raw SHDR mode switch enable */
+  kSHDRRawSwitchEnable,
+  /**< YUV SHDR mode switch enable */
+  kSHDRYUVSwitchEnable,
   /**< QBC HDR video mode */
   kQBCHDRVideo,
   /**< QBC HDR snapshot mode */

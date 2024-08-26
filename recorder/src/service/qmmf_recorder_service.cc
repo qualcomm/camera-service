@@ -84,12 +84,12 @@ ThreadPool::ThreadPool()
         std::function<void()> task;
         {
           std::unique_lock<std::mutex> lock(queue_mutex_);
-          QMMF_INFO("%s: waiting for work on thread:%lu", __func__, i);
+          QMMF_VERBOSE("%s: waiting for work on thread:%lu", __func__, i);
           condition_.wait(lock, [this] { return stop_ || HasTasks(); });
           if (stop_ && !HasTasks()) {
             return;
           }
-          QMMF_INFO("%s: got work on thread:%lu", __func__, i);
+          QMMF_VERBOSE("%s: got work on thread:%lu", __func__, i);
 
           // Get the highest-priority task from the queue.
           task = std::move(GetHighestPriorityTask());
@@ -125,7 +125,7 @@ auto ThreadPool::Enqueue(Func &&func, TASK_PRIORITY priority)
     tasks_.push(std::move(TaskWrapper));
   }
 
-  QMMF_INFO("%s: notifying task ", __func__);
+  QMMF_VERBOSE("%s: notifying task ", __func__);
   condition_.notify_one();
   return result;
 }
@@ -844,7 +844,7 @@ status_t RecorderService::ReadRequest (int socket, void *buffer, size_t size) {
 
 status_t RecorderService::SendResponse (int socket, void *buffer, size_t size) {
   ssize_t bytesSent = send(socket, buffer, size, 0);
-  QMMF_INFO("sendResponse bytes: %lu, size: %lu", bytesSent, size);
+  QMMF_VERBOSE("sendResponse bytes: %lu, size: %lu", bytesSent, size);
   if (bytesSent == -1) {
     QMMF_ERROR("%s: failed: %s", __func__, strerror(errno));
     close(socket);
@@ -1351,7 +1351,7 @@ void RecorderService::MainLoop() {
       int client_socket = it->first;
       if (FD_ISSET(client_socket, &read_fds)) {
 
-        QMMF_INFO("%s: Waiting for data from client(%d)",
+        QMMF_VERBOSE("%s: Waiting for data from client(%d)",
                   __func__, client_socket);
 
         auto bytes_read =
@@ -2000,7 +2000,7 @@ status_t RecorderService::GetCameraCharacteristics(const uint32_t client_id,
                                                    const uint32_t camera_id,
                                                    CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter client_id(%d)", __func__, client_id);
+  QMMF_DEBUG("%s: Enter client_id(%d)", __func__, client_id);
 
   if (!IsRecorderInitialized()) {
     QMMF_ERROR("%s: Recorder not initialized!", __func__);
@@ -2012,7 +2012,7 @@ status_t RecorderService::GetCameraCharacteristics(const uint32_t client_id,
     QMMF_ERROR("%s: GetCameraCharacteristics failed!", __func__);
     return ret;
   }
-  QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
+  QMMF_DEBUG("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
 

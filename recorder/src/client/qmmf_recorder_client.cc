@@ -3276,7 +3276,7 @@ RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
 }
 
 RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
-  QMMF_INFO("%s: Enter", __func__);
+  QMMF_DEBUG("%s: Enter", __func__);
 
   run_thread_ = false;
   if (callback_thread_.joinable()) {
@@ -3300,7 +3300,7 @@ RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
 
   delete[] socket_recv_buf_;
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
 }
 
 status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_pid) {

@@ -75,7 +75,7 @@ FrameRateController::FrameRateController(const std::string& name)
     input_frame_interval_(0),
     previous_input_ts_(0) {
 
-  QMMF_INFO("%s: %s: Enter", __func__, name_.c_str());
+  QMMF_DEBUG("%s: %s: Enter", __func__, name_.c_str());
 
   buffer_producer_ = std::make_shared<BufferProducerImpl<FrameRateController>>(this);
 
@@ -83,13 +83,13 @@ FrameRateController::FrameRateController(const std::string& name)
 
   debug_flags_ = Property::Get("persist.qmmf.rec.frc.debug", 0);
 
-  QMMF_INFO("%s: %s: Exit(%p)", __func__, name_.c_str(), this);
+  QMMF_DEBUG("%s: %s: Exit(%p)", __func__, name_.c_str(), this);
 }
 
 FrameRateController::~FrameRateController() {
 
-  QMMF_INFO("%s: %s: Enter", __func__, name_.c_str());
-  QMMF_INFO("%s: %s: Exit(%p)", __func__, name_.c_str(), this);
+  QMMF_DEBUG("%s: %s: Enter", __func__, name_.c_str());
+  QMMF_DEBUG("%s: %s: Exit(%p)", __func__, name_.c_str(), this);
 }
 
 status_t FrameRateController::SetFrameRate(const float& fps) {

@@ -32,6 +32,7 @@
 [Unit]
 Description= Camera Server Service
 SourcePath=/usr/bin/cam-server
+After=var-volatile-lib.service
 
 [Service]
 User=system
@@ -40,6 +41,7 @@ SupplementaryGroups=system
 Restart=always
 EnvironmentFile=/etc/cam-server-env
 ExecStartPre=/bin/mkdir -p /tmp/socket/cam_server
+CacheDirectory=camera
 ExecStart=/usr/bin/cam-server
 
 [Install]

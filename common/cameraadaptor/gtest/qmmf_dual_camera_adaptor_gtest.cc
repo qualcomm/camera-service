@@ -101,7 +101,7 @@ void DualCamera3Gtest::SetUp() {
 }
 
 void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
-#ifndef TARGET_USES_GBM
+#ifndef USE_LIBGBM
   int32_t ret;
   printf("%s: E streamId: %d buffer: %p size %d ts: %" PRId64 "\n", __func__,
          buffer.stream_id, buffer.handle, buffer.size, buffer.timestamp);
@@ -144,7 +144,7 @@ void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
   }
 #else
   printf("%s: WARN: Not yet supported.", __func__);
-#endif
+#endif // USE_LIBGBM
 }
 
 void DualCamera3Gtest::ErrorCb(CameraErrorCode errorCode,

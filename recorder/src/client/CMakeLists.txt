@@ -47,7 +47,7 @@ if(NOT CAMERA_CLIENT_DISABLED)
 target_link_libraries(qmmf_recorder_client camera_client)
 endif()
 
-if(TARGET_USES_GBM)
+if(USE_LIBGBM)
 target_link_libraries(qmmf_recorder_client ${CMAKE_DL_LIBS})
 endif()
 

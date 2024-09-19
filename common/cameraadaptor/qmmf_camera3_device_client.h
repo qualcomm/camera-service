@@ -88,11 +88,11 @@
 #endif // HAVE_ANDROID_UTILS
 #include <mutex>
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 #include <gbm.h>
 #include <gbm_priv.h>
 #include <fcntl.h>
-#endif
+#endif // USE_LIBGBM
 
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include "qmmf-sdk/qmmf_camera_metadata.h"

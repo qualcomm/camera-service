@@ -418,7 +418,8 @@ gbm_device *GBMDevice::GetDevice() const {
 }
 
 MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
-  int32_t height, int32_t format, MemAllocFlags usage, uint32_t *stride)
+  int32_t height, int32_t format, int32_t override_format,
+  MemAllocFlags usage, uint32_t *stride)
 {
   handle = new GBMBuffer;
   GBMBuffer* gbm_hnd = static_cast<GBMBuffer*>(handle);

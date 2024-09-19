@@ -63,11 +63,11 @@
 
 #pragma once
 
-#ifdef TARGET_USES_GBM
 #ifdef HAVE_ANDROID_UTILS
 #include <system/window.h>
 #else
 // TODO: update when camera exports this header
+#include <unordered_map>
 #include <hardware/graphics.h>
 #include <hardware/native_handle.h>
 
@@ -94,6 +94,8 @@
 #define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC         0x10000000 // GRALLOC_USAGE_PRIVATE_0
 #define GRALLOC_USAGE_PRIVATE_ALLOC_10BIT        0x40000000 // GRALLOC_USAGE_PRIVATE_2
 #define GRALLOC_USAGE_PRIVATE_UNCACHED           0x02000000
+#define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP         0x0
+#define GRALLOC_USAGE_PRIVATE_MM_HEAP            0x0
 #ifndef HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS      0x7FA30C04
 #endif
@@ -137,8 +139,6 @@ struct private_handle_t : public native_handle {
   ~private_handle_t() {
   };
 };
-#endif
-#include <unordered_map>
 
 /** MemAllocError
 * @Fail - error while memory allocator operation
@@ -319,7 +319,8 @@ class IAllocDevice {
   * @handle - handle to the allocated buffer
   * @width - width of the buffer
   * @height - height of the buffer
-  * @format - format of the buffer
+  * @format - HAL format of the buffer
+  * @cam_format - CAM format of the buffer
   * @usage - usage flags of the buffer
   * @stride - returned: result stride for the allocated buffer according format
   *           width and usage
@@ -332,7 +333,7 @@ class IAllocDevice {
   **/
   virtual MemAllocError AllocBuffer(IBufferHandle& handle, int32_t width,
                                     int32_t height, int32_t format,
-                                    MemAllocFlags usage,
+                                    int override_format, MemAllocFlags usage,
                                     uint32_t* stride) = 0;
 
   virtual MemAllocError ImportBuffer(IBufferHandle& handle,
@@ -421,8 +422,10 @@ class AllocUsageFactory {
  */
 
 // Support for code with hard dependency to native handles.
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle);
 struct gbm_device *GetAllocDeviceHandle(const IAllocDevice &handle);
 buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle);
-#endif
+#else
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
+#endif // USE_LIBGBM

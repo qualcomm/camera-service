@@ -97,9 +97,9 @@
 #else
 #include <QCamera3VendorTags.h>
 #endif
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 #include "common/memory/qmmf_gbm_interface.h"
-#endif
+#endif // USE_LIBGBM
 
 #ifdef DISABLE_OP_MODES
 #define QCAMERA3_SENSORMODE_ZZHDR_OPMODE      (0xF002)

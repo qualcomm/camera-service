@@ -756,7 +756,7 @@ status_t CameraRescalerMemPool::AllocHWMemBuffer(IBufferHandle &buf) {
   uint32_t stride = 0;
 
   MemAllocError ret = alloc_device_interface_->AllocBuffer(buf,
-    static_cast<int>(width), static_cast<int>(height), format, usage, &stride);
+    static_cast<int>(width), static_cast<int>(height), format, 0, usage, &stride);
   if (MemAllocError::kAllocOk != ret) {
     QMMF_ERROR("%s: Failed to allocate alloc buffer", __func__);
     return -ENOMEM;

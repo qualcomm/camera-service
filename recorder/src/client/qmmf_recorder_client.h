@@ -74,19 +74,21 @@
 #include <qmmf-sdk/qmmf_recorder_extra_param.h>
 
 #include <linux/dma-buf.h>
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 #include <gbm.h>
 #include <gbm_priv.h>
-#endif
+#endif // USE_LIBGBM
 
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 
+#ifdef USE_LIBGBM
 using gbm_perform_fnp = decltype(gbm_perform);
 using gbm_bo_destroy_fnp = decltype(gbm_bo_destroy);
 using gbm_bo_import_fnp = decltype(gbm_bo_import);
 using gbm_device_destroy_fnp = decltype(gbm_device_destroy);
 using gbm_create_device_fnp = decltype(gbm_create_device);
+#endif // USE_LIBGBM
 
 using copy_camera_metadata_fnp = decltype(copy_camera_metadata);
 using get_camera_metadata_compact_size_fnp = decltype(get_camera_metadata_compact_size);
@@ -239,10 +241,10 @@ class RecorderClient {
   // Map <buffer index, buffer info>
   typedef std::map<uint32_t, BufferInfo> BufferInfoMap;
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   void ImportBuffer(int32_t fd, int32_t metafd, const BufferMeta& meta);
   void ReleaseBuffer(int32_t& fd, int32_t& meta_fd);
-#endif
+#endif // USE_LIBGBM
 
   status_t MapBuffer(BufferInfo& info, const BufferMeta& meta);
   void UnmapBuffer(BufferInfo& info);
@@ -286,7 +288,7 @@ class RecorderClient {
   BufferInfoMap                     snapshot_buffers_;
   std::mutex                        snapshot_buffers_lock_;
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   int32_t                           gbm_fd_;
   gbm_device*                       gbm_device_;
 
@@ -299,7 +301,7 @@ class RecorderClient {
   gbm_bo_import_fnp*                gbm_bo_import_;
   gbm_device_destroy_fnp*           gbm_device_destroy_;
   gbm_create_device_fnp*            gbm_create_device_;
-#endif
+#endif // USE_LIBGBM
 
   // VendorTagDescriptor
   std::shared_ptr<VendorTagDescriptor>           vendor_tag_desc_;

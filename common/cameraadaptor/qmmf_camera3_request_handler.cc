@@ -28,9 +28,9 @@
 #include <qmmf_camera3_request_handler.h>
 #include "recorder/src/service/qmmf_recorder_common.h"
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 #include "common/memory/qmmf_gbm_interface.h"
-#endif
+#endif // USE_LIBGBM
 
 #define SIG_ERROR(fmt, ...) \
   SignalError("%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
@@ -357,11 +357,11 @@ void Camera3RequestHandler::ReprocLoop(Camera3RequestHandler *ctx) {
       nextRequest.input->input_buffer_cnt++;
 
       // TODO: To be removed when camera supports GBM
- #ifdef TARGET_USES_GBM
+ #ifdef USE_LIBGBM
       in_buf_handle = GetGrallocBufferHandle(in_buf.handle);
  #else
       in_buf_handle = GetAllocBufferHandle(in_buf.handle);
- #endif
+ #endif // USE_LIBGBM
 
       nextRequest.input->buffers_map.insert(
           std::make_pair(in_buf_handle, in_buf.handle));
@@ -445,11 +445,11 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
     nextRequest.input->input_buffer_cnt++;
 
     // TODO: To be removed when camera supports GBM
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
     in_buf_handle = GetGrallocBufferHandle(in_buf.handle);
 #else
     in_buf_handle = GetAllocBufferHandle(in_buf.handle);
-#endif
+#endif // USE_LIBGBM
     nextRequest.input->buffers_map.insert(
     std::make_pair(in_buf_handle, in_buf.handle));
     res = CreateInputBuffer(request.frame_number, &request.input_buffer);
@@ -460,7 +460,11 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
       return res;
     }
 
+#ifdef USE_LIBGBM
     request.input_buffer->buffer = &GetGrallocBufferHandle(in_buf.handle);
+#else
+    request.input_buffer->buffer = &GetAllocBufferHandle(in_buf.handle);
+#endif // USE_LIBGBM
     request.input_buffer->acquire_fence = -1;
     request.input_buffer->release_fence = -1;
     request.input_buffer->status = CAMERA3_BUFFER_STATUS_OK;

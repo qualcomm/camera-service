@@ -904,7 +904,7 @@ RecorderClient::RecorderClient()
   QMMF_KPI_DETAIL();
   QMMF_INFO("%s Enter ", __func__);
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
   if (gbm_fd_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/ion \n", __func__);
@@ -943,7 +943,7 @@ RecorderClient::RecorderClient()
   }
 
   assert(NULL != gbm_device_);
-#endif
+#endif // USE_LIBGBM
 
 #ifdef HAVE_BINDER
   sp<ProcessState> proc(ProcessState::self());
@@ -959,13 +959,13 @@ RecorderClient::~RecorderClient() {
 
   recorder_service_.reset();
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   gbm_device_destroy_(gbm_device_);
   if (NULL != libgbm_handle_) {
     dlclose(libgbm_handle_);
   }
   close(gbm_fd_);
-#endif
+#endif // USE_LIBGBM
 
   QMMF_INFO("%s Exit 0x%p", __func__, this);
 }
@@ -1692,7 +1692,7 @@ bool RecorderClient::IsJpegBufPresent(const int32_t& buf_fd) {
   return found;
 }
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
                                   const BufferMeta& meta) {
 
@@ -1798,7 +1798,7 @@ void RecorderClient::ReleaseBuffer(int32_t& fd, int32_t& meta_fd) {
   fd = -1;
   meta_fd = -1;
 }
-#endif // TARGET_USES_GBM
+#endif // USE_LIBGBM
 
 status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
 
@@ -1824,9 +1824,9 @@ status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
 #endif
   info.vaddr = vaddr;
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   ImportBuffer(info.ion_fd, info.ion_meta_fd, meta);
-#endif
+#endif // USE_LIBGBM
 
   QMMF_DEBUG("%s Exit ", __func__);
   return 0;
@@ -1858,9 +1858,9 @@ void RecorderClient::UnmapBuffer(BufferInfo& info) {
   }
   info.vaddr = nullptr;
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   ReleaseBuffer(info.ion_fd, info.ion_meta_fd);
-#endif
+#endif // USE_LIBGBM
 
   QMMF_DEBUG("%s Exit ", __func__);
   return;

@@ -61,9 +61,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 #include "qmmf_gbm_interface.h"
-#endif
+#else
+#include "qmmf_dmabuf_interface.h"
+#endif // USE_LIBGBM
 #include "qmmf_memory_interface.h"
 #include "common/utils/qmmf_log.h"
 
@@ -87,27 +89,31 @@ const int IMemAllocUsage::kHwCameraWrite        = (1 << 16);
 const int IMemAllocUsage::kPrivateAllocHEIF     = (1 << 17);
 
 IAllocDevice *AllocDeviceFactory::CreateAllocDevice() {
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   return GBMDevice::CreateGBMDevice();
-#endif
+#else
+  return new DMABufDevice;
+#endif // USE_LIBGBM
 }
 
 void AllocDeviceFactory::DestroyAllocDevice(IAllocDevice* alloc_device_interface) {
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   GBMDevice::DestroyGBMDevice();
 #else
   delete alloc_device_interface;
-#endif
+#endif // USE_LIBGBM
 }
 
 const IMemAllocUsage &AllocUsageFactory::GetAllocUsage() {
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
   static const GBMUsage x = GBMUsage();
-#endif
+#else
+  static const DMABufUsage x = DMABufUsage();
+#endif // USE_LIBGBM
   return x;
 }
 
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle) {
   GBMBuffer *b = static_cast<GBMBuffer *>(handle);
   assert(b != nullptr);
@@ -124,4 +130,10 @@ buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle) {
   assert(b != nullptr);
   return b->RepackToGralloc();
 }
-#endif
+#else
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  DMABuffer *b = static_cast<DMABuffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+#endif // USE_LIBGBM

@@ -923,8 +923,10 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
         buf_width,
         buf_height,
         camera3_stream::format,
+        camera3_stream::override_format,
         memusage,
         &current_buffer_stride_);
+
     if (MemAllocError::kAllocOk != ret) {
       return -ENOMEM;
     }
@@ -946,11 +948,11 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     streamBuffer->acquire_fence = -1;
     streamBuffer->release_fence = -1;
     streamBuffer->status = CAMERA3_BUFFER_STATUS_OK;
-#ifdef TARGET_USES_GBM
+#ifdef USE_LIBGBM
     streamBuffer->buffer = &GetGrallocBufferHandle(mem_alloc_slots_[idx]);
 #else
     streamBuffer->buffer = &GetAllocBufferHandle(mem_alloc_slots_[idx]);
-#endif //TARGET_USES_GBM
+#endif // USE_LIBGBM
 
    buffers_map.emplace(*streamBuffer->buffer, mem_alloc_slots_[idx]);
 

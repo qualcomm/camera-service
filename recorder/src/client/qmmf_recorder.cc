@@ -98,14 +98,14 @@ status_t Recorder::Connect(const RecorderCb& callback) {
 
 status_t Recorder::Disconnect() {
 
-  QMMF_INFO("%s: Enter", __func__);
+  QMMF_DEBUG("%s: Enter", __func__);
   assert(recorder_client_ != nullptr);
 
   auto ret = recorder_client_->Disconnect();
   if (0 != ret) {
     QMMF_ERROR("%s Disconnect failed!", __func__);
   }
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
@@ -316,40 +316,40 @@ status_t Recorder::ReturnImageCaptureBuffer(const uint32_t camera_id,
 status_t Recorder::SetCameraParam(const uint32_t camera_id,
                                   const CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->SetCameraParam(camera_id, meta);
   if (0 != ret) {
       QMMF_ERROR("%s: SetCameraParam failed!", __func__);
   }
-  QMMF_INFO("%s: Exit" ,__func__);
+  QMMF_DEBUG("%s: Exit" ,__func__);
   return ret;
 }
 
 status_t Recorder::GetCameraParam(const uint32_t camera_id,
                                   CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->GetCameraParam(camera_id, meta);
   if (0 != ret) {
       QMMF_ERROR("%s: GetCameraParam failed!", __func__);
   }
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
 status_t Recorder::SetCameraSessionParam(const uint32_t camera_id,
                                          const CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->SetCameraSessionParam(camera_id, meta);
   if (0 != ret) {
       QMMF_ERROR("%s: SetCameraSessionParam failed!", __func__);
   }
-  QMMF_INFO("%s: Exit" ,__func__);
+  QMMF_DEBUG("%s: Exit" ,__func__);
   return ret;
 }
 
@@ -357,28 +357,28 @@ status_t Recorder::SetCameraSessionParam(const uint32_t camera_id,
 status_t Recorder::SetVHDR(const uint32_t camera_id,
                            const int32_t mode) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->SetVHDR(camera_id, mode);
   if (0 != ret) {
       QMMF_ERROR("%s: SetVHDR failed!", __func__);
   }
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 #else
 status_t Recorder::SetSHDR(const uint32_t camera_id,
                            const bool enable) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->SetSHDR(camera_id, enable);
   if (0 != ret) {
       QMMF_ERROR("%s: SetSHDR failed!", __func__);
   }
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 #endif // VHDR_MODES_ENABLE
@@ -386,28 +386,28 @@ status_t Recorder::SetSHDR(const uint32_t camera_id,
 status_t Recorder::GetDefaultCaptureParam(const uint32_t camera_id,
                                           CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->GetDefaultCaptureParam(camera_id, meta);
   if (0 != ret) {
       QMMF_ERROR("%s: GetDefaultCaptureParam failed!", __func__);
   }
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
 status_t Recorder::GetCameraCharacteristics(const uint32_t camera_id,
                                             CameraMetadata &meta) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->GetCameraCharacteristics(camera_id, meta);
   if (0 != ret) {
       QMMF_ERROR("%s: GetCameraCharacteristics failed!", __func__);
   }
 
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
@@ -415,35 +415,35 @@ status_t Recorder::CreateOfflineJPEG(
                     const OfflineJpegCreateParams& params,
                     const OfflineJpegCb &cb) {
 
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->CreateOfflineJPEG(params, cb);
   if (0 != ret) {
     QMMF_ERROR("%s: CreateOfflineJPEG failed!", __func__);
   }
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
 status_t Recorder::EncodeOfflineJPEG(const OfflineJpegProcessParams& params) {
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->EncodeOfflineJPEG(params);
   if (0 != ret) {
     QMMF_ERROR("%s: EncodeOfflineJPEG failed!", __func__);
   }
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
 status_t Recorder::DestroyOfflineJPEG() {
-  QMMF_INFO("%s: Enter" ,__func__);
+  QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
   auto ret = recorder_client_->DestroyOfflineJPEG();
   if (0 != ret) {
     QMMF_ERROR("%s: DestroyOfflineJPEG failed!", __func__);
   }
-  QMMF_INFO("%s: Exit", __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 

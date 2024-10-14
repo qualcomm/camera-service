@@ -110,7 +110,7 @@ class RecorderImpl {
   /// Destroys all instances created in Init
   status_t DeInit();
 
-  /// Connect and register client to the session
+  /// Connect and register client
   status_t RegisterClient(const uint32_t client_id);
 
   /// Cleans up and closes the cameras owned by previous "dead" client.
@@ -127,47 +127,33 @@ class RecorderImpl {
   /// Stop(close) the Camera
   status_t StopCamera(const uint32_t client_id, const uint32_t camera_id);
 
-  /// Create session
-  status_t CreateSession(const uint32_t client_id, uint32_t *session_id);
-
-  /// Delete session
-  status_t DeleteSession(const uint32_t client_id, const uint32_t session_id);
-
-  /// Start the session
-  status_t StartSession(const uint32_t client_id, const uint32_t session_id);
-
-  /// Stop the session
-  status_t StopSession(const uint32_t client_id, const uint32_t session_id,
-                       bool do_flush, bool force_cleanup = false);
-
-  /// Pause the session
-  status_t PauseSession(const uint32_t client_id, const uint32_t session_id);
-
-  /// Resume the session
-  status_t ResumeSession(const uint32_t client_id, const uint32_t session_id);
-
-  /// Create Video Track and associates it to the session with
+  /// Create Video Track with
   /// additional configure parameters
   status_t CreateVideoTrack(const uint32_t client_id,
-                            const uint32_t session_id,
                             const uint32_t track_id,
                             const VideoTrackParam& param,
                             const VideoExtraParam& xtraparam);
 
-  /// Delete Video Track from the session.
+  /// Delete Video Track.
   status_t DeleteVideoTrack(const uint32_t client_id,
-                            const uint32_t session_id,
                             const uint32_t track_id);
+
+  /// Start the tracks
+  status_t StartVideoTracks(const uint32_t client_id,
+                            const std::unordered_set<uint32_t>& track_ids);
+
+  /// Stop the tracks
+  status_t StopVideoTracks(const uint32_t client_id,
+                           const std::unordered_set<uint32_t>& track_ids,
+                           bool force_cleanup = false);
 
   /// Return Track buffers to Camera Source.
   status_t ReturnTrackBuffer(const uint32_t client_id,
-                             const uint32_t session_id,
                              const uint32_t track_id,
                              std::vector<BnBuffer> &buffers);
 
   /// Set Video Track parameters
   status_t SetVideoTrackParam(const uint32_t client_id,
-                              const uint32_t session_id,
                               const uint32_t track_id,
                               VideoParam type,
                               void *param,
@@ -245,8 +231,8 @@ class RecorderImpl {
 
   // Data callback handlers.
   /// Video Track buffer callback handler
-  void VideoTrackBufferCb(uint32_t client_id, uint32_t session_id,
-                          uint32_t track_id, std::vector<BnBuffer>& buffers,
+  void VideoTrackBufferCb(uint32_t client_id, uint32_t track_id,
+                          std::vector<BnBuffer>& buffers,
                           std::vector<BufferMeta>& metas);
 
   /// Camera Snapshot callback handler
@@ -269,18 +255,15 @@ class RecorderImpl {
     kDead,
   };
 
-  enum class SessionState {
+  enum class TrackState {
     kActive,
-    kPause,
     kIdle,
   };
 
   // <client track id, service track id>
   typedef std::map<uint32_t, uint32_t> TrackMap;
-  // <session id, map <tracks> >
-  typedef std::map<uint32_t, TrackMap> SessionTrackMap;
-  // <client id, <session_id, vector<client track id, service track id> > >
-  typedef std::map<uint32_t, SessionTrackMap> ClientSessionMap;
+  // <client id, vector<client track id, service track id> >
+  typedef std::map<uint32_t, TrackMap> ClientTrackMap;
 
   // <client id, map<camera id, owned?> >
   typedef std::map<uint32_t, std::map<uint32_t, bool> > ClientCameraIdMap;
@@ -288,49 +271,38 @@ class RecorderImpl {
   // <client id, ClientState>
   typedef std::map<uint32_t, ClientState> ClientStateMap;
 
-  // <session_id, SessionState>
-  typedef std::map<uint32_t, SessionState> SessionStateMap;
-  // <client_id, SessionStateMap>
-  typedef std::map<uint32_t, SessionStateMap> ClientSessionStateMap;
+  // <track_id, TrackState>
+  typedef std::map<uint32_t, TrackState> TrackStateMap;
+  // <client_id, TrackStateMap>
+  typedef std::map<uint32_t, TrackStateMap> ClientTrackStateMap;
 
-  // <session_id, session_mutex>
-  typedef std::map<uint32_t, std::mutex *> SessionMutexMap;
-  // <client_id, SessionStateMap>
-  typedef std::map<uint32_t, SessionMutexMap> ClientSessionMutexMap;
-
+  // <client_id, mutex>
+  typedef std::map<uint32_t, std::mutex *> ClientMutexMap;
 
   bool IsClientValid(const uint32_t& client_id);
   bool IsClientAlive(const uint32_t& client_id);
-  bool IsSessionValid(const uint32_t& client_id, const uint32_t& session_id);
-  bool IsTrackValid(const uint32_t& client_id, const uint32_t& session_id,
-                    const uint32_t& track_id);
   bool IsTrackValid(const uint32_t& client_id, const uint32_t& track_id);
   bool IsCameraValid(const uint32_t& client_id, const uint32_t& camera_id);
   bool IsCameraOwned(const uint32_t& client_id, const uint32_t& camera_id);
 
-  bool IsSessionActive(const uint32_t& client_id, const uint32_t& session_id);
-  bool IsSessionPaused(const uint32_t& client_id, const uint32_t& session_id);
-  bool IsSessionIdle(const uint32_t& client_id, const uint32_t& session_id);
-  void ChangeSessionState(const uint32_t& client_id,
-                          const uint32_t& session_id,
-                          const SessionState& state);
+  bool IsTrackActive(const uint32_t& client_id, const uint32_t& track_id);
+  bool IsTrackIdle(const uint32_t& client_id, const uint32_t& track_id);
+  void ChangeTrackState(const uint32_t& client_id,
+                        const uint32_t& track_id,
+                        const TrackState& state);
 
   uint32_t GetUniqueServiceTrackId(const uint32_t& client_id,
-                                   const uint32_t& session_id,
                                    const uint32_t& track_id);
 
   uint32_t GetServiceTrackId(const uint32_t& client_id,
-                             const uint32_t& session_id,
                              const uint32_t& track_id);
 
-  uint32_t GetServiceTrackId(const uint32_t& client_id,
-                             const uint32_t& track_id);
+  uint32_t GetClientTrackId(const uint32_t& client_id,
+                            const uint32_t& service_track_id);
 
   std::vector<uint32_t> GetCameraClients(const uint32_t& camera_id);
 
   status_t ForceReturnBuffers(const uint32_t client_id);
-
-  status_t GetUniqueSessionID(const uint32_t& client_id, uint32_t* session_id);
 
   CameraSource*                 camera_source_;
 
@@ -340,8 +312,8 @@ class RecorderImpl {
 
   RemoteCallbackHandle          remote_cb_handle_;
 
-  ClientSessionMap              client_session_map_;
-  std::mutex                    client_session_lock_;
+  ClientTrackMap                client_track_map_;
+  std::mutex                    client_track_lock_;
 
   ClientCameraIdMap             client_cameraid_map_;
   QCondition                    slave_camera_closed_;
@@ -350,9 +322,9 @@ class RecorderImpl {
   ClientStateMap                client_state_;
   std::mutex                    client_state_lock_;
 
-  ClientSessionStateMap         client_sessions_state_;
+  ClientTrackStateMap           client_tracks_state_;
 
-  ClientSessionMutexMap         client_sessions_mutex_map_;
+  ClientMutexMap                client_mutex_map_;
 
   std::mutex                    stop_camera_lock_;
 

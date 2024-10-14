@@ -152,16 +152,10 @@ class CameraInterface {
                                   std::shared_ptr<IBufferConsumer>& consumer) = 0;
 
   /// Start stream
-  virtual status_t StartStream(const uint32_t track_id) = 0;
+  virtual status_t StartStream(const uint32_t track_id, bool cached) = 0;
 
   /// Stop stream
-  virtual status_t StopStream(const uint32_t track_id) = 0;
-
-  /// Pause stream
-  virtual status_t PauseStream(const uint32_t track_id) = 0;
-
-  /// Resume stream
-  virtual status_t ResumeStream(const uint32_t track_id) = 0;
+  virtual status_t StopStream(const uint32_t track_id, bool cached) = 0;
 
   /// Set camera parameters
   virtual status_t SetCameraParam(const CameraMetadata &meta) = 0;

@@ -81,9 +81,8 @@ using ::std::streampos;
 
 const std::string GtestCommon::kQmmfFolderPath = "/var/tmp/qmmf/";
 
-void FrameTrace::SetUp(uint32_t session_id, uint32_t track_id, float fps) {
+void FrameTrace::SetUp(uint32_t track_id, float fps) {
   std::lock_guard<std::mutex> lk(lock_);
-  session_id_ = session_id;
   track_id_   = track_id;
   track_fps_  = fps;
 }
@@ -121,9 +120,9 @@ void FrameTrace::BufferAvailableCb(BufferDescriptor buffer) {
     total_frames_ += dropped_frames;
     total_dropped_frames_ += dropped_frames;
 
-    TEST_WARN("%s: Session %u | Track %u | Expected timestamp Δ = %llu us | "
+    TEST_WARN("%s: Track %u | Expected timestamp Δ = %llu us | "
         "Current timestamp Δ = %llu us | DROPPED FRAMES = %d | TOTAL DROPPED "
-        "FRAMES = %u / %u", __func__, session_id_, track_id_, expected_delta,
+        "FRAMES = %u / %u", __func__, track_id_, expected_delta,
         current_delta, dropped_frames, total_dropped_frames_, total_frames_);
   }
 
@@ -586,13 +585,6 @@ void GtestCommon::RecorderCallbackHandler(EventType type, void *payload,
   TEST_INFO("%s Exit ", __func__);
 }
 
-void GtestCommon::SessionCallbackHandler(EventType event_type,
-                                        void *event_data,
-                                        size_t event_data_size) {
-  TEST_INFO("%s: Enter", __func__);
-  TEST_INFO("%s: Exit", __func__);
-}
-
 void GtestCommon::CameraResultCallbackHandler(uint32_t camera_id,
                                    const CameraMetadata &result) {
   TEST_DBG(stderr,"%s: camera_id: %d\n", __func__, camera_id);
@@ -608,7 +600,7 @@ void GtestCommon::CameraResultCallbackHandler(uint32_t camera_id,
   }
 }
 
-void GtestCommon::VideoTrackYUVDataCb(uint32_t session_id, uint32_t track_id,
+void GtestCommon::VideoTrackYUVDataCb(uint32_t track_id,
                                       std::vector<BufferDescriptor> buffers,
                                       std::vector<BufferMeta> metas) {
   TEST_DBG("%s: Enter track_id: %d", __func__, track_id);
@@ -656,7 +648,7 @@ void GtestCommon::VideoTrackYUVDataCb(uint32_t session_id, uint32_t track_id,
   }
 
 
-  auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
+  auto ret = recorder_.ReturnTrackBuffer(track_id, buffers);
   ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
@@ -670,7 +662,7 @@ void GtestCommon::VideoTrackEventCb(uint32_t track_id,
     TEST_DBG("%s: Exit", __func__);
 }
 
-void GtestCommon::VideoTrackRawDataCb(uint32_t session_id, uint32_t track_id,
+void GtestCommon::VideoTrackRawDataCb(uint32_t track_id,
                                       std::vector<BufferDescriptor> buffers,
                                       std::vector<BufferMeta> metas) {
   TEST_DBG("%s: Enter track_id: %d", __func__, track_id);
@@ -730,7 +722,7 @@ void GtestCommon::VideoTrackRawDataCb(uint32_t session_id, uint32_t track_id,
       fcounter = 0;
     }
   }
-  auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
+  auto ret = recorder_.ReturnTrackBuffer(track_id, buffers);
   ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
@@ -832,7 +824,7 @@ void GtestCommon::SnapshotCb(uint32_t camera_id, uint32_t imgcount,
   TEST_INFO("%s Exit", __func__);
 }
 
-void GtestCommon::VideoTrackRGBDataCb(uint32_t session_id, uint32_t track_id,
+void GtestCommon::VideoTrackRGBDataCb(uint32_t track_id,
                                       std::vector<BufferDescriptor> buffers,
                                       std::vector<BufferMeta> metas) {
   TEST_DBG("%s: Enter track_id: %d", __func__, track_id);
@@ -872,21 +864,10 @@ void GtestCommon::VideoTrackRGBDataCb(uint32_t session_id, uint32_t track_id,
     }
   }
 
-  auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
+  auto ret = recorder_.ReturnTrackBuffer(track_id, buffers);
   ASSERT_TRUE(ret == 0);
 
   TEST_DBG("%s: Exit", __func__);
-}
-
-void GtestCommon::ClearSessions() {
-
-  TEST_INFO("%s Enter ", __func__);
-  std::map <uint32_t , std::vector<uint32_t> >::iterator it = sessions_.begin();
-  for (; it != sessions_.end(); ++it) {
-    it->second.clear();
-  }
-  sessions_.clear();
-  TEST_INFO("%s Exit ", __func__);
 }
 
 void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
@@ -903,7 +884,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
   if (append) {
     // New entry, camera meta arrived first.
     auto buffer_meta_tuple = std::make_tuple(BufferDescriptor(),
-     CameraMetadata(result), 0, 0);
+     CameraMetadata(result), 0);
     buffer_metadata_map_.insert( { meta_frame_number, buffer_meta_tuple} );
   } else {
     // Buffer already arrived for this meta.
@@ -916,8 +897,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
     // nothing it is just returning buffer back to service on match.
     std::vector<BufferDescriptor> buffers;
     buffers.push_back(std::get<0>(tuple));
-    auto ret = recorder_.ReturnTrackBuffer(std::get<2>(tuple),
-        std::get<3>(tuple), buffers);
+    auto ret = recorder_.ReturnTrackBuffer(std::get<2>(tuple), buffers);
     ASSERT_TRUE(ret == 0);
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);
@@ -926,7 +906,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
   }
 }
 
-void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
+void GtestCommon::VideoTrackDataCbMatchCameraMeta(
     uint32_t track_id, std::vector<BufferDescriptor> buffers,
     std::vector<BufferMeta> metas) {
 
@@ -945,7 +925,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
   if (append) {
     // New entry, buffer arrived first.
     auto buffer_meta_tuple = std::make_tuple(BufferDescriptor(buffers[0]),
-        CameraMetadata(), session_id, track_id);
+        CameraMetadata(), track_id);
     buffer_metadata_map_.insert( {meta_frame_number, buffer_meta_tuple} );
   } else {
     // BufferMeta already arrived for this buffer.
@@ -960,7 +940,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(uint32_t session_id,
     // its corresponding camera meta data. once buffer & meta data matched
     // application can take appropriate actions. this test app is doing
     // nothing it is just returning buffer back to service on match.
-    auto ret = recorder_.ReturnTrackBuffer(session_id, track_id, buffers);
+    auto ret = recorder_.ReturnTrackBuffer(track_id, buffers);
     ASSERT_TRUE(ret == 0);
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);

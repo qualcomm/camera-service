@@ -146,13 +146,9 @@ class CameraContext : public CameraInterface {
   status_t RemoveConsumer(const uint32_t& track_id,
                           std::shared_ptr<IBufferConsumer>& consumer) override;
 
-  status_t StartStream(const uint32_t track_id) override;
+  status_t StartStream(const uint32_t track_id, bool cached) override;
 
-  status_t StopStream(const uint32_t track_id) override;
-
-  status_t PauseStream(const uint32_t track_id) override;
-
-  status_t ResumeStream(const uint32_t track_id) override;
+  status_t StopStream(const uint32_t track_id, bool cached) override;
 
   status_t SetCameraParam(const CameraMetadata &meta) override;
 
@@ -236,7 +232,7 @@ class CameraContext : public CameraInterface {
 
   status_t SetPerStreamFrameRate();
 
-  status_t UpdateRequest(bool is_streaming);
+  status_t UpdateRequest(bool cached = false);
 
   status_t CancelRequest();
 
@@ -444,9 +440,9 @@ class CameraPort {
 
   virtual status_t DeInit();
 
-  status_t Start();
+  status_t Start(bool cached = false);
 
-  status_t Stop();
+  status_t Stop(bool cached = false);
 
   status_t Pause();
 

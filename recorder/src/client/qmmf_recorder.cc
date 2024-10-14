@@ -137,84 +137,13 @@ status_t Recorder::StopCamera(const uint32_t camera_id) {
   return ret;
 }
 
-status_t Recorder::CreateSession(const SessionCb& cb, uint32_t *session_id) {
-
-  assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->CreateSession(cb, session_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: CreateSession failed!", __func__);
-  }
-  return ret;
-}
-
-status_t Recorder::DeleteSession(const uint32_t session_id) {
-
-  assert(recorder_client_ != NULL);
-
-  auto ret = recorder_client_->DeleteSession(session_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: DeleteSession failed!", __func__);
-  }
-
-  return ret;
-}
-
-status_t Recorder::StartSession(const uint32_t session_id) {
-
-  assert(recorder_client_ != NULL);
-
-  auto ret = recorder_client_->StartSession(session_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: StartSession failed!", __func__);
-  }
-
-  return ret;
-}
-
-status_t Recorder::StopSession(const uint32_t session_id, bool do_flush) {
-
-  assert(recorder_client_ != NULL);
-
-  auto ret = recorder_client_->StopSession(session_id, do_flush);
-  if (0 != ret) {
-    QMMF_ERROR("%s: StopSession failed!", __func__);
-  }
-
-  return ret;
-}
-
-status_t Recorder::PauseSession(const uint32_t session_id) {
-
-  assert(recorder_client_ != NULL);
-
-  auto ret = recorder_client_->PauseSession(session_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: PauseSession failed!", __func__);
-  }
-
-  return ret;
-}
-
-status_t Recorder::ResumeSession(const uint32_t session_id) {
-
-  assert(recorder_client_ != NULL);
-
-  auto ret = recorder_client_->ResumeSession(session_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: ResumeSession failed!", __func__);
-  }
-
-  return ret;
-}
-
-status_t Recorder::CreateVideoTrack(const uint32_t session_id,
-                                    const uint32_t track_id,
+status_t Recorder::CreateVideoTrack(const uint32_t track_id,
                                     const VideoTrackParam& param,
                                     const VideoExtraParam& xtraparam,
                                     const TrackCb& cb) {
 
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->CreateVideoTrack(session_id,track_id, param,
+  auto ret = recorder_client_->CreateVideoTrack(track_id, param,
                                                 xtraparam, cb);
   if (0 != ret) {
     QMMF_ERROR("%s: CreateVideoTrackWithExtraParam failed!", __func__);
@@ -222,42 +151,64 @@ status_t Recorder::CreateVideoTrack(const uint32_t session_id,
   return ret;
 }
 
-status_t Recorder::ReturnTrackBuffer(const uint32_t session_id,
-                                     const uint32_t track_id,
+status_t Recorder::DeleteVideoTrack(const uint32_t track_id) {
+
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->DeleteVideoTrack(track_id);
+  if (0 != ret) {
+    QMMF_ERROR("%s: DeleteVideoTrack failed!", __func__);
+  }
+
+  return ret;
+}
+
+status_t Recorder::StartVideoTracks(
+    const std::unordered_set<uint32_t>& track_ids) {
+
+  assert(recorder_client_ != NULL);
+
+  auto ret = recorder_client_->StartVideoTracks(track_ids);
+  if (0 != ret) {
+    QMMF_ERROR("%s: StartVideoTracks failed!", __func__);
+  }
+
+  return ret;
+}
+
+status_t Recorder::StopVideoTracks(
+    const std::unordered_set<uint32_t>& track_ids) {
+
+  assert(recorder_client_ != NULL);
+
+  auto ret = recorder_client_->StopVideoTracks(track_ids);
+  if (0 != ret) {
+    QMMF_ERROR("%s: StopVideoTracks failed!", __func__);
+  }
+
+  return ret;
+}
+
+status_t Recorder::ReturnTrackBuffer(const uint32_t track_id,
                                      std::vector<BufferDescriptor> &buffers) {
 
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->ReturnTrackBuffer(session_id, track_id, buffers);
+  auto ret = recorder_client_->ReturnTrackBuffer(track_id, buffers);
   if (0 != ret) {
     QMMF_ERROR("%s: ReturnTrackBuffer failed!", __func__);
   }
   return ret;
 }
 
-status_t Recorder::SetVideoTrackParam(const uint32_t session_id,
-                                      const uint32_t track_id,
+status_t Recorder::SetVideoTrackParam(const uint32_t track_id,
                                       VideoParam type,
                                       const void *params,
                                       size_t size) {
 
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->SetVideoTrackParam(session_id, track_id,
-                                                  type, params, size);
+  auto ret = recorder_client_->SetVideoTrackParam(track_id, type, params, size);
   if (0 != ret) {
     QMMF_ERROR("%s: SetVideoTrackParam failed!", __func__);
   }
-  return ret;
-}
-
-status_t Recorder::DeleteVideoTrack(const uint32_t session_id,
-                                    const uint32_t track_id) {
-
-  assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->DeleteVideoTrack(session_id, track_id);
-  if (0 != ret) {
-    QMMF_ERROR("%s: DeleteVideoTrack failed!", __func__);
-  }
-
   return ret;
 }
 

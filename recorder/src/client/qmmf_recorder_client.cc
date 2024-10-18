@@ -949,8 +949,37 @@ RecorderClient::RecorderClient()
   }
   assert(gbm_fd_ >= 0);
 
-  gbm_device_ = gbm_create_device(gbm_fd_);
-  assert(gbm_device_ != nullptr);
+  libgbm_handle_ = dlopen("libgbm.so", RTLD_LAZY);
+  char* err = dlerror();
+
+  assert(libgbm_handle_ != NULL);
+
+  gbm_perform_ =reinterpret_cast<gbm_perform_fnp*>(
+      dlsym(libgbm_handle_,"gbm_perform"));
+  gbm_bo_destroy_ =reinterpret_cast<gbm_bo_destroy_fnp*>(
+      dlsym(libgbm_handle_,"gbm_bo_destroy"));
+  gbm_bo_import_ =reinterpret_cast<gbm_bo_import_fnp*>(
+      dlsym(libgbm_handle_,"gbm_bo_import"));
+  gbm_device_destroy_ =reinterpret_cast<gbm_device_destroy_fnp*>(
+      dlsym(libgbm_handle_,"gbm_device_destroy"));
+  gbm_create_device_ =reinterpret_cast<gbm_create_device_fnp*>(
+      dlsym(libgbm_handle_,"gbm_create_device"));
+  char* dlsym_err = dlerror();
+  if (dlsym_err != NULL) {
+    assert(gbm_perform_);
+    assert(gbm_bo_destroy_);
+    assert(gbm_bo_import_);
+    assert(gbm_device_destroy_);
+    assert(gbm_create_device_);
+  }
+
+  gbm_device_ = gbm_create_device_(gbm_fd_);
+
+  if (NULL == gbm_device_) {
+    dlclose(libgbm_handle_);
+  }
+
+  assert(NULL != gbm_device_);
 #endif
 
 #ifdef HAVE_BINDER
@@ -968,7 +997,10 @@ RecorderClient::~RecorderClient() {
   recorder_service_.reset();
 
 #ifdef TARGET_USES_GBM
-  gbm_device_destroy(gbm_device_);
+  gbm_device_destroy_(gbm_device_);
+  if (NULL != libgbm_handle_) {
+    dlclose(libgbm_handle_);
+  }
   close(gbm_fd_);
 #endif
 
@@ -1894,7 +1926,7 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
 
   gbm_buf_info bufinfo = { fd, metafd, width , height, format };
 
-  auto bo = gbm_bo_import(gbm_device_, GBM_BO_IMPORT_GBM_BUF_TYPE, &bufinfo, 0);
+  auto bo = gbm_bo_import_(gbm_device_, GBM_BO_IMPORT_GBM_BUF_TYPE, &bufinfo, 0);
   if (bo == nullptr) {
     QMMF_WARN("%s: gbm bo import failed", __func__);
     return;
@@ -1911,13 +1943,13 @@ void RecorderClient::ReleaseBuffer(int32_t& fd, int32_t& meta_fd) {
     return;
   }
 
-  gbm_bo_destroy(gbm_buffers_map_[fd]);
+  gbm_bo_destroy_(gbm_buffers_map_[fd]);
   gbm_buffers_map_.erase(fd);
 
   uint32_t duplicated = 0;
 
 #ifdef GBM_PERFORM_GET_FD_WITH_NEW
-  gbm_perform(GBM_PERFORM_GET_FD_WITH_NEW, &duplicated);
+  gbm_perform_(GBM_PERFORM_GET_FD_WITH_NEW, &duplicated);
 #endif // GBM_PERFORM_GET_FD_WITH_NEW
 
   if (duplicated) {

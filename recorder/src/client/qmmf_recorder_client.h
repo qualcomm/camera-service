@@ -81,6 +81,12 @@
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 
+using gbm_perform_fnp = decltype(gbm_perform);
+using gbm_bo_destroy_fnp = decltype(gbm_bo_destroy);
+using gbm_bo_import_fnp = decltype(gbm_bo_import);
+using gbm_device_destroy_fnp = decltype(gbm_device_destroy);
+using gbm_create_device_fnp = decltype(gbm_create_device);
+
 namespace qmmf {
 
 namespace recorder {
@@ -304,6 +310,13 @@ class RecorderClient {
 
   std::map<int32_t, gbm_bo*>        gbm_buffers_map_;
   std::mutex                        gbm_lock_;
+
+  void*                             libgbm_handle_;
+  gbm_perform_fnp*                  gbm_perform_;
+  gbm_bo_destroy_fnp*               gbm_bo_destroy_;
+  gbm_bo_import_fnp*                gbm_bo_import_;
+  gbm_device_destroy_fnp*           gbm_device_destroy_;
+  gbm_create_device_fnp*            gbm_create_device_;
 #endif
 
   // VendorTagDescriptor

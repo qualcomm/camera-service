@@ -43,7 +43,7 @@ target_link_libraries(qmmf_recorder_client camera_client)
 endif()
 
 if(TARGET_USES_GBM)
-target_link_libraries(qmmf_recorder_client gbm)
+target_link_libraries(qmmf_recorder_client ${CMAKE_DL_LIBS})
 endif()
 
 if(NOT HAVE_BINDER_H)

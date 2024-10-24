@@ -18,6 +18,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#include <dlfcn.h>
+
 #define LOG_NDEBUG 1
 
 #define LOG_TAG "Camera2-Metadata"
@@ -42,19 +44,311 @@ typedef Parcel::WritableBlob WritableBlob;
 typedef Parcel::ReadableBlob ReadableBlob;
 #endif
 
-CameraMetadata::CameraMetadata() :
-        mBuffer(NULL), mLocked(false) {
+void* CameraMetadata::libcamera_metadata_handle = NULL;
+add_camera_metadata_entry_fnp*
+    CameraMetadata::add_camera_metadata_entry = NULL;
+allocate_camera_metadata_fnp*
+    CameraMetadata::allocate_camera_metadata = NULL;
+allocate_copy_camera_metadata_checked_fnp*
+    CameraMetadata::allocate_copy_camera_metadata_checked = NULL;
+append_camera_metadata_fnp*
+    CameraMetadata::append_camera_metadata = NULL;
+calculate_camera_metadata_entry_data_size_fnp*
+    CameraMetadata::calculate_camera_metadata_entry_data_size = NULL;
+clone_camera_metadata_fnp*
+    CameraMetadata::clone_camera_metadata = NULL;
+copy_camera_metadata_fnp*
+    CameraMetadata::copy_camera_metadata = NULL;
+delete_camera_metadata_entry_fnp*
+    CameraMetadata::delete_camera_metadata_entry = NULL;
+dump_indented_camera_metadata_fnp*
+    CameraMetadata::dump_indented_camera_metadata = NULL;
+find_camera_metadata_entry_fnp*
+    CameraMetadata::find_camera_metadata_entry = NULL;
+find_camera_metadata_ro_entry_fnp*
+    CameraMetadata::find_camera_metadata_ro_entry = NULL;
+free_camera_metadata_fnp*
+    CameraMetadata::free_camera_metadata = NULL;
+get_camera_metadata_alignment_fnp*
+    CameraMetadata::get_camera_metadata_alignment = NULL;
+get_camera_metadata_compact_size_fnp*
+    CameraMetadata::get_camera_metadata_compact_size = NULL;
+get_camera_metadata_data_capacity_fnp*
+    CameraMetadata::get_camera_metadata_data_capacity = NULL;
+get_camera_metadata_data_count_fnp*
+    CameraMetadata::get_camera_metadata_data_count = NULL;
+get_camera_metadata_entry_capacity_fnp*
+    CameraMetadata::get_camera_metadata_entry_capacity = NULL;
+get_camera_metadata_entry_count_fnp*
+    CameraMetadata::get_camera_metadata_entry_count = NULL;
+get_camera_metadata_section_name_fnp*
+    CameraMetadata::get_camera_metadata_section_name = NULL;
+get_camera_metadata_tag_name_fnp*
+    CameraMetadata::get_camera_metadata_tag_name = NULL;
+get_camera_metadata_tag_type_fnp*
+    CameraMetadata::get_camera_metadata_tag_type = NULL;
+get_camera_metadata_size_fnp*
+    CameraMetadata::get_camera_metadata_size = NULL;
+sort_camera_metadata_fnp*
+    CameraMetadata::sort_camera_metadata = NULL;
+update_camera_metadata_entry_fnp*
+    CameraMetadata::update_camera_metadata_entry = NULL;
+validate_camera_metadata_structure_fnp*
+    CameraMetadata::validate_camera_metadata_structure = NULL;
+unsigned int** CameraMetadata::camera_metadata_section_bounds = NULL;
+const char** CameraMetadata::camera_metadata_section_names = NULL;
+const char** CameraMetadata::camera_metadata_type_names = NULL;
+
+void CameraMetadata_libCameraMetadataOpen() __attribute__ ((constructor (101)));
+void CameraMetadata_libCameraMetadataClose() __attribute__ ((destructor (101)));
+
+void CameraMetadata_libCameraMetadataOpen()
+{
+    if (NULL == CameraMetadata::libcamera_metadata_handle) {
+        CameraMetadata::libcamera_metadata_handle =
+            dlopen("libcamera_metadata.so", RTLD_LAZY);
+        char* err = dlerror();
+
+        if ((NULL != CameraMetadata::libcamera_metadata_handle) && (NULL == err)) {
+            CameraMetadata::add_camera_metadata_entry =
+                reinterpret_cast<add_camera_metadata_entry_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "add_camera_metadata_entry"));
+            CameraMetadata::allocate_camera_metadata =
+                reinterpret_cast<allocate_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "allocate_camera_metadata"));
+            CameraMetadata::allocate_copy_camera_metadata_checked =
+                reinterpret_cast<allocate_copy_camera_metadata_checked_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "allocate_copy_camera_metadata_checked"));
+            CameraMetadata::append_camera_metadata =
+                reinterpret_cast<append_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "append_camera_metadata"));
+            CameraMetadata::calculate_camera_metadata_entry_data_size =
+                reinterpret_cast<calculate_camera_metadata_entry_data_size_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "calculate_camera_metadata_entry_data_size"));
+            CameraMetadata::clone_camera_metadata =
+                reinterpret_cast<clone_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "clone_camera_metadata"));
+            CameraMetadata::copy_camera_metadata =
+                reinterpret_cast<copy_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "copy_camera_metadata"));
+            CameraMetadata::delete_camera_metadata_entry =
+                reinterpret_cast<delete_camera_metadata_entry_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "delete_camera_metadata_entry"));
+            CameraMetadata::dump_indented_camera_metadata =
+                reinterpret_cast<dump_indented_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "dump_indented_camera_metadata"));
+            CameraMetadata::find_camera_metadata_entry =
+                reinterpret_cast<find_camera_metadata_entry_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "find_camera_metadata_entry"));
+            CameraMetadata::find_camera_metadata_ro_entry =
+                reinterpret_cast<find_camera_metadata_ro_entry_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "find_camera_metadata_ro_entry"));
+            CameraMetadata::free_camera_metadata =
+                reinterpret_cast<free_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "free_camera_metadata"));
+            CameraMetadata::get_camera_metadata_alignment =
+                reinterpret_cast<get_camera_metadata_alignment_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_alignment"));
+            CameraMetadata::get_camera_metadata_compact_size =
+                reinterpret_cast<get_camera_metadata_compact_size_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_compact_size"));
+            CameraMetadata::get_camera_metadata_data_capacity =
+                reinterpret_cast<get_camera_metadata_data_capacity_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_data_capacity"));
+            CameraMetadata::get_camera_metadata_data_count =
+                reinterpret_cast<get_camera_metadata_data_count_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_data_count"));
+            CameraMetadata::get_camera_metadata_entry_capacity =
+                reinterpret_cast<get_camera_metadata_entry_capacity_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_entry_capacity"));
+            CameraMetadata::get_camera_metadata_entry_count =
+                reinterpret_cast<get_camera_metadata_entry_count_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_entry_count"));
+            CameraMetadata::get_camera_metadata_section_name =
+                reinterpret_cast<get_camera_metadata_section_name_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_section_name"));
+            CameraMetadata::get_camera_metadata_tag_name =
+                reinterpret_cast<get_camera_metadata_tag_name_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_tag_name"));
+            CameraMetadata::get_camera_metadata_tag_type =
+                reinterpret_cast<get_camera_metadata_tag_type_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_tag_type"));
+            CameraMetadata::get_camera_metadata_size =
+                reinterpret_cast<get_camera_metadata_size_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "get_camera_metadata_size"));
+            CameraMetadata::sort_camera_metadata =
+                reinterpret_cast<sort_camera_metadata_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "sort_camera_metadata"));
+            CameraMetadata::update_camera_metadata_entry =
+                reinterpret_cast<update_camera_metadata_entry_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "update_camera_metadata_entry"));
+            CameraMetadata::validate_camera_metadata_structure =
+                reinterpret_cast<validate_camera_metadata_structure_fnp*>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "validate_camera_metadata_structure"));
+            CameraMetadata::camera_metadata_section_bounds =
+                reinterpret_cast<unsigned int**>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "camera_metadata_section_bounds"));
+            CameraMetadata::camera_metadata_section_names =
+                reinterpret_cast<const char**>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "camera_metadata_section_names"));
+            CameraMetadata::camera_metadata_type_names =
+                reinterpret_cast<const char**>(
+                dlsym(CameraMetadata::libcamera_metadata_handle,
+                "camera_metadata_type_names"));
+            char* dlsym_err = dlerror();
+            if (dlsym_err != NULL) {
+                assert(CameraMetadata::add_camera_metadata_entry);
+                assert(CameraMetadata::allocate_camera_metadata);
+                assert(CameraMetadata::allocate_copy_camera_metadata_checked);
+                assert(CameraMetadata::append_camera_metadata);
+                assert(CameraMetadata::calculate_camera_metadata_entry_data_size);
+                assert(CameraMetadata::clone_camera_metadata);
+                assert(CameraMetadata::copy_camera_metadata);
+                assert(CameraMetadata::delete_camera_metadata_entry);
+                assert(CameraMetadata::dump_indented_camera_metadata);
+                assert(CameraMetadata::find_camera_metadata_entry);
+                assert(CameraMetadata::find_camera_metadata_ro_entry);
+                assert(CameraMetadata::free_camera_metadata);
+                assert(CameraMetadata::get_camera_metadata_alignment);
+                assert(CameraMetadata::get_camera_metadata_compact_size);
+                assert(CameraMetadata::get_camera_metadata_data_capacity);
+                assert(CameraMetadata::get_camera_metadata_data_count);
+                assert(CameraMetadata::get_camera_metadata_entry_capacity);
+                assert(CameraMetadata::get_camera_metadata_entry_count);
+                assert(CameraMetadata::get_camera_metadata_section_name);
+                assert(CameraMetadata::get_camera_metadata_tag_name);
+                assert(CameraMetadata::get_camera_metadata_tag_type);
+                assert(CameraMetadata::get_camera_metadata_size);
+                assert(CameraMetadata::sort_camera_metadata);
+                assert(CameraMetadata::update_camera_metadata_entry);
+                assert(CameraMetadata::validate_camera_metadata_structure);
+                assert(CameraMetadata::camera_metadata_section_bounds);
+                assert(CameraMetadata::camera_metadata_section_names);
+                assert(CameraMetadata::camera_metadata_type_names);
+            }
+        }
+    }
 }
+
+void CameraMetadata_libCameraMetadataClose()
+{
+    if (CameraMetadata::libcamera_metadata_handle != NULL) {
+      dlclose(CameraMetadata::libcamera_metadata_handle);
+    }
+}
+
+CameraMetadata::CameraMetadata() :
+        mBuffer(NULL), mLocked(false) {}
+
 
 CameraMetadata::CameraMetadata(size_t entryCapacity, size_t dataCapacity) :
         mLocked(false)
 {
-    mBuffer = allocate_camera_metadata(entryCapacity, dataCapacity);
+    if (NULL == CameraMetadata::allocate_camera_metadata) {
+        add_camera_metadata_entry = NULL;
+        allocate_camera_metadata = NULL;
+        allocate_copy_camera_metadata_checked = NULL;
+        append_camera_metadata = NULL;
+        calculate_camera_metadata_entry_data_size = NULL;
+        clone_camera_metadata = NULL;
+        copy_camera_metadata = NULL;
+        delete_camera_metadata_entry = NULL;
+        dump_indented_camera_metadata = NULL;
+        find_camera_metadata_entry = NULL;
+        find_camera_metadata_ro_entry = NULL;
+        free_camera_metadata = NULL;
+        get_camera_metadata_alignment = NULL;
+        get_camera_metadata_compact_size = NULL;
+        get_camera_metadata_data_capacity = NULL;
+        get_camera_metadata_data_count = NULL;
+        get_camera_metadata_entry_capacity = NULL;
+        get_camera_metadata_entry_count = NULL;
+        get_camera_metadata_section_name = NULL;
+        get_camera_metadata_tag_name = NULL;
+        get_camera_metadata_tag_type = NULL;
+        get_camera_metadata_size = NULL;
+        sort_camera_metadata = NULL;
+        update_camera_metadata_entry = NULL;
+        validate_camera_metadata_structure = NULL;
+        camera_metadata_section_bounds = NULL;
+        camera_metadata_section_names = NULL;
+        camera_metadata_type_names = NULL;
+        CameraMetadata_libCameraMetadataClose();
+    }
+
+    if (CameraMetadata::allocate_camera_metadata != NULL) {
+        mBuffer = CameraMetadata::allocate_camera_metadata(entryCapacity, dataCapacity);
+    }
+
+    assert(CameraMetadata::allocate_camera_metadata != NULL);
 }
 
 CameraMetadata::CameraMetadata(const CameraMetadata &other) :
         mLocked(false) {
-    mBuffer = clone_camera_metadata(other.mBuffer);
+    if (NULL == CameraMetadata::clone_camera_metadata) {
+        add_camera_metadata_entry = NULL;
+        allocate_camera_metadata = NULL;
+        allocate_copy_camera_metadata_checked = NULL;
+        append_camera_metadata = NULL;
+        calculate_camera_metadata_entry_data_size = NULL;
+        clone_camera_metadata = NULL;
+        copy_camera_metadata = NULL;
+        delete_camera_metadata_entry = NULL;
+        dump_indented_camera_metadata = NULL;
+        find_camera_metadata_entry = NULL;
+        find_camera_metadata_ro_entry = NULL;
+        free_camera_metadata = NULL;
+        get_camera_metadata_alignment = NULL;
+        get_camera_metadata_compact_size = NULL;
+        get_camera_metadata_data_capacity = NULL;
+        get_camera_metadata_data_count = NULL;
+        get_camera_metadata_entry_capacity = NULL;
+        get_camera_metadata_entry_count = NULL;
+        get_camera_metadata_section_name = NULL;
+        get_camera_metadata_tag_name = NULL;
+        get_camera_metadata_tag_type = NULL;
+        get_camera_metadata_size = NULL;
+        sort_camera_metadata = NULL;
+        update_camera_metadata_entry = NULL;
+        validate_camera_metadata_structure = NULL;
+        camera_metadata_section_bounds = NULL;
+        camera_metadata_section_names = NULL;
+        camera_metadata_type_names = NULL;
+        CameraMetadata_libCameraMetadataClose();
+    }
+
+    if (CameraMetadata::clone_camera_metadata != NULL) {
+        mBuffer = CameraMetadata::clone_camera_metadata(other.mBuffer);
+    }
+
+    assert(CameraMetadata::clone_camera_metadata != NULL);
 }
 
 CameraMetadata::CameraMetadata(camera_metadata_t *buffer) :
@@ -73,7 +367,7 @@ CameraMetadata &CameraMetadata::operator=(const camera_metadata_t *buffer) {
     }
 
     if (!!(buffer != mBuffer)) {
-        camera_metadata_t *newBuffer = clone_camera_metadata(buffer);
+        camera_metadata_t *newBuffer = CameraMetadata::clone_camera_metadata(buffer);
         clear();
         mBuffer = newBuffer;
     }
@@ -120,7 +414,7 @@ void CameraMetadata::clear() {
         return;
     }
     if (mBuffer) {
-        free_camera_metadata(mBuffer);
+        CameraMetadata::free_camera_metadata(mBuffer);
         mBuffer = NULL;
     }
 }
@@ -133,7 +427,7 @@ void CameraMetadata::acquire(camera_metadata_t *buffer) {
     clear();
     mBuffer = buffer;
 
-    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
+    assert(CameraMetadata::validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
 }
 
 void CameraMetadata::acquire(CameraMetadata &other) {
@@ -153,16 +447,16 @@ status_t CameraMetadata::append(const camera_metadata_t* other) {
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    size_t extraEntries = get_camera_metadata_entry_count(other);
-    size_t extraData = get_camera_metadata_data_count(other);
+    size_t extraEntries = CameraMetadata::get_camera_metadata_entry_count(other);
+    size_t extraData = CameraMetadata::get_camera_metadata_data_count(other);
     resizeIfNeeded(extraEntries, extraData);
 
-    return append_camera_metadata(mBuffer, other);
+    return CameraMetadata::append_camera_metadata(mBuffer, other);
 }
 
 size_t CameraMetadata::entryCount() const {
     return (mBuffer == NULL) ? 0 :
-            get_camera_metadata_entry_count(mBuffer);
+            CameraMetadata::get_camera_metadata_entry_count(mBuffer);
 }
 
 bool CameraMetadata::isEmpty() const {
@@ -174,11 +468,11 @@ status_t CameraMetadata::sort() {
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    return sort_camera_metadata(mBuffer);
+    return CameraMetadata::sort_camera_metadata(mBuffer);
 }
 
 status_t CameraMetadata::checkType(uint32_t tag, uint8_t expectedType) {
-    int tagType = get_camera_metadata_tag_type(tag);
+    int tagType = CameraMetadata::get_camera_metadata_tag_type(tag);
     if (tagType == -1) {
         QMMF_ERROR("Update metadata entry: Unknown tag %u", tag);
         return -ENOSYS;
@@ -186,9 +480,9 @@ status_t CameraMetadata::checkType(uint32_t tag, uint8_t expectedType) {
     if ( tagType != expectedType) {
         QMMF_ERROR("Mismatched tag type when updating entry %s (%u) of type %s; "
                 "got type %s data instead ",
-                get_camera_metadata_tag_name(tag), tag,
-                camera_metadata_type_names[tagType],
-                camera_metadata_type_names[expectedType]);
+                CameraMetadata::get_camera_metadata_tag_name(tag), tag,
+                CameraMetadata::camera_metadata_type_names[tagType],
+                CameraMetadata::camera_metadata_type_names[expectedType]);
         return -ENOSYS;
     }
     return 0;
@@ -293,14 +587,14 @@ status_t CameraMetadata::updateImpl(uint32_t tag, const void *data,
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    int type = get_camera_metadata_tag_type(tag);
+    int type = CameraMetadata::get_camera_metadata_tag_type(tag);
     if (type == -1) {
         QMMF_ERROR("%s: Tag %u not found", __FUNCTION__, tag);
         return -EINVAL;
     }
     // Safety check - ensure that data isn't pointing to this metadata, since
     // that would get invalidated if a resize is needed
-    size_t bufferSize = get_camera_metadata_size(mBuffer);
+    size_t bufferSize = CameraMetadata::get_camera_metadata_size(mBuffer);
     uintptr_t bufAddr = reinterpret_cast<uintptr_t>(mBuffer);
     uintptr_t dataAddr = reinterpret_cast<uintptr_t>(data);
     if (dataAddr > bufAddr && dataAddr < (bufAddr + bufferSize)) {
@@ -309,37 +603,37 @@ status_t CameraMetadata::updateImpl(uint32_t tag, const void *data,
         return -ENOSYS;
     }
 
-    size_t data_size = calculate_camera_metadata_entry_data_size(type,
+    size_t data_size = CameraMetadata::calculate_camera_metadata_entry_data_size(type,
             data_count);
 
     res = resizeIfNeeded(1, data_size);
 
     if (res == 0) {
         camera_metadata_entry_t entry;
-        res = find_camera_metadata_entry(mBuffer, tag, &entry);
+        res = CameraMetadata::find_camera_metadata_entry(mBuffer, tag, &entry);
         if (res == -ENOENT) {
-            res = add_camera_metadata_entry(mBuffer,
+            res = CameraMetadata::add_camera_metadata_entry(mBuffer,
                     tag, data, data_count);
         } else if (res == 0) {
-            res = update_camera_metadata_entry(mBuffer,
+            res = CameraMetadata::update_camera_metadata_entry(mBuffer,
                     entry.index, data, data_count, NULL);
         }
     }
 
     if (res != 0) {
         QMMF_ERROR("%s: Unable to update metadata entry %s.%s (%x): %s (%u)",
-                __FUNCTION__, get_camera_metadata_section_name(tag),
-                get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
+                __FUNCTION__, CameraMetadata::get_camera_metadata_section_name(tag),
+                CameraMetadata::get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
     }
 
-    assert(validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
+    assert(CameraMetadata::validate_camera_metadata_structure(mBuffer, /*size*/NULL) == 0);
 
     return res;
 }
 
 bool CameraMetadata::exists(uint32_t tag) const {
     camera_metadata_ro_entry entry;
-    return find_camera_metadata_ro_entry(mBuffer, tag, &entry) == 0;
+    return CameraMetadata::find_camera_metadata_ro_entry(mBuffer, tag, &entry) == 0;
 }
 
 camera_metadata_entry_t CameraMetadata::find(uint32_t tag) {
@@ -350,7 +644,7 @@ camera_metadata_entry_t CameraMetadata::find(uint32_t tag) {
         entry.count = 0;
         return entry;
     }
-    res = find_camera_metadata_entry(mBuffer, tag, &entry);
+    res = CameraMetadata::find_camera_metadata_entry(mBuffer, tag, &entry);
     if (res != 0) {
         entry.count = 0;
         entry.data.u8 = NULL;
@@ -361,7 +655,7 @@ camera_metadata_entry_t CameraMetadata::find(uint32_t tag) {
 camera_metadata_ro_entry_t CameraMetadata::find(uint32_t tag) const {
     status_t res;
     camera_metadata_ro_entry entry;
-    res = find_camera_metadata_ro_entry(mBuffer, tag, &entry);
+    res = CameraMetadata::find_camera_metadata_ro_entry(mBuffer, tag, &entry);
     if (res != 0 ) {
         entry.count = 0;
         entry.data.u8 = NULL;
@@ -376,47 +670,47 @@ status_t CameraMetadata::erase(uint32_t tag) {
         QMMF_ERROR("%s: CameraMetadata is locked", __FUNCTION__);
         return -ENOSYS;
     }
-    res = find_camera_metadata_entry(mBuffer, tag, &entry);
+    res = CameraMetadata::find_camera_metadata_entry(mBuffer, tag, &entry);
     if (res == -ENOENT) {
         return 0;
     } else if (res != 0) {
         QMMF_ERROR("%s: Error looking for entry %s.%s (%x): %s %u",
                 __FUNCTION__,
-                get_camera_metadata_section_name(tag),
-                get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
+                CameraMetadata::get_camera_metadata_section_name(tag),
+                CameraMetadata::get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
         return res;
     }
-    res = delete_camera_metadata_entry(mBuffer, entry.index);
+    res = CameraMetadata::delete_camera_metadata_entry(mBuffer, entry.index);
     if (res != 0) {
         QMMF_ERROR("%s: Error deleting entry %s.%s (%x): %s %u",
                 __FUNCTION__,
-                get_camera_metadata_section_name(tag),
-                get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
+                CameraMetadata::get_camera_metadata_section_name(tag),
+                CameraMetadata::get_camera_metadata_tag_name(tag), tag, strerror(-res), res);
     }
     return res;
 }
 
 void CameraMetadata::dump(int fd, int verbosity, int indentation) const {
-    dump_indented_camera_metadata(mBuffer, fd, verbosity, indentation);
+    CameraMetadata::dump_indented_camera_metadata(mBuffer, fd, verbosity, indentation);
 }
 
 status_t CameraMetadata::resizeIfNeeded(size_t extraEntries, size_t extraData) {
     if (mBuffer == NULL) {
-        mBuffer = allocate_camera_metadata(extraEntries * 2, extraData * 2);
+        mBuffer = CameraMetadata::allocate_camera_metadata(extraEntries * 2, extraData * 2);
         if (mBuffer == NULL) {
             QMMF_ERROR("%s: Can't allocate larger metadata buffer", __FUNCTION__);
             return -ENOENT;
         }
     } else {
-        size_t currentEntryCount = get_camera_metadata_entry_count(mBuffer);
-        size_t currentEntryCap = get_camera_metadata_entry_capacity(mBuffer);
+        size_t currentEntryCount = CameraMetadata::get_camera_metadata_entry_count(mBuffer);
+        size_t currentEntryCap = CameraMetadata::get_camera_metadata_entry_capacity(mBuffer);
         size_t newEntryCount = currentEntryCount +
                 extraEntries;
         newEntryCount = (newEntryCount > currentEntryCap) ?
                 newEntryCount * 2 : currentEntryCap;
 
-        size_t currentDataCount = get_camera_metadata_data_count(mBuffer);
-        size_t currentDataCap = get_camera_metadata_data_capacity(mBuffer);
+        size_t currentDataCount = CameraMetadata::get_camera_metadata_data_count(mBuffer);
+        size_t currentDataCap = CameraMetadata::get_camera_metadata_data_capacity(mBuffer);
         size_t newDataCount = currentDataCount +
                 extraData;
         newDataCount = (newDataCount > currentDataCap) ?
@@ -425,14 +719,14 @@ status_t CameraMetadata::resizeIfNeeded(size_t extraEntries, size_t extraData) {
         if (newEntryCount > currentEntryCap ||
                 newDataCount > currentDataCap) {
             camera_metadata_t *oldBuffer = mBuffer;
-            mBuffer = allocate_camera_metadata(newEntryCount,
+            mBuffer = CameraMetadata::allocate_camera_metadata(newEntryCount,
                     newDataCount);
             if (mBuffer == NULL) {
                 QMMF_ERROR("%s: Can't allocate larger metadata buffer", __FUNCTION__);
                 return -ENOENT;
             }
-            append_camera_metadata(mBuffer, oldBuffer);
-            free_camera_metadata(oldBuffer);
+            CameraMetadata::append_camera_metadata(mBuffer, oldBuffer);
+            CameraMetadata::free_camera_metadata(oldBuffer);
         }
     }
     return 0;
@@ -459,7 +753,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
         return err;
     }
     const size_t blobSize = static_cast<size_t>(blobSizeTmp);
-    const size_t alignment = get_camera_metadata_alignment();
+    const size_t alignment = CameraMetadata::get_camera_metadata_alignment();
 
     // Special case: zero blob size means zero sized (NULL) metadata.
     if (blobSize == 0) {
@@ -509,7 +803,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
                        reinterpret_cast<const camera_metadata_t*>(metadataStart);
         QMMF_VERBOSE("%s: alignment is: %zu, metadata start: %p, offset: %zu",
                 __FUNCTION__, alignment, tmp, offset);
-        metadata = allocate_copy_camera_metadata_checked(tmp, metadataSize);
+        metadata = CameraMetadata::allocate_copy_camera_metadata_checked(tmp, metadataSize);
         if (metadata == NULL) {
             // We consider that allocation only fails if the validation
             // also failed, therefore the readFromParcel was a failure.
@@ -524,7 +818,7 @@ status_t CameraMetadata::readFromParcel(const Parcel& data,
         *out = metadata;
     } else if (metadata != NULL) {
         QMMF_VERBOSE("%s: Freed camera metadata at %p", __FUNCTION__, metadata);
-        free_camera_metadata(metadata);
+        CameraMetadata::free_camera_metadata(metadata);
     }
 
     return err;
@@ -564,8 +858,8 @@ status_t CameraMetadata::writeToParcel(Parcel& data,
      * padding and metadata into the blob. Since we don't know the alignment
      * offset before writeBlob. Then write the metadata to aligned offset.
      */
-    const size_t metadataSize = get_camera_metadata_compact_size(metadata);
-    const size_t alignment = get_camera_metadata_alignment();
+    const size_t metadataSize = CameraMetadata::get_camera_metadata_compact_size(metadata);
+    const size_t alignment = CameraMetadata::get_camera_metadata_alignment();
     const size_t blobSize = metadataSize + alignment;
     res = data.writeInt32(static_cast<int32_t>(blobSize));
     if (res != 0) {
@@ -607,11 +901,12 @@ status_t CameraMetadata::writeToParcel(Parcel& data,
         QMMF_VERBOSE("%s: alignment is: %zu, metadata start: %p, offset: %zu",
                 __FUNCTION__, alignment,
                 reinterpret_cast<const void *>(metadataStart), offset);
-        copy_camera_metadata(reinterpret_cast<void*>(metadataStart), metadataSize, metadata);
+        CameraMetadata::copy_camera_metadata(reinterpret_cast<void*>(metadataStart),
+                metadataSize, metadata);
 
         // Not too big of a problem since receiving side does hard validation
         // Don't check the size since the compact size could be larger
-        if (validate_camera_metadata_structure(metadata, /*size*/NULL) != 0) {
+        if (CameraMetadata::validate_camera_metadata_structure(metadata, /*size*/NULL) != 0) {
             QMMF_WARN("%s: Failed to validate metadata %p before writing blob",
                    __FUNCTION__, metadata);
         }
@@ -708,7 +1003,8 @@ status_t CameraMetadata::getTagFromName(const char *name,
     size_t totalSectionCount = ANDROID_SECTION_COUNT + vendorSectionCount;
     for (size_t i = 0; i < totalSectionCount; ++i) {
 
-        const char *str = (i < ANDROID_SECTION_COUNT) ? camera_metadata_section_names[i] :
+        const char *str = (i < ANDROID_SECTION_COUNT) ?
+                CameraMetadata::camera_metadata_section_names[i] :
                 vendorSections[i - ANDROID_SECTION_COUNT].c_str();
 
         if (str == nullptr) {
@@ -751,11 +1047,11 @@ status_t CameraMetadata::getTagFromName(const char *name,
     if (sectionIndex < ANDROID_SECTION_COUNT) {
         // Match built-in tags (typically android.*)
         uint32_t tagBegin, tagEnd; // [tagBegin, tagEnd)
-        tagBegin = camera_metadata_section_bounds[sectionIndex][0];
-        tagEnd = camera_metadata_section_bounds[sectionIndex][1];
+        tagBegin = CameraMetadata::camera_metadata_section_bounds[sectionIndex][0];
+        tagEnd = CameraMetadata::camera_metadata_section_bounds[sectionIndex][1];
 
         for (candidateTag = tagBegin; candidateTag < tagEnd; ++candidateTag) {
-            const char *tagName = get_camera_metadata_tag_name(candidateTag);
+            const char *tagName = CameraMetadata::get_camera_metadata_tag_name(candidateTag);
 
             if (tagName != NULL && strcmp(nameTagName, tagName) == 0) {
                 QMMF_VERBOSE("%s: Found matched tag '%s' (%u)",

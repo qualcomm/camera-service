@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -25,6 +25,57 @@
 #include <vector>
 
 #include <system/camera_metadata.h>
+
+using add_camera_metadata_entry_fnp =
+    decltype(add_camera_metadata_entry);
+using allocate_camera_metadata_fnp =
+    decltype(allocate_camera_metadata);
+using allocate_copy_camera_metadata_checked_fnp =
+    decltype(allocate_copy_camera_metadata_checked);
+using append_camera_metadata_fnp =
+    decltype(append_camera_metadata);
+using calculate_camera_metadata_entry_data_size_fnp =
+    decltype(calculate_camera_metadata_entry_data_size);
+using clone_camera_metadata_fnp =
+    decltype(clone_camera_metadata);
+using copy_camera_metadata_fnp =
+    decltype(copy_camera_metadata);
+using delete_camera_metadata_entry_fnp =
+    decltype(delete_camera_metadata_entry);
+using dump_indented_camera_metadata_fnp =
+    decltype(dump_indented_camera_metadata);
+using find_camera_metadata_entry_fnp =
+    decltype(find_camera_metadata_entry);
+using find_camera_metadata_ro_entry_fnp =
+    decltype(find_camera_metadata_ro_entry);
+using free_camera_metadata_fnp =
+    decltype(free_camera_metadata);
+using get_camera_metadata_alignment_fnp =
+    decltype(get_camera_metadata_alignment);
+using get_camera_metadata_compact_size_fnp =
+    decltype(get_camera_metadata_compact_size);
+using get_camera_metadata_data_capacity_fnp =
+    decltype(get_camera_metadata_data_capacity);
+using get_camera_metadata_data_count_fnp =
+    decltype(get_camera_metadata_data_count);
+using get_camera_metadata_entry_capacity_fnp =
+    decltype(get_camera_metadata_entry_capacity);
+using get_camera_metadata_entry_count_fnp =
+    decltype(get_camera_metadata_entry_count);
+using get_camera_metadata_section_name_fnp =
+    decltype(get_camera_metadata_section_name);
+using get_camera_metadata_tag_name_fnp =
+    decltype(get_camera_metadata_tag_name);
+using get_camera_metadata_tag_type_fnp =
+    decltype(get_camera_metadata_tag_type);
+using get_camera_metadata_size_fnp =
+    decltype(get_camera_metadata_size);
+using sort_camera_metadata_fnp =
+    decltype(sort_camera_metadata);
+using update_camera_metadata_entry_fnp =
+    decltype(update_camera_metadata_entry);
+using validate_camera_metadata_structure_fnp =
+    decltype(validate_camera_metadata_structure);
 
 typedef int32_t status_t;
 
@@ -230,6 +281,37 @@ class CameraMetadata {
      */
     static status_t getTagFromName(const char *name,
             const VendorTagDescriptor* vTags, uint32_t *tag);
+
+    static void* libcamera_metadata_handle;
+    static add_camera_metadata_entry_fnp* add_camera_metadata_entry;
+    static allocate_camera_metadata_fnp* allocate_camera_metadata;
+    static allocate_copy_camera_metadata_checked_fnp* allocate_copy_camera_metadata_checked;
+    static append_camera_metadata_fnp* append_camera_metadata;
+    static calculate_camera_metadata_entry_data_size_fnp* calculate_camera_metadata_entry_data_size;
+    static clone_camera_metadata_fnp* clone_camera_metadata;
+    static copy_camera_metadata_fnp* copy_camera_metadata;
+    static delete_camera_metadata_entry_fnp* delete_camera_metadata_entry;
+    static dump_indented_camera_metadata_fnp* dump_indented_camera_metadata;
+    static find_camera_metadata_entry_fnp* find_camera_metadata_entry;
+    static find_camera_metadata_ro_entry_fnp* find_camera_metadata_ro_entry;
+    static free_camera_metadata_fnp* free_camera_metadata;
+    static get_camera_metadata_alignment_fnp* get_camera_metadata_alignment;
+    static get_camera_metadata_compact_size_fnp* get_camera_metadata_compact_size;
+    static get_camera_metadata_data_capacity_fnp* get_camera_metadata_data_capacity;
+    static get_camera_metadata_data_count_fnp* get_camera_metadata_data_count;
+    static get_camera_metadata_entry_capacity_fnp* get_camera_metadata_entry_capacity;
+    static get_camera_metadata_entry_count_fnp* get_camera_metadata_entry_count;
+    static get_camera_metadata_section_name_fnp* get_camera_metadata_section_name;
+    static get_camera_metadata_tag_name_fnp* get_camera_metadata_tag_name;
+    static get_camera_metadata_tag_type_fnp* get_camera_metadata_tag_type;
+    static get_camera_metadata_size_fnp* get_camera_metadata_size;
+    static sort_camera_metadata_fnp* sort_camera_metadata;
+    static update_camera_metadata_entry_fnp* update_camera_metadata_entry;
+    static validate_camera_metadata_structure_fnp* validate_camera_metadata_structure;
+
+    static unsigned int** camera_metadata_section_bounds;
+    static const char** camera_metadata_section_names;
+    static const char** camera_metadata_type_names;
 
   private:
     camera_metadata_t *mBuffer;

@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -24,7 +24,6 @@
 #include <binder/Parcel.h>
 #include <utils/String8.h>
 #endif
-#include <system/camera_metadata.h>
 
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include <common/utils/qmmf_log.h>
@@ -35,10 +34,20 @@
 #include <algorithm>
 #include <cstdlib>
 #include <forward_list>
+#include <dlfcn.h>
 
 #ifdef HAVE_BINDER
 using namespace android;
 #endif
+
+extern "C" {
+int set_camera_metadata_vendor_ops(const vendor_tag_ops_t *query_ops);
+} /* extern "C" */
+
+using set_camera_metadata_vendor_ops_fnp = decltype(set_camera_metadata_vendor_ops);
+
+set_camera_metadata_vendor_ops_fnp*
+    libcamera_metadata_set_camera_metadata_vendor_ops = NULL;
 
 namespace qmmf {
 
@@ -49,16 +58,50 @@ static void vendor_tag_descriptor_get_all_tags(const vendor_tag_ops_t* v, uint32
 static const char* vendor_tag_descriptor_get_section_name(const vendor_tag_ops_t* v, uint32_t tag);
 static const char* vendor_tag_descriptor_get_tag_name(const vendor_tag_ops_t* v, uint32_t tag);
 static int vendor_tag_descriptor_get_tag_type(const vendor_tag_ops_t* v, uint32_t tag);
-
-int set_camera_metadata_vendor_ops(const vendor_tag_ops_t *query_ops);
 } /* extern "C" */
 
+void* VendorTagDescriptor::libcamera_metadata_handle = NULL;
+const char** VendorTagDescriptor::camera_metadata_type_names = NULL;
 
 static std::mutex sLock;
 static std::shared_ptr<VendorTagDescriptor> sGlobalVendorTagDescriptor;
 
-VendorTagDescriptor::~VendorTagDescriptor() {
+void VendorTagDescriptor_libCameraMetadataOpen() __attribute__ ((constructor (101)));
+void VendorTagDescriptor_libCameraMetadataClose() __attribute__ ((destructor (101)));
+
+void VendorTagDescriptor_libCameraMetadataOpen()
+{
+    if (NULL == VendorTagDescriptor::libcamera_metadata_handle) {
+        VendorTagDescriptor::libcamera_metadata_handle =
+            dlopen("libcamera_metadata.so", RTLD_LAZY);
+        char* err = dlerror();
+
+        if ((NULL != VendorTagDescriptor::libcamera_metadata_handle) && (NULL == err)) {
+            libcamera_metadata_set_camera_metadata_vendor_ops =
+                reinterpret_cast<set_camera_metadata_vendor_ops_fnp*>(
+                dlsym(VendorTagDescriptor::libcamera_metadata_handle,
+                "set_camera_metadata_vendor_ops"));
+            VendorTagDescriptor::camera_metadata_type_names =
+                reinterpret_cast<const char**>(
+                dlsym(VendorTagDescriptor::libcamera_metadata_handle,
+                "camera_metadata_type_names"));
+            char* dlsym_err = dlerror();
+            if (dlsym_err != NULL) {
+                assert(libcamera_metadata_set_camera_metadata_vendor_ops);
+                assert(VendorTagDescriptor::camera_metadata_type_names);
+            }
+        }
+    }
 }
+
+void VendorTagDescriptor_libCameraMetadataClose()
+{
+    if (VendorTagDescriptor::libcamera_metadata_handle != NULL) {
+      dlclose(VendorTagDescriptor::libcamera_metadata_handle);
+    }
+}
+
+VendorTagDescriptor::~VendorTagDescriptor() {}
 
 int32_t VendorTagDescriptor::createDescriptorFromOps(
     const vendor_tag_ops_t* vOps,
@@ -417,7 +460,7 @@ void VendorTagDescriptor::dump(int fd, int verbosity, int indentation) const {
         }
         auto &desc = mtagArrayDetail.at(tag);
         const char* typeName = (desc.tagType >= 0 && desc.tagType < NUM_TYPES) ?
-                camera_metadata_type_names[desc.tagType] : "UNKNOWN";
+                VendorTagDescriptor::camera_metadata_type_names[desc.tagType] : "UNKNOWN";
         dprintf(fd, "%*s0x%x (%s) with type %d (%s) defined in section %s\n", indentation + 2,
             "", tag, desc.tagName.c_str(), desc.tagType, typeName, desc.sectionName.c_str());
     }
@@ -439,7 +482,7 @@ int32_t VendorTagDescriptor::setAsGlobalVendorTagDescriptor(
         opsPtr->get_tag_name = vendor_tag_descriptor_get_tag_name;
         opsPtr->get_tag_type = vendor_tag_descriptor_get_tag_type;
     }
-    if((res = set_camera_metadata_vendor_ops(opsPtr)) != 0) {
+    if((res = libcamera_metadata_set_camera_metadata_vendor_ops(opsPtr)) != 0) {
         QMMF_ERROR("%s: Could not set vendor tag descriptor, received error %s (%d)."
                 , __FUNCTION__, strerror(-res), res);
     }
@@ -448,7 +491,7 @@ int32_t VendorTagDescriptor::setAsGlobalVendorTagDescriptor(
 
 void VendorTagDescriptor::clearGlobalVendorTagDescriptor() {
     std::unique_lock<std::mutex> unl{sLock};
-    set_camera_metadata_vendor_ops(NULL);
+    libcamera_metadata_set_camera_metadata_vendor_ops(NULL);
     sGlobalVendorTagDescriptor.reset();
 }
 

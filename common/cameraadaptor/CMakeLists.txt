@@ -44,7 +44,8 @@ target_compile_definitions(qmmf_camera_adaptor PRIVATE
 )
 
 install(TARGETS qmmf_camera_adaptor DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata qmmf_utils pthread dl qmmf_memory_interface)
+target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata camera_metadata qmmf_utils)
+target_link_libraries(qmmf_camera_adaptor pthread ${CMAKE_DL_LIBS} qmmf_memory_interface)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_adaptor log binder utils cutils hardware)
 else()

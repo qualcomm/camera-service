@@ -14,12 +14,13 @@
  * limitations under the License.
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #ifndef QMMF_VENDOR_TAG_DESCRIPTOR_H
 
+#include <system/camera_metadata.h>
 #include <system/camera_vendor_tags.h>
 #include <memory>
 #include <map>
@@ -166,10 +167,14 @@ class VendorTagDescriptor {
          * This will contain NULL if no vendor tags are defined.
          */
         static std::shared_ptr<VendorTagDescriptor> getGlobalVendorTagDescriptor();
+
+        static void* libcamera_metadata_handle;
+        static const char** camera_metadata_type_names;
+
     protected:
         struct tag_detail {
           std::string sectionName, tagName;
-          int32_t tagType;  
+          int32_t tagType;
         };
         // tag ids
         std::vector<uint32_t> mtagArray;

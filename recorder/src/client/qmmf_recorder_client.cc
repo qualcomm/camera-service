@@ -123,9 +123,37 @@ using ::std::underlying_type;
 #else
 class RecorderServiceProxy: public IRecorderService {
  public:
-  RecorderServiceProxy() {}
+  void* libcamera_metadata_handle_;
+  copy_camera_metadata_fnp* copy_camera_metadata_;
+  get_camera_metadata_compact_size_fnp* get_camera_metadata_compact_size_;
+
+  RecorderServiceProxy() {
+    libcamera_metadata_handle_ = dlopen("libcamera_metadata.so", RTLD_LAZY);
+    char* err = dlerror();
+
+    if ((NULL != libcamera_metadata_handle_) && (NULL == err)) {
+      copy_camera_metadata_ =
+            reinterpret_cast<copy_camera_metadata_fnp*>(
+            dlsym(libcamera_metadata_handle_, "copy_camera_metadata"));
+      get_camera_metadata_compact_size_ =
+            reinterpret_cast<get_camera_metadata_compact_size_fnp*>(
+            dlsym(libcamera_metadata_handle_, "get_camera_metadata_compact_size"));
+      char* dlsym_err = dlerror();
+      if (dlsym_err != NULL) {
+        assert(copy_camera_metadata_);
+        assert(get_camera_metadata_compact_size_);
+      }
+    }
+
+    assert(libcamera_metadata_handle_ != NULL);
+  }
+
   ~RecorderServiceProxy() {
     QMMF_DEBUG("%s: Enter", __func__);
+    if (libcamera_metadata_handle_ != NULL) {
+      dlclose(libcamera_metadata_handle_);
+    }
+
     if (socket_ != -1) {
       close(socket_);
     }
@@ -538,10 +566,10 @@ class RecorderServiceProxy: public IRecorderService {
     uint32_t size = meta.size();
     for (uint32_t i = 0; i < size; i++) {
       const camera_metadata_t *meta_buffer = meta[i].getAndLock();
-      uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+      uint32_t size = get_camera_metadata_compact_size_(meta_buffer);
       std::string *data = cmd.mutable_capture_image()->add_meta();
       data->resize(size);
-      copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+      copy_camera_metadata_(&data->at(0), data->size(), meta_buffer);
       const_cast<CameraMetadata&>(meta[i]).unlock(meta_buffer);
     }
 
@@ -657,10 +685,10 @@ class RecorderServiceProxy: public IRecorderService {
     cmd.mutable_set_camera_param()->set_camera_id(camera_id);
 
     const camera_metadata_t *meta_buffer = meta.getAndLock();
-    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+    uint32_t size = get_camera_metadata_compact_size_(meta_buffer);
     std::string *data = new std::string;
     data->resize(size);
-    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    auto copy_ptr = copy_camera_metadata_(&data->at(0), data->size(), meta_buffer);
     if (!copy_ptr) {
       QMMF_ERROR ("%s: Failed to copy metadata", __func__);
       return -1;
@@ -704,7 +732,8 @@ class RecorderServiceProxy: public IRecorderService {
     const std::string& data = resp.get_camera_param_resp().meta();
     uint8_t *raw_buf = new uint8_t[data.size()];
     camera_metadata_t *meta_buffer =
-        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+        copy_camera_metadata_(raw_buf, data.size(),
+            reinterpret_cast<const camera_metadata_t *>(data.data()));
     if (!meta_buffer) {
       QMMF_ERROR ("%s: Failed to copy metadata", __func__);
       return -1;
@@ -725,11 +754,11 @@ class RecorderServiceProxy: public IRecorderService {
     cmd.mutable_set_camera_session_param()->set_camera_id(camera_id);
 
     const camera_metadata_t *meta_buffer = meta.getAndLock();
-    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+    uint32_t size = get_camera_metadata_compact_size_(meta_buffer);
 
     std::string *data = new std::string;
     data->resize(size);
-    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    auto copy_ptr = copy_camera_metadata_(&data->at(0), data->size(), meta_buffer);
     if (!copy_ptr) {
       QMMF_ERROR ("%s: Failed to copy metadata", __func__);
       return -1;
@@ -795,7 +824,8 @@ class RecorderServiceProxy: public IRecorderService {
     const std::string& data = resp.get_default_capture_param_resp().meta();
     uint8_t *raw_buf = new uint8_t[data.size()];
     camera_metadata_t *meta_buffer =
-        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+        copy_camera_metadata_(raw_buf, data.size(),
+            reinterpret_cast<const camera_metadata_t *>(data.data()));
     if (!meta_buffer) {
       QMMF_ERROR ("%s: Failed to copy metadata", __func__);
       return -1;
@@ -829,7 +859,8 @@ class RecorderServiceProxy: public IRecorderService {
     const std::string& data = resp.get_camera_characteristics_resp().meta();
     uint8_t *raw_buf = new uint8_t[data.size()];
     camera_metadata_t *meta_buffer =
-        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+        copy_camera_metadata_(raw_buf, data.size(),
+            reinterpret_cast<const camera_metadata_t *>(data.data()));
     if (!meta_buffer) {
       QMMF_ERROR ("%s: Failed to copy metadata", __func__);
       return -1;

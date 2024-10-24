@@ -87,6 +87,9 @@ using gbm_bo_import_fnp = decltype(gbm_bo_import);
 using gbm_device_destroy_fnp = decltype(gbm_device_destroy);
 using gbm_create_device_fnp = decltype(gbm_create_device);
 
+using copy_camera_metadata_fnp = decltype(copy_camera_metadata);
+using get_camera_metadata_compact_size_fnp = decltype(get_camera_metadata_compact_size);
+
 namespace qmmf {
 
 namespace recorder {

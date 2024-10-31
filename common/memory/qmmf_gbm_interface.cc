@@ -65,6 +65,7 @@
 #endif // HAVE_ANDROID_UTILS
 #include <fcntl.h>
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "qmmf_gbm_interface.h"
 
 #ifndef LOG_TAG
@@ -455,7 +456,7 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   }
 
   char prop[PROP_VALUE_MAX];
-  property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
+  qmmf_property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
   std::string colorspace(prop);
 
   QMMF_INFO("%s: Using color space: %s", __func__, colorspace.c_str());

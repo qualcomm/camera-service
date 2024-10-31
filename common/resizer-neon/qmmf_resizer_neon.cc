@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "CommonNEONResizer"
@@ -68,7 +72,7 @@ RESIZER_STATUS NEONResizer::Init() {
 
   char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
-  property_get("persist.qmmf.rescaler.method", prop, "0");
+  qmmf_property_get("persist.qmmf.rescaler.method", prop, "0");
   auto value = static_cast<neonresizer::ResMethod>(atoi(prop));
   if (value < neonresizer::ResMethod::kRES_NUMBER) {
     method_ = value;

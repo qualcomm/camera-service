@@ -141,54 +141,6 @@ struct ReprocEntry {
   int64_t         timestamp;
 };
 
-/** Property:
- *
- *  This class defines property operations
- **/
-class Property {
- public:
-  /** Get
-   *    @property: property
-   *    @default_value: default value
-   *
-   * Gets requested property value
-   *
-   * return: property value
-   **/
-  template <typename T>
-  static T Get(std::string property, T default_value) {
-
-    T value = default_value;
-    char prop_val[PROP_VALUE_MAX];
-
-    std::stringstream s;
-    s << default_value;
-
-    property_get(property.c_str(), prop_val, s.str().c_str());
-
-    std::stringstream output(prop_val);
-    output >> value;
-    return value;
-  }
-
-  /** Set
-   *    @property: property
-   *    @value: value
-   *
-   * Sets requested property value
-   *
-   * return: nothing
-   **/
-  template <typename T>
-  static void Set(std::string property, T value) {
-
-    std::stringstream s;
-    s << value;
-
-    property_set(property.c_str(), s.str().c_str());
-  }
-};
-
 class Common {
  public:
   /** FromQmmfToHalFormat

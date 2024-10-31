@@ -46,6 +46,7 @@
 #include "properties.h"
 #endif
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "common/utils/qmmf_log.h"
 
 namespace qmmf {

@@ -77,6 +77,7 @@
 #include <QCamera3VendorTags.h>
 #endif
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_camera_context.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
 
@@ -1039,7 +1040,7 @@ status_t CameraContext::CreateStream(const StreamParam& param,
     char prop[PROP_VALUE_MAX];
 
     stream_id = port->GetCameraStreamId();
-    property_get("persist.qmmf.static.mem.alloc", prop, "0");
+    qmmf_property_get("persist.qmmf.static.mem.alloc", prop, "0");
     stream_prepared_[stream_id] = (std::stoi(prop) == 0) ? true : false;
 
     if (!stream_prepared_[stream_id]) {

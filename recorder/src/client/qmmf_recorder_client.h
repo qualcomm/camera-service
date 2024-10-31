@@ -67,6 +67,7 @@
 #include <set>
 #include <map>
 #include <mutex>
+#include <dlfcn.h>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include <qmmf-sdk/qmmf_recorder_params.h>
@@ -337,6 +338,7 @@ class ServiceCallbackHandler : public RecorderServiceCallbackStub {
   ~ServiceCallbackHandler();
 
  private:
+
   //Methods of BnRecorderServiceCallback.
   void NotifyRecorderEvent(EventType event_type, void *event_data,
                            size_t event_data_size) override;

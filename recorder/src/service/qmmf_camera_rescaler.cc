@@ -74,6 +74,7 @@
 #include "recorder/src/service/qmmf_camera_rescaler.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "common/resizer-neon/qmmf_resizer_neon.h"
 #include "common/resizer-c2d/qmmf_resizer_c2d.h"
 #ifdef ENABLE_RESCALER_FASTCV
@@ -96,11 +97,11 @@ CameraRescalerBase::CameraRescalerBase()
   char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
 #ifdef ENABLE_RESCALER_NEON
-  property_get("persist.qmmf.rescaler.type", prop, "Neon");
+  qmmf_property_get("persist.qmmf.rescaler.type", prop, "Neon");
 #elif ENABLE_RESCALER_C2D
-  property_get("persist.qmmf.rescaler.type", prop, "C2D");
+  qmmf_property_get("persist.qmmf.rescaler.type", prop, "C2D");
 #elif ENABLE_RESCALER_FASTCV
-  property_get("persist.qmmf.rescaler.type", prop, "FastCV");
+  qmmf_property_get("persist.qmmf.rescaler.type", prop, "FastCV");
 #endif
   std::string name = prop;
   if (name == "Neon") {
@@ -118,11 +119,11 @@ CameraRescalerBase::CameraRescalerBase()
   }
 
   memset(prop, 0, sizeof(prop));
-  property_get("persist.qipcam.rescaler.perf", prop, "0");
+  qmmf_property_get("persist.qipcam.rescaler.perf", prop, "0");
   uint32_t value = (uint32_t) atoi(prop);
   print_process_time_ = (value == 1) ? true : false;
 
-  property_get(PRESERVE_ASPECT_RATIO, prop, "1");
+  qmmf_property_get(PRESERVE_ASPECT_RATIO, prop, "1");
   value = (uint32_t) atoi(prop);
   rescaler_->aspect_ratio_preserve_ = (value == 1) ? true : false;
 

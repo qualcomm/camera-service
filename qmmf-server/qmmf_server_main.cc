@@ -49,6 +49,7 @@
 #include "properties.h"
 #endif
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/service/qmmf_recorder_service.h"
 

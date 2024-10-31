@@ -63,6 +63,7 @@
 
 #define LOG_TAG "RecorderService"
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_recorder_service.h"
 
 namespace qmmf {

@@ -109,6 +109,8 @@ if (RESIZER_NEON_ENABLED)
 add_subdirectory(common/resizer-neon)
 endif()
 
+add_subdirectory(common/propertyvault)
+
 add_subdirectory(common/utils)
 
 if (NOT HAVE_BINDER_H)

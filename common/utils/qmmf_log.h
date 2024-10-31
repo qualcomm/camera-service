@@ -66,14 +66,6 @@ static inline void unused(...) {};
 
 extern uint32_t qmmf_log_level;
 
-#define QMMF_GET_LOG_LEVEL()                               \
-  ({                                                       \
-    char prop[PROP_VALUE_MAX];                         \
-    property_get("persist.qmmf.sdk.log.level", prop, "0"); \
-    qmmf_log_level = atoi(prop);                           \
-  })
-
-
 #ifdef HAVE_ANDROID_UTILS
 #define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
 #define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
@@ -146,12 +138,6 @@ static inline void ftrace_async_end(const char* name, int32_t cookie) {
   len = snprintf(buffer, FTRACE_BUFFER_SIZE, "E|%s|%d\n", name, cookie);
   ftrace_write(buffer, len);
 }
-
-#define QMMF_KPI_GET_MASK() ({\
-char prop[PROP_VALUE_MAX];\
-property_get("persist.qmmf.kpi.debug", prop,\
-  std::to_string(DEFAULT_KPI_FLAG).c_str()); \
-kpi_debug_level = atoi (prop);})
 
 class BaseKpiObject {
 public:

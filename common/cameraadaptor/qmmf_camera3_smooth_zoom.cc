@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <stdio.h>
@@ -38,6 +42,7 @@
 #endif
 #include <qmmf_camera3_utils.h>
 #include <qmmf_camera3_device_client.h>
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_smooth_zoom.h"
 

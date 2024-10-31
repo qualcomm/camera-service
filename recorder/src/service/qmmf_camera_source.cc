@@ -71,6 +71,7 @@
 #include <errno.h>
 #include <hardware/camera3.h>
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"

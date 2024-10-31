@@ -69,6 +69,7 @@
 #include <random>
 #include <algorithm>
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/test/gtest/qmmf_gtest_common.h"
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 
@@ -141,68 +142,68 @@ void GtestCommon::SetUp() {
       { RecorderCallbackHandler(event_type, event_data, event_data_size); };
 
   char prop_val[PROP_VALUE_MAX];
-  property_get(PROP_DUMP_JPEG, prop_val, "0");
+  qmmf_property_get(PROP_DUMP_JPEG, prop_val, "0");
   is_dump_jpeg_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_DUMP_RAW, prop_val, "0");
+  qmmf_property_get(PROP_DUMP_RAW, prop_val, "0");
   is_dump_raw_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_DUMP_YUV_FRAMES, prop_val, "0");
+  qmmf_property_get(PROP_DUMP_YUV_FRAMES, prop_val, "0");
   is_dump_yuv_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_DUMP_YUV_FREQ, prop_val, DEFAULT_YUV_DUMP_FREQ);
+  qmmf_property_get(PROP_DUMP_YUV_FREQ, prop_val, DEFAULT_YUV_DUMP_FREQ);
   dump_yuv_freq_ = atoi(prop_val);
-  property_get(PROP_N_ITERATIONS, prop_val, DEFAULT_ITERATIONS);
+  qmmf_property_get(PROP_N_ITERATIONS, prop_val, DEFAULT_ITERATIONS);
   iteration_count_ = atoi(prop_val);
-  property_get(PROP_CAMERA_ID, prop_val, "0");
+  qmmf_property_get(PROP_CAMERA_ID, prop_val, "0");
   camera_id_ = atoi(prop_val);
-  property_get(PROP_RECORD_DURATION, prop_val, DEFAULT_RECORD_DURATION);
+  qmmf_property_get(PROP_RECORD_DURATION, prop_val, DEFAULT_RECORD_DURATION);
   record_duration_ = atoi(prop_val);
-  property_get(PROP_DUMP_THUMBNAIL, prop_val, "0");
+  qmmf_property_get(PROP_DUMP_THUMBNAIL, prop_val, "0");
   is_dump_thumb_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_BURST_N_IMAGES, prop_val, DEFAULT_BURST_COUNT);
+  qmmf_property_get(PROP_BURST_N_IMAGES, prop_val, DEFAULT_BURST_COUNT);
   burst_image_count_ = atoi(prop_val);
-  property_get(PROP_JPEG_QUALITY, prop_val, IMAGE_QUALITY);
+  qmmf_property_get(PROP_JPEG_QUALITY, prop_val, IMAGE_QUALITY);
   default_jpeg_quality_ = atoi(prop_val);
-  property_get(PROP_CDS_THRESHOLD, prop_val, "600");
+  qmmf_property_get(PROP_CDS_THRESHOLD, prop_val, "600");
   default_cds_threshold_ = atoi(prop_val);
-  property_get(PROP_EIS_H_MARGIN, prop_val, "-1.0");
+  qmmf_property_get(PROP_EIS_H_MARGIN, prop_val, "-1.0");
   eis_h_margin_ = atof(prop_val);
-  property_get(PROP_EIS_V_MARGIN, prop_val, "-1.0");
+  qmmf_property_get(PROP_EIS_V_MARGIN, prop_val, "-1.0");
   eis_v_margin_ = atof(prop_val);
-  property_get(PROP_FRAME_DEBUG, prop_val, "0");
+  qmmf_property_get(PROP_FRAME_DEBUG, prop_val, "0");
   is_frame_debug_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_SENSOR_CONFIG_FILE, prop_val, "");
+  qmmf_property_get(PROP_SENSOR_CONFIG_FILE, prop_val, "");
   sensor_mode_file_name_ = std::string(prop_val);
-  property_get(PROP_MEASURE_SOF_LATENCY, prop_val, "0");
+  qmmf_property_get(PROP_MEASURE_SOF_LATENCY, prop_val, "0");
   enable_sof_latency_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_AF_MODE, prop_val, "0");
+  qmmf_property_get(PROP_AF_MODE, prop_val, "0");
   af_mode_ = atoi(prop_val);
-  property_get(PROP_CAMERA_FPS, prop_val, DEFAULT_CAMERA_FPS);
+  qmmf_property_get(PROP_CAMERA_FPS, prop_val, DEFAULT_CAMERA_FPS);
   camera_fps_ = atof(prop_val);
-  property_get(PROP_EIS, prop_val, "0");
+  qmmf_property_get(PROP_EIS, prop_val, "0");
   is_eis_on_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_SHDR, prop_val, "0");
+  qmmf_property_get(PROP_SHDR, prop_val, "0");
   is_shdr_on_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_SNAPSHOT_STREAM_ON, prop_val, "0");
+  qmmf_property_get(PROP_SNAPSHOT_STREAM_ON, prop_val, "0");
   is_snap_stream_on_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_LDC, prop_val, "0");
+  qmmf_property_get(PROP_LDC, prop_val, "0");
   is_ldc_on_ = (atoi(prop_val) == 0) ? false : true;
-  property_get(PROP_LCAC, prop_val, "0");
+  qmmf_property_get(PROP_LCAC, prop_val, "0");
   is_lcac_on_ = (atoi(prop_val) == 0) ? false : true;
 
   // Read First Video Stream Params
   VideoStreamInfo stream { };
-  property_get(PROP_FIRST_STREAM_WIDTH, prop_val, DEFAULT_FIRST_STREAM_WIDTH);
+  qmmf_property_get(PROP_FIRST_STREAM_WIDTH, prop_val, DEFAULT_FIRST_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_FIRST_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_FIRST_STREAM_HEIGHT, prop_val,
                DEFAULT_FIRST_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_FIRST_STREAM_FPS, prop_val, DEFAULT_FIRST_STREAM_FPS);
+  qmmf_property_get(PROP_FIRST_STREAM_FPS, prop_val, DEFAULT_FIRST_STREAM_FPS);
   stream.fps = atof(prop_val);
 
   stream.source_stream_id = 0; // First Stream, Linked ID should be 0.
 
-  property_get(PROP_FIRST_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_FIRST_STREAM_FORMAT, prop_val,
                DEFAULT_FIRST_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -210,21 +211,21 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFirstStreamID, stream);
 
   // Read Second Video Stream Params
-  property_get(PROP_SECOND_STREAM_WIDTH, prop_val,
+  qmmf_property_get(PROP_SECOND_STREAM_WIDTH, prop_val,
                DEFAULT_SECOND_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_SECOND_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_SECOND_STREAM_HEIGHT, prop_val,
                DEFAULT_SECOND_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_SECOND_STREAM_FPS, prop_val, DEFAULT_SECOND_STREAM_FPS);
+  qmmf_property_get(PROP_SECOND_STREAM_FPS, prop_val, DEFAULT_SECOND_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  property_get(PROP_SECOND_STREAM_SOURCE_ID, prop_val, "0");
+  qmmf_property_get(PROP_SECOND_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  property_get(PROP_SECOND_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_SECOND_STREAM_FORMAT, prop_val,
                DEFAULT_SECOND_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -232,20 +233,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kSecondStreamID, stream);
 
   // Read Third Video Stream Params
-  property_get(PROP_THIRD_STREAM_WIDTH, prop_val, DEFAULT_THIRD_STREAM_WIDTH);
+  qmmf_property_get(PROP_THIRD_STREAM_WIDTH, prop_val, DEFAULT_THIRD_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_THIRD_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_THIRD_STREAM_HEIGHT, prop_val,
                DEFAULT_THIRD_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_THIRD_STREAM_FPS, prop_val, DEFAULT_THIRD_STREAM_FPS);
+  qmmf_property_get(PROP_THIRD_STREAM_FPS, prop_val, DEFAULT_THIRD_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  property_get(PROP_THIRD_STREAM_SOURCE_ID, prop_val, "0");
+  qmmf_property_get(PROP_THIRD_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  property_get(PROP_THIRD_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_THIRD_STREAM_FORMAT, prop_val,
                DEFAULT_THIRD_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -253,20 +254,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kThirdStreamID, stream);
 
   // Read Fourth Video Stream Params
-  property_get(PROP_FOURTH_STREAM_WIDTH, prop_val, DEFAULT_FOURTH_STREAM_WIDTH);
+  qmmf_property_get(PROP_FOURTH_STREAM_WIDTH, prop_val, DEFAULT_FOURTH_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_FOURTH_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_FOURTH_STREAM_HEIGHT, prop_val,
                DEFAULT_FOURTH_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_FOURTH_STREAM_FPS, prop_val, DEFAULT_FOURTH_STREAM_FPS);
+  qmmf_property_get(PROP_FOURTH_STREAM_FPS, prop_val, DEFAULT_FOURTH_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  property_get(PROP_FOURTH_STREAM_SOURCE_ID, prop_val, "0");
+  qmmf_property_get(PROP_FOURTH_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  property_get(PROP_FOURTH_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_FOURTH_STREAM_FORMAT, prop_val,
                DEFAULT_FOURTH_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -274,20 +275,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFourthStreamID, stream);
 
   // Read Fifth Video Stream Params
-  property_get(PROP_FIFTH_STREAM_WIDTH, prop_val, DEFAULT_FIFTH_STREAM_WIDTH);
+  qmmf_property_get(PROP_FIFTH_STREAM_WIDTH, prop_val, DEFAULT_FIFTH_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_FIFTH_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_FIFTH_STREAM_HEIGHT, prop_val,
                DEFAULT_FIFTH_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_FIFTH_STREAM_FPS, prop_val, DEFAULT_FIFTH_STREAM_FPS);
+  qmmf_property_get(PROP_FIFTH_STREAM_FPS, prop_val, DEFAULT_FIFTH_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  property_get(PROP_FIFTH_STREAM_SOURCE_ID, prop_val, "0");
+  qmmf_property_get(PROP_FIFTH_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  property_get(PROP_FIFTH_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_FIFTH_STREAM_FORMAT, prop_val,
                DEFAULT_FIFTH_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -295,46 +296,46 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFifthStreamID, stream);
 
   // Read HFR Video Stream Params
-  property_get(PROP_HFR_STREAM_WIDTH, prop_val, DEFAULT_HFR_STREAM_WIDTH);
+  qmmf_property_get(PROP_HFR_STREAM_WIDTH, prop_val, DEFAULT_HFR_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  property_get(PROP_HFR_STREAM_HEIGHT, prop_val, DEFAULT_HFR_STREAM_HEIGHT);
+  qmmf_property_get(PROP_HFR_STREAM_HEIGHT, prop_val, DEFAULT_HFR_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  property_get(PROP_HFR_STREAM_FPS, prop_val, DEFAULT_HFR_STREAM_FPS);
+  qmmf_property_get(PROP_HFR_STREAM_FPS, prop_val, DEFAULT_HFR_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  property_get(PROP_HFR_STREAM_SOURCE_ID, prop_val, "0");
+  qmmf_property_get(PROP_HFR_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  property_get(PROP_HFR_STREAM_FORMAT, prop_val, DEFAULT_HFR_STREAM_FORMAT);
+  qmmf_property_get(PROP_HFR_STREAM_FORMAT, prop_val, DEFAULT_HFR_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
   // Insert HFR stream into Map. Taking stream ID as 16.
   stream_info_map_.emplace(kHFRStreamID, stream);
 
-  property_get(PROP_SNAPSHOT_MODE, prop_val,
+  qmmf_property_get(PROP_SNAPSHOT_MODE, prop_val,
                DEFAULT_PROP_SNAPSHOT_MODE);
   SetSnapshotMode(prop_val);
 
   // Read JPEG Snapshot Stream
-  property_get(PROP_SNAPSHOT_STREAM_WIDTH, prop_val,
+  qmmf_property_get(PROP_SNAPSHOT_STREAM_WIDTH, prop_val,
                DEFAULT_SNAPSHOT_STREAM_WIDTH);
   snap_width_ = atoi(prop_val);
 
-  property_get(PROP_SNAPSHOT_STREAM_HEIGHT, prop_val,
+  qmmf_property_get(PROP_SNAPSHOT_STREAM_HEIGHT, prop_val,
                DEFAULT_SNAPSHOT_STREAM_HEIGHT);
   snap_height_ = atoi(prop_val);
 
-  property_get(PROP_SNAPSHOT_STREAM_FORMAT, prop_val,
+  qmmf_property_get(PROP_SNAPSHOT_STREAM_FORMAT, prop_val,
                DEFAULT_SNAPSHOT_STREAM_FORMAT);
   SetSnapShotStreamFormat(prop_val);
 
-  property_get(PROP_NUM_SNAPSHOT, prop_val,
+  qmmf_property_get(PROP_NUM_SNAPSHOT, prop_val,
                DEFAULT_SNAPSHOT_COUNT);
   snap_count_ = atoi(prop_val);
 
-  property_get(PROP_SNAPSHOT_TYPE, prop_val,
+  qmmf_property_get(PROP_SNAPSHOT_TYPE, prop_val,
                DEFAULT_PROP_SNAPSHOT_TYPE);
   SetSnapshotType(prop_val);
 

@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "CommonFastCVResizer"
@@ -55,7 +59,7 @@ FastCVResizer::~FastCVResizer() {
 RESIZER_STATUS FastCVResizer::Init() {
   char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
-  property_get("persist.qmmf.fastcv.level", prop, "3");
+  qmmf_property_get("persist.qmmf.fastcv.level", prop, "3");
   uint32_t level = (uint32_t) atoi(prop);
 
   if ((level == FASTCV_OP_LOW_POWER) ||

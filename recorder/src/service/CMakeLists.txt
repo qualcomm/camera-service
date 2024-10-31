@@ -78,7 +78,7 @@ if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_service log utils cutils binder hardware ion)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(qmmf_recorder_service propertyvault)
+target_link_libraries(qmmf_recorder_service qmmf_propertyvault)
 endif()
 
 if(NOT CAMERA_CLIENT_DISABLED)

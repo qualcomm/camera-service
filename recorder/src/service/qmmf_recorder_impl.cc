@@ -64,6 +64,7 @@
 
 #define LOG_TAG "RecorderImpl"
 
+#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_recorder_impl.h"
 
 #include <functional>

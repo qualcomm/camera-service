@@ -711,6 +711,10 @@ status_t CameraMetadata::getTagFromName(const char *name,
         const char *str = (i < ANDROID_SECTION_COUNT) ? camera_metadata_section_names[i] :
                 vendorSections[i - ANDROID_SECTION_COUNT].c_str();
 
+        if (str == nullptr) {
+          continue;
+        }
+
         if (strstr(name, str) == name) { // name begins with the section name
             size_t strLength = strlen(str);
 

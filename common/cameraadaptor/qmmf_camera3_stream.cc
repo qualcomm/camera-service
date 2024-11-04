@@ -952,8 +952,8 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
 #else
     streamBuffer->buffer = &GetAllocBufferHandle(mem_alloc_slots_[idx]);
 #endif //TARGET_USES_GBM
-    buffers_map[*streamBuffer->buffer] =
-      mem_alloc_slots_[idx];
+
+   buffers_map.emplace(*streamBuffer->buffer, mem_alloc_slots_[idx]);
 
     if (pending_buffer_count_ == 0 && status_ != STATUS_CONFIG_ACTIVE &&
         status_ != STATUS_RECONFIG_ACTIVE) {

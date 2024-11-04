@@ -57,7 +57,7 @@ class Camera3Stream : public camera3_stream {
 
   int32_t GetBuffer(camera3_stream_buffer *buffer);
   int32_t ReturnBuffer(const StreamBuffer &buffer);
-  std::unordered_map <buffer_handle_t, IBufferHandle> buffers_map;
+  std::map <buffer_handle_t, IBufferHandle> buffers_map;
 
   void ReturnBufferToClient(const camera3_stream_buffer &buffer,
                             int64_t timestamp, int64_t frame_number);

@@ -33,4 +33,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl 
 target_link_libraries(cam-server qmmf_propertyvault)
 endif()
 
+if (QMMF_SERVER_ENABLED)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
+endif()

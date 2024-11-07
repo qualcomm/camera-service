@@ -165,7 +165,6 @@ message OfflineJpegProcessParamsMsg {
 
 message ConnectRespMsg {
   uint32 client_id = 1;
-  int32  server_pid = 2;
 }
 
 // CallbackSocketReady

@@ -33,6 +33,4 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl 
 target_link_libraries(cam-server propertyvault)
 endif()
 
-if (TARGET_BOARD_PLATFORM STREQUAL "qcm6490")
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
-endif()
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)

@@ -62,7 +62,6 @@
 #ifdef HAVE_MMM_COLOR_FMT_H
 #include <display/media/mmm_color_fmt.h>
 #else
-#include <media/msm_media_info.h>
 #define MMM_COLOR_FMT_NV12_UBWC COLOR_FMT_NV12_UBWC
 #define MMM_COLOR_FMT_NV12_BPP10_UBWC COLOR_FMT_NV12_BPP10_UBWC
 #define MMM_COLOR_FMT_ALIGN MSM_MEDIA_ALIGN

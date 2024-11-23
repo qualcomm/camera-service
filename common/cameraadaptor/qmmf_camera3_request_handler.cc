@@ -293,6 +293,11 @@ bool Camera3RequestHandler::ThreadLoop() {
   if (0 != res) {
     return true;
   } else if (ExitPending()) {
+    // Clear the request, as it will not be submitted to camera.
+    pthread_mutex_lock(&lock_);
+    ClearCaptureRequest(current_request_);
+    pthread_cond_signal(&current_request_signal_);
+    pthread_mutex_unlock(&lock_);
     return false;
   }
 

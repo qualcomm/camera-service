@@ -203,7 +203,7 @@ class RecorderServiceCallbackProxy: public IRecorderServiceCallback {
     QMMF_INFO("%s: Exit ", __func__);
   }
 
-  status_t Init(uint32_t client_id, uint32_t server_pid) override;
+  status_t Init(uint32_t client_id) override;
 
   void NotifyRecorderEvent(EventType event_type, void *event_data,
                                    size_t event_data_size) override;

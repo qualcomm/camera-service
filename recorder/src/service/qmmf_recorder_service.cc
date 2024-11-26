@@ -865,7 +865,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     auto ret = Connect(nullptr, &client_id);
     resp_msg.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONNECT);
     resp_msg.mutable_connect_resp()->set_client_id(client_id);
-    resp_msg.mutable_connect_resp()->set_server_pid(getpid());
     resp_msg.set_status(ret);
     if (ret == 0) {
       client_sockets_[client_socket] = client_id;
@@ -2163,8 +2162,7 @@ status_t RecorderService::GetUniqueClientID(uint32_t *client_id) {
   QMMF_INFO("%s: Exit ", __func__);
  }
 
-status_t RecorderServiceCallbackProxy::Init (uint32_t client_id,
-                                             uint32_t server_pid) {
+status_t RecorderServiceCallbackProxy::Init (uint32_t client_id) {
   QMMF_INFO("%s: Enter ", __func__);
 
   std::stringstream ss;
@@ -2206,15 +2204,60 @@ void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync
   auto msg_size = message.ByteSizeLong();
   auto buf_size = msg_size + offset;
   void *buffer = malloc(buf_size);
+  std::vector<int32_t> fds;
+  struct cmsghdr *cmsg = NULL;
+  struct msghdr msg = {0};
+  struct iovec io;
+  int32_t fd_nums = -1;
 
   if (!buffer) {
     QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
     return;
   }
 
+  switch(message.cmd()) {
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SNAPSHOT_DATA: {
+      NotifySnapshotDataMsg data = message.snapshot_data();
+      if (data.buffer().ion_fd() != -1)
+        fds.push_back(data.buffer().ion_fd());
+      if (data.buffer().ion_meta_fd() != -1)
+        fds.push_back(data.buffer().ion_meta_fd());
+      break;
+    }
+    case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_VIDEO_TRACK_DATA: {
+      NotifyVideoTrackDataMsg data = message.video_track_data();
+      for (auto &&b_data : data.buffers()) {
+        if (b_data.ion_fd() != -1)
+          fds.push_back(b_data.ion_fd());
+        if (b_data.ion_meta_fd() != -1)
+          fds.push_back(b_data.ion_meta_fd());
+      }
+      break;
+    }
+  }
+
   *(static_cast<uint32_t *>(buffer)) = msg_size;
   message.SerializeToArray(buffer+offset, msg_size);
-  ssize_t bytesSent = send(callback_socket_, buffer, buf_size, 0);
+
+  io.iov_base = buffer;
+  io.iov_len = buf_size;
+  msg.msg_iov = &io;
+  msg.msg_iovlen = 1;
+
+  fd_nums = fds.size();
+  char cmsgbuf[CMSG_SPACE(fds.size() * sizeof(int32_t))] = {0};
+
+  if (!fds.empty()) {
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = sizeof(cmsgbuf);
+    cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(fds.size() * sizeof(int32_t));
+    memmove(CMSG_DATA(cmsg), fds.data(), fds.size() * sizeof(int32_t));
+  }
+
+  ssize_t bytesSent = sendmsg(callback_socket_, (struct msghdr *) &msg, 0);
   QMMF_VERBOSE("%s bytesSent: %u, size: %u", __func__, bytesSent, buf_size);
   if (bytesSent == -1) {
     QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);

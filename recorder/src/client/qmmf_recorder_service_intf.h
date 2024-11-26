@@ -352,7 +352,7 @@ class IRecorderServiceCallback {
  public:
   virtual ~IRecorderServiceCallback() {};
 
-  virtual status_t Init(uint32_t client_id, uint32_t server_pid = 0) = 0;
+  virtual status_t Init(uint32_t client_id) = 0;
 #endif // HAVE_BINDER
 
   virtual void NotifyRecorderEvent(EventType event_type, void *event_data,
@@ -402,19 +402,19 @@ class RecorderServiceCallbackStub : public IRecorderServiceCallback {
  public:
   RecorderServiceCallbackStub();
   virtual ~RecorderServiceCallbackStub();
-  status_t Init(uint32_t client_id, uint32_t server_pid);
+  status_t Init(uint32_t client_id);
   virtual void NotifyServerDeath();
  private:
   status_t ProcessCallbackMsg (RecorderClientCallbacksAsync &msg);
   void ThreadLoop();
 
-  int32_t server_fd_;
   std::string socket_path_;
   int32_t cb_socket_;
   int32_t client_socket_;
   char* socket_recv_buf_;
   std::thread callback_thread_;
   bool run_thread_;
+  std::vector<int32_t> fds_;
 };
 #endif // HAVE_BINDER
 

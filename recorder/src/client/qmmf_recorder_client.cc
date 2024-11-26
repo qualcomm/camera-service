@@ -83,7 +83,6 @@
 #include <string>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/syscall.h>
 #include <sys/un.h>
 #include <thread>
 #include <unistd.h>
@@ -158,7 +157,6 @@ class RecorderServiceProxy: public IRecorderService {
 
     RecorderClientReqMsg cmd;
     status_t ret;
-    uint32_t server_pid;
     cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONNECT);
     ret = SendRequest(cmd);
     if (ret != 0)
@@ -174,10 +172,9 @@ class RecorderServiceProxy: public IRecorderService {
       return ret;
 
     *client_id = resp.connect_resp().client_id();
-    server_pid = resp.connect_resp().server_pid();
 
     // Callback handler
-    ret = service_cb->Init(*client_id, server_pid);
+    ret = service_cb->Init(*client_id);
     if(ret != 0)
       return ret;
     // CallbackSocketReady
@@ -3269,7 +3266,6 @@ RecorderServiceCallbackStub::RecorderServiceCallbackStub() {
   cb_socket_ = -1;
   client_socket_ = -1;
   socket_recv_buf_ = new char[kMaxSocketBufSize];
-  server_fd_ = -1;
   QMMF_INFO("%s: Exit", __func__);
 }
 
@@ -3292,16 +3288,12 @@ RecorderServiceCallbackStub::~RecorderServiceCallbackStub() {
     client_socket_ = -1;
   }
 
-  if (server_fd_ != -1) {
-    close(server_fd_);
-  }
-
   delete[] socket_recv_buf_;
 
   QMMF_DEBUG("%s: Exit", __func__);
 }
 
-status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_pid) {
+status_t RecorderServiceCallbackStub::Init(uint32_t client_id) {
   QMMF_INFO("%s: Enter", __func__);
 
   std:;stringstream path;
@@ -3338,13 +3330,6 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id, uint32_t server_p
     return -errno;
   }
 
-  server_fd_ = syscall(SYS_pidfd_open, server_pid, 0);
-  if (server_fd_ == -1) {
-    QMMF_ERROR("%s: pidfd_open failed for - %d with error: %s",
-        __func__, server_pid, strerror(errno));
-    return -errno;
-  }
-
   run_thread_ = true;
   try {
     callback_thread_ = std::thread(&RecorderServiceCallbackStub::ThreadLoop, this);
@@ -3371,7 +3356,17 @@ void RecorderServiceCallbackStub::ThreadLoop () {
 
   QMMF_INFO("%s: connection accepted new fd %d", __func__, client_socket_);
   while (run_thread_) {
-    ssize_t bytes_read = recv(client_socket_, socket_recv_buf_, kMaxSocketBufSize, 0);
+    struct cmsghdr *cmsg = NULL;
+    struct msghdr msg = {0};
+    struct iovec io = {.iov_base = socket_recv_buf_, .iov_len = kMaxSocketBufSize};
+    msg.msg_iov = &io;
+    msg.msg_iovlen = 1;
+    char cmsgbuf[CMSG_SPACE(1024)] = {0};
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = sizeof(cmsgbuf);
+    fds_.clear();
+
+    ssize_t bytes_read = recvmsg(client_socket_, &msg, 0);
     QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
 
     if (bytes_read < 0) {
@@ -3381,6 +3376,17 @@ void RecorderServiceCallbackStub::ThreadLoop () {
       QMMF_ERROR("%s: connection closed", __func__);
       NotifyServerDeath();
       break;
+    }
+
+    for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr;
+         cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+      if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
+        int32_t *fds = (int32_t *) CMSG_DATA(cmsg);
+        int fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int32_t);
+        for (int i = 0; i < fd_count; ++i) {
+          fds_.push_back(fds[i]);
+        }
+      }
     }
 
     ssize_t buf_size = bytes_read;
@@ -3431,18 +3437,13 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t camera_id = data.camera_id();
       uint32_t count = data.img_count();
       BnBuffer bn_buffer;
-      int32_t dup_buf_fd = -1, dup_meta_fd = -1;
-      int32_t ion_fd = data.buffer().ion_fd();
-      int32_t meta_fd = data.buffer().ion_meta_fd();
-
-      if (ion_fd > 0)
-        dup_buf_fd = syscall(SYS_pidfd_getfd, server_fd_, ion_fd, 0);
-
-      if (meta_fd > 0)
-        dup_meta_fd = syscall(SYS_pidfd_getfd, server_fd_, meta_fd, 0);
-
-      bn_buffer.ion_fd = dup_buf_fd;
-      bn_buffer.ion_meta_fd = dup_meta_fd;
+      if (fds_.size()) {
+        bn_buffer.ion_fd = fds_[0];
+        bn_buffer.ion_meta_fd = fds_[1];
+      } else {
+        bn_buffer.ion_fd = -1;
+        bn_buffer.ion_meta_fd = -1;
+      }
       bn_buffer.img_id = data.buffer().img_id();
       bn_buffer.size = data.buffer().size();
       bn_buffer.timestamp = data.buffer().timestamp();
@@ -3479,26 +3480,15 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t session_id = data.session_id();
       uint32_t track_id = data.track_id();
       std::vector<BnBuffer> buffers;
-      int32_t ion_fd, meta_fd, dup_buf_fd = -1, dup_meta_fd = -1;
       for (auto &&b_data : data.buffers()) {
         BnBuffer buffer;
-        ion_fd = b_data.ion_fd();
-        meta_fd = b_data.ion_meta_fd();
-
-        if (ion_fd > 0) {
-          // New buffer, map it to the client
-          dup_buf_fd = syscall(SYS_pidfd_getfd, server_fd_, ion_fd, 0);
-          QMMF_VERBOSE("%s : ION fd(%d) is duped.", __func__, ion_fd);
+        if (fds_.size()) {
+          buffer.ion_fd = fds_[0];
+          buffer.ion_meta_fd = fds_[1];
+        } else {
+          buffer.ion_fd = -1;
+          buffer.ion_meta_fd = -1;
         }
-
-        if (meta_fd > 0) {
-          // New meta buffer, map it to the client
-          dup_meta_fd = syscall(SYS_pidfd_getfd, server_fd_, meta_fd, 0);
-          QMMF_VERBOSE("%s : meta fd(%d) is duped.", __func__, meta_fd);
-        }
-
-        buffer.ion_fd = dup_buf_fd;
-        buffer.ion_meta_fd = dup_meta_fd;
         buffer.img_id = b_data.img_id();
         buffer.size = b_data.size();
         buffer.timestamp = b_data.timestamp();

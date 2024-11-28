@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -167,6 +167,7 @@ struct CameraStreamParameters {
 struct CameraParameters {
   bool is_constrained_high_speed;
   bool is_raw_only;
+  int8_t super_frames;
   uint32_t batch_size;
   uint32_t fps_sensormode_index;
   int32_t frame_rate_range[2];
@@ -174,7 +175,7 @@ struct CameraParameters {
   CamOperationMode cam_opmode;
   CameraParameters() :
       is_constrained_high_speed(false), is_raw_only(false), batch_size(1),
-      fps_sensormode_index(0), frame_rate_range{},
+      super_frames(1), fps_sensormode_index(0), frame_rate_range{},
       cam_feature_flags(static_cast<uint32_t>(CamFeatureFlag::kNone)),
       cam_opmode(CamOperationMode::kCamOperationModeNone) {}
 };

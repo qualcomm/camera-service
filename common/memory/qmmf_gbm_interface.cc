@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -93,10 +93,13 @@ const std::unordered_map<int32_t, int32_t> GBMUsage::usage_flag_map_ = {
   {IMemAllocUsage::kHwCameraRead,         GBM_BO_USAGE_CAMERA_READ_QTI},
   {IMemAllocUsage::kHwCameraWrite,        GBM_BO_USAGE_CAMERA_WRITE_QTI},
 #ifdef GBM_BO_USAGE_PRIVATE_HEIF
-  {IMemAllocUsage::kPrivateAllocHEIF,     GBM_BO_USAGE_PRIVATE_HEIF}
+  {IMemAllocUsage::kPrivateAllocHEIF,     GBM_BO_USAGE_PRIVATE_HEIF},
 #else
-  {IMemAllocUsage::kPrivateAllocHEIF,     0}
+  {IMemAllocUsage::kPrivateAllocHEIF,     0},
 #endif
+  {IMemAllocUsage::kFlex2Batch,           0},
+  {IMemAllocUsage::kFlex4Batch,           0},
+  {IMemAllocUsage::kFlex8Batch,           0},
 };
 
 const std::unordered_map<int32_t, int32_t> GBMUsage::gralloc_usage_flag_map_ = {
@@ -116,7 +119,11 @@ const std::unordered_map<int32_t, int32_t> GBMUsage::gralloc_usage_flag_map_ = {
   {IMemAllocUsage::kHwComposer,           GRALLOC_USAGE_HW_COMPOSER},
   {IMemAllocUsage::kHwCameraRead,         GRALLOC_USAGE_HW_CAMERA_READ},
   {IMemAllocUsage::kHwCameraWrite,        GRALLOC_USAGE_HW_CAMERA_WRITE},
-  {IMemAllocUsage::kPrivateAllocHEIF,     GRALLOC_USAGE_PRIVATE_HEIF}};
+  {IMemAllocUsage::kPrivateAllocHEIF,     GRALLOC_USAGE_PRIVATE_HEIF},
+  {IMemAllocUsage::kFlex2Batch,           0},
+  {IMemAllocUsage::kFlex4Batch,           0},
+  {IMemAllocUsage::kFlex8Batch,           0},
+};
 
 GBMDevice* GBMDevice::gbm_device_obj_ = nullptr;
 int32_t GBMDevice::ref_count_ = 0;
@@ -249,6 +256,10 @@ const std::unordered_map<int32_t, int32_t> GBMBuffer::from_gbm_ = {
   {GBM_FORMAT_RAW16,                    HAL_PIXEL_FORMAT_RAW16},
 
   {GBM_FORMAT_IMPLEMENTATION_DEFINED,   HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED},
+
+  {GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH},
+  {GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH},
+  {GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH},
 
   {GBM_FORMAT_NV12_ENCODEABLE,          HAL_PIXEL_FORMAT_NV12_ENCODEABLE},
   {GBM_FORMAT_YCbCr_420_SP_VENUS,       HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS},
@@ -431,7 +442,13 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   gbm_format = gbm_hnd->GetLocalFormat(format);
 
   if (gbm_format == GBM_FORMAT_IMPLEMENTATION_DEFINED) {
-    if (usage.Exists(IMemAllocUsage::kPrivateAllocP010)) {
+    if (usage.Exists(IMemAllocUsage::kFlex2Batch)) {
+      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH;
+    } else if (usage.Exists(IMemAllocUsage::kFlex4Batch)) {
+      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH;
+    } else if (usage.Exists(IMemAllocUsage::kFlex8Batch)) {
+      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH;
+    } else if (usage.Exists(IMemAllocUsage::kPrivateAllocP010)) {
       gbm_format = GBM_FORMAT_YCbCr_420_P010_VENUS;
     } else if (usage.Exists(IMemAllocUsage::kPrivateAllocTP10) &&
                usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {

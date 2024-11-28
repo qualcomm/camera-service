@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -79,6 +79,7 @@ enum class BufferFormat : uint32_t {
   kRGB,
   kNV12,
   kNV12UBWC,
+  kNV12UBWCFLEX,
   kNV12HEIF,
   kNV21,
   kNV16,
@@ -157,6 +158,8 @@ struct BufferDescriptor {
 struct BufferMeta {
   /// Buffer format.
   BufferFormat format;
+  /// frame count in one buffer
+  uint8_t      n_frames;
   /// Number of buffer planes.
   uint32_t     n_planes;
   /// Buffer plane information.
@@ -167,6 +170,7 @@ struct BufferMeta {
     stream << "format["
            << static_cast<::std::underlying_type<BufferFormat>::type>(format)
            << "] ";
+    stream << "n_frames" << n_frames << "] ";
     stream << "n_planes[" << n_planes << "] ";
     stream << "planes[";
     for (uint32_t idx = 0; idx < n_planes; ++idx)

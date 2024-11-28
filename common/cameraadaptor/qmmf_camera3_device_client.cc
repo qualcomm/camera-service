@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -490,6 +490,7 @@ int32_t Camera3DeviceClient::ConfigureStreams(
   hfr_mode_enabled_ = stream_config.is_constrained_high_speed;
   is_raw_only_ = stream_config.is_raw_only;
   batch_size_ = stream_config.batch_size;
+  super_frames_ = stream_config.super_frames;
   frame_rate_range_[0] = stream_config.frame_rate_range[0];
   frame_rate_range_[1] = stream_config.frame_rate_range[1];
   cam_opmode_ = stream_config.cam_opmode;
@@ -534,6 +535,31 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   config.operation_mode = GetOpMode();
 
   QMMF_INFO("%s: operation_mode: 0x%x \n", __func__, config.operation_mode);
+
+  if (super_frames_ > 1) {
+    uint32_t tag = 0;
+    uint8_t val = 1;
+    int32_t res;
+    const std::shared_ptr<VendorTagDescriptor> vTags =
+        ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+
+    QMMF_VERBOSE("%s: enable super buffer mode session metadata", __func__);
+
+    ::camera::CameraMetadata::getTagFromName(
+        "org.codeaurora.qcamera3.sessionParameters.HALOutputBufferCombined",
+        vTags.get(), &tag);
+
+    if (tag > 0) {
+      res = session_metadata_.update(tag, &val, 1);
+      if (res != 0) {
+        QMMF_ERROR("%s: super buffer enable tag update failed", __func__);
+        return -EINVAL;
+      }
+    } else {
+      QMMF_ERROR("%s: super buffer enable tag not found", __func__);
+      return -EINVAL;
+    }
+  }
 
 #if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0305)
   session_metadata_.update(ANDROID_CONTROL_AE_TARGET_FPS_RANGE,

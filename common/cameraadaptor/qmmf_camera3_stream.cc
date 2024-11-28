@@ -20,7 +20,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -65,6 +65,7 @@
 #define MMM_COLOR_FMT_NV12_UBWC COLOR_FMT_NV12_UBWC
 #define MMM_COLOR_FMT_NV12_BPP10_UBWC COLOR_FMT_NV12_BPP10_UBWC
 #define MMM_COLOR_FMT_ALIGN MSM_MEDIA_ALIGN
+#define MMM_COLOR_FMT_UV_SCANLINES VENUS_UV_SCANLINES
 #define MMM_COLOR_FMT_Y_META_STRIDE VENUS_Y_META_STRIDE
 #define MMM_COLOR_FMT_Y_META_SCANLINES VENUS_Y_META_SCANLINES
 #define MMM_COLOR_FMT_UV_META_STRIDE VENUS_UV_META_STRIDE
@@ -530,6 +531,13 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
 
   QMMF_DEBUG("%s: format(0x%x)", __func__, handle->GetFormat());
 
+  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH)
+    info.n_frames = 2;
+  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH)
+    info.n_frames = 4;
+  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH)
+    info.n_frames = 8;
+
   switch (handle->GetFormat()) {
     case HAL_PIXEL_FORMAT_BLOB:
       info.format = BufferFormat::kBLOB;
@@ -577,6 +585,28 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
       info.planes[1].scanline = scanline / 2;
       info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * scanline / 2), 4096) +
           MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_Y_META_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width) *
+          MMM_COLOR_FMT_UV_META_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height)), 4096);
+      info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
+      info.format = BufferFormat::kNV12UBWCFLEX;
+      info.n_planes = 2;
+      info.planes[0].width = width;
+      info.planes[0].height = height;
+      info.planes[0].stride = stride;
+      info.planes[0].scanline = scanline;
+      info.planes[0].size = MMM_COLOR_FMT_ALIGN((stride * scanline), 4096) +
+          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_Y_META_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width) *
+          MMM_COLOR_FMT_Y_META_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height)), 4096);
+      info.planes[0].offset = 0;
+      info.planes[1].width = width;
+      info.planes[1].height = height / 2;
+      info.planes[1].stride = stride;
+      info.planes[1].scanline = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height);;
+      info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * info.planes[1].scanline), 4096) +
+          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_UV_META_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width) *
           MMM_COLOR_FMT_UV_META_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height)), 4096);
       info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
       break;

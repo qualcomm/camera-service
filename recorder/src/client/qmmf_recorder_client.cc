@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -1735,6 +1735,14 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
       break;
     case BufferFormat::kNV12UBWC:
       format = GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+      break;
+    case BufferFormat::kNV12UBWCFLEX:
+      if (meta.n_frames == 2)
+        format = GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH;
+      else if (meta.n_frames == 4)
+        format = GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH;
+      else if (meta.n_frames == 8)
+        format = GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH;
       break;
     case BufferFormat::kP010:
       format = GBM_FORMAT_YCbCr_420_P010_VENUS;

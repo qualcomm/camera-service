@@ -28,7 +28,7 @@
 *
 * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 *
-* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) 2021-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted (subject to the limitations in the
@@ -105,6 +105,7 @@ enum class VideoFormat : uint32_t {
   kRGB,
   kNV12,
   kNV12UBWC,
+  kNV12UBWCFLEX,
   kNV16,
   kYUY2,
   kUYVY,

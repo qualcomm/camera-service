@@ -28,7 +28,7 @@
  *
  * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
  *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -161,6 +161,7 @@ class Common {
       case BufferFormat::kNV12:
       case BufferFormat::kP010:
       case BufferFormat::kTP10UBWC:
+      case BufferFormat::kNV12UBWCFLEX:
         return HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
         break;
       case BufferFormat::kNV21:
@@ -214,6 +215,11 @@ class Common {
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
         return BufferFormat::kNV12UBWC;
+        break;
+      case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
+        return BufferFormat::kNV12UBWCFLEX;
         break;
       case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
         return BufferFormat::kNV12;
@@ -310,6 +316,9 @@ class Common {
         break;
       case VideoFormat::kNV12UBWC:
         return BufferFormat::kNV12UBWC;
+        break;
+      case VideoFormat::kNV12UBWCFLEX:
+        return BufferFormat::kNV12UBWCFLEX;
         break;
       case VideoFormat::kP010:
         return BufferFormat::kP010;

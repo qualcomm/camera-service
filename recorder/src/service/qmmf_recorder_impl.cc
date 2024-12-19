@@ -314,7 +314,6 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     }
 
     client_track_lock_.lock();
-    client_track_map_.erase(client_id);
     client_tracks_state_.erase(client_id);
     if (client_mutex_map_.count(client_id) != 0)
       delete client_mutex_map_[client_id];
@@ -340,6 +339,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     }
 
     lk.lock();
+    client_track_map_.erase(client_id);
     client_cameraid_map_.erase(client_id);
   }
 

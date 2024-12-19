@@ -198,77 +198,45 @@ message StopCameraReqMsg {
   uint32 camera_id = 2;
 }
 
-// CreateSession
-message CreateSessionReqMsg {
-  uint32 client_id = 1;
-}
-
-message CreateSessionRespMsg {
-  uint32 session_id = 1;
-}
-
-// DeleteSession
-message DeleteSessionReqMsg {
-  uint32 client_id = 1;
-  uint32 session_id = 2;
-}
-
-// StartSession
-message StartSessionReqMsg {
-  uint32 client_id = 1;
-  uint32 session_id = 2;
-}
-
-// StopSession
-message StopSessionReqMsg {
-  uint32 client_id = 1;
-  uint32 session_id = 2;
-  bool do_flush = 3;
-}
-
-// PauseSession
-message PuaseSessionReqMsg {
-  uint32 client_id = 1;
-  uint32 session_id = 2;
-}
-
-// ResumeSession
-message ResumeSessionReqMsg {
-  uint32 client_id = 1;
-  uint32 session_id = 2;
-}
-
 // CreateVideoTrack
 message CreateVideoTrackReqMsg {
   uint32 client_id = 1;
-  uint32 session_id = 2;
-  uint32 track_id = 3;
-  VideoTrackParamMsg video_params = 4;
-  bytes extra_params = 5;
+  uint32 track_id = 2;
+  VideoTrackParamMsg video_params = 3;
+  bytes extra_params = 4;
 }
 
 // CreateVideoTrack
 message DeleteVideoTrackReqMsg {
   uint32 client_id = 1;
-  uint32 session_id = 2;
-  uint32 track_id = 3;
+  uint32 track_id = 2;
+}
+
+// StartVideoTracks
+message StartVideoTracksReqMsg {
+  uint32 client_id = 1;
+  repeated uint32 id = 2;
+}
+
+// StopVideoTracks
+message StopVideoTracksReqMsg {
+  uint32 client_id = 1;
+  repeated uint32 id = 2;
 }
 
 // ReturnTrackBuffer
 message ReturnTrackBufferReqMsg {
   uint32 client_id = 1;
-  uint32 session_id = 2;
-  uint32 track_id = 3;
-  repeated BufferInfoMsg buffers = 4;
+  uint32 track_id = 2;
+  repeated BufferInfoMsg buffers = 3;
 }
 
 // SetVideoTrackParam
 message SetVideoTrackParamReqMsg {
   uint32 client_id = 1;
-  uint32 session_id = 2;
-  uint32 track_id = 3;
-  VIDEO_PARAM type = 4;
-  bytes param = 5;
+  uint32 track_id = 2;
+  VIDEO_PARAM type = 3;
+  bytes param = 4;
 }
 
 // CaptureImage
@@ -392,32 +360,28 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_DISCONNECT = 2;
   RECORDER_START_CAMERA = 3;
   RECORDER_STOP_CAMERA = 4;
-  RECORDER_CREATE_SESSION = 5;
-  RECORDER_DELETE_SESSION = 6;
-  RECORDER_START_SESSION = 7;
-  RECORDER_STOP_SESSION = 8;
-  RECORDER_PAUSE_SESSION = 9;
-  RECORDER_RESUME_SESSION = 10;
-  RECORDER_GET_NUMBER_OF_CAMERAS = 11;
-  RECORDER_CREATE_VIDEOTRACK = 12;
-  RECORDER_DELETE_VIDEOTRACK = 13;
-  RECORDER_RETURN_TRACKBUFFER = 14;
-  RECORDER_SET_VIDEOTRACK_PARAMS = 15;
-  RECORDER_CAPTURE_IMAGE = 16;
-  RECORDER_CONFIG_IMAGECAPTURE = 17;
-  RECORDER_CANCEL_IMAGECAPTURE = 18;
-  RECORDER_RETURN_IMAGECAPTURE_BUFFER = 19;
-  RECORDER_SET_CAMERA_PARAMS = 20;
-  RECORDER_GET_CAMERA_PARAMS = 21;
-  RECORDER_SET_CAMERA_SESSION_PARAMS = 22;
-  RECORDER_SET_VHDR = 23;
-  RECORDER_GET_DEFAULT_CAPTURE_PARAMS = 24;
-  RECORDER_GET_CAMERA_CHARACTERISTICS = 25;
-  RECORDER_GET_VENDOR_TAG_DESCRIPTOR = 26;
-  RECORDER_CONFIGURE_OFFLINE_JPEG = 27;
-  RECORDER_ENCODE_OFFLINE_JPEG = 28;
-  RECORDER_DESTROY_OFFLINE_JPEG = 29;
-  RECORDER_CALLBACK_SOCKET_READY = 30;
+  RECORDER_GET_NUMBER_OF_CAMERAS = 5;
+  RECORDER_CREATE_VIDEOTRACK = 6;
+  RECORDER_DELETE_VIDEOTRACK = 7;
+  RECORDER_START_VIDEOTRACKS = 8;
+  RECORDER_STOP_VIDEOTRACKS = 9;
+  RECORDER_RETURN_TRACKBUFFER = 10;
+  RECORDER_SET_VIDEOTRACK_PARAMS = 11;
+  RECORDER_CAPTURE_IMAGE = 12;
+  RECORDER_CONFIG_IMAGECAPTURE = 13;
+  RECORDER_CANCEL_IMAGECAPTURE = 14;
+  RECORDER_RETURN_IMAGECAPTURE_BUFFER = 15;
+  RECORDER_SET_CAMERA_PARAMS = 16;
+  RECORDER_GET_CAMERA_PARAMS = 17;
+  RECORDER_SET_CAMERA_SESSION_PARAMS = 18;
+  RECORDER_SET_VHDR = 19;
+  RECORDER_GET_DEFAULT_CAPTURE_PARAMS = 20;
+  RECORDER_GET_CAMERA_CHARACTERISTICS = 21;
+  RECORDER_GET_VENDOR_TAG_DESCRIPTOR = 22;
+  RECORDER_CONFIGURE_OFFLINE_JPEG = 23;
+  RECORDER_ENCODE_OFFLINE_JPEG = 24;
+  RECORDER_DESTROY_OFFLINE_JPEG = 25;
+  RECORDER_CALLBACK_SOCKET_READY = 26;
 }
 
 message RecorderClientReqMsg {
@@ -426,31 +390,27 @@ message RecorderClientReqMsg {
     DisconnectReqMsg disconnect = 2;
     StartCameraReqMsg start_camera = 3;
     StopCameraReqMsg stop_camera = 4;
-    CreateSessionReqMsg create_session = 5;
-    DeleteSessionReqMsg delete_session = 6;
-    StartSessionReqMsg start_session = 7;
-    StopSessionReqMsg stop_session = 8;
-    PuaseSessionReqMsg pause_session = 9;
-    ResumeSessionReqMsg resume_session = 10;
-    CreateVideoTrackReqMsg create_video_track = 11;
-    DeleteVideoTrackReqMsg delete_video_track = 12;
-    ReturnTrackBufferReqMsg return_track_buffer = 13;
-    SetVideoTrackParamReqMsg set_video_track_param = 14;
-    CaptureImageReqMsg capture_image = 15;
-    ConfigImageCaptureReqMsg config_image_capture = 16;
-    CancelCaptureImageReqMsg cancel_image_capture = 17;
-    ReturnImageCaptureBufferReqMsg return_image_capture_buffer = 18;
-    SetCameraParamReqMsg set_camera_param = 19;
-    GetCameraParamReqMsg get_camera_param = 20;
-    SetCameraSessionParamReqMsg set_camera_session_param = 21;
-    SetVHDRReqMsg set_vhdr = 22;
-    GetDefaultCaptureParamReqMsg get_default_capture_param = 23;
-    GetCameraCharacteristicsReqMsg get_camera_characteristics = 24;
-    CreateOfflineJPEGReqMsg create_offline_jpeg = 25;
-    EncodeOfflineJPEGReqMsg encode_offline_jpeg = 26;
-    DestroyOfflineJPEGReqMsg destroy_offline_jpeg = 27;
-    CallbackSocketReadyMsg callback_socket_ready = 28;
-    DummyMsg dummy_msg = 29;
+    CreateVideoTrackReqMsg create_video_track = 5;
+    DeleteVideoTrackReqMsg delete_video_track = 6;
+    StartVideoTracksReqMsg start_video_tracks = 7;
+    StopVideoTracksReqMsg stop_video_tracks = 8;
+    ReturnTrackBufferReqMsg return_track_buffer = 9;
+    SetVideoTrackParamReqMsg set_video_track_param = 10;
+    CaptureImageReqMsg capture_image = 11;
+    ConfigImageCaptureReqMsg config_image_capture = 12;
+    CancelCaptureImageReqMsg cancel_image_capture = 13;
+    ReturnImageCaptureBufferReqMsg return_image_capture_buffer = 14;
+    SetCameraParamReqMsg set_camera_param = 15;
+    GetCameraParamReqMsg get_camera_param = 16;
+    SetCameraSessionParamReqMsg set_camera_session_param = 17;
+    SetVHDRReqMsg set_vhdr = 18;
+    GetDefaultCaptureParamReqMsg get_default_capture_param = 19;
+    GetCameraCharacteristicsReqMsg get_camera_characteristics = 20;
+    CreateOfflineJPEGReqMsg create_offline_jpeg = 21;
+    EncodeOfflineJPEGReqMsg encode_offline_jpeg = 22;
+    DestroyOfflineJPEGReqMsg destroy_offline_jpeg = 23;
+    CallbackSocketReadyMsg callback_socket_ready = 24;
+    DummyMsg dummy_msg = 25;
   }
 }
 
@@ -459,34 +419,27 @@ message RecorderClientRespMsg {
   uint32 status = 2;
   oneof response {
     ConnectRespMsg connect_resp = 3;
-    CreateSessionRespMsg create_session_resp = 4;
-    GetCameraParamRespMsg get_camera_param_resp = 5;
-    GetDefaultCaptureParamRespMsg get_default_capture_param_resp = 6;
-    GetCameraCharacteristicsRespMsg get_camera_characteristics_resp = 7;
-    GetVendorTagDescriptorRespMsg get_vendor_tag_descriptor_resp = 8;
-    DummyMsg dummy_msg = 9;
+    GetCameraParamRespMsg get_camera_param_resp = 4;
+    GetDefaultCaptureParamRespMsg get_default_capture_param_resp = 5;
+    GetCameraCharacteristicsRespMsg get_camera_characteristics_resp = 6;
+    GetVendorTagDescriptorRespMsg get_vendor_tag_descriptor_resp = 7;
+    DummyMsg dummy_msg = 8;
   }
 }
 
 // Server to Client
 enum RECORDER_SERVICE_CB_CMDS {
   RECORDER_NOTIFY_EVENT= 0;
-  RECORDER_NOTIFY_SESSION_EVENT= 1;
-  RECORDER_NOTIFY_SNAPSHOT_DATA= 2;
-  RECORDER_NOTIFY_OFFLINE_JPEG_DATA= 3;
-  RECORDER_NOTIFY_VIDEO_TRACK_DATA= 4;
-  RECORDER_NOTIFY_VIDEO_TRACK_EVENT= 5;
-  RECORDER_NOTIFY_CAMERA_RESULT= 6;
+  RECORDER_NOTIFY_SNAPSHOT_DATA= 1;
+  RECORDER_NOTIFY_OFFLINE_JPEG_DATA= 2;
+  RECORDER_NOTIFY_VIDEO_TRACK_DATA= 3;
+  RECORDER_NOTIFY_VIDEO_TRACK_EVENT= 4;
+  RECORDER_NOTIFY_CAMERA_RESULT= 5;
 };
 
 message NotifyRecorderEventMsg {
   EventTypeMsg type = 1;
   bytes event_msg = 2;
-}
-
-message NotifySessionEventMsg {
-  EventTypeMsg type = 1;
-  string event_msg = 2;
 }
 
 message NotifySnapshotDataMsg {
@@ -502,17 +455,15 @@ message NotifyOfflineJpegDataMsg {
 }
 
 message NotifyVideoTrackDataMsg {
-  uint32 session_id = 1;
-  uint32 track_id = 2;
-  repeated BufferInfoMsg buffers = 3;
-  repeated BufferMetaMsg metas = 4;
+  uint32 track_id = 1;
+  repeated BufferInfoMsg buffers = 2;
+  repeated BufferMetaMsg metas = 3;
 }
 
 message NotifyVideoTrackEventMsg {
-  uint32 session_id = 1;
-  uint32 track_id = 2;
-  EventTypeMsg type = 3;
-  string event_msg = 4;
+  uint32 track_id = 1;
+  EventTypeMsg type = 2;
+  string event_msg = 3;
 }
 
 message NotifyCameraResultMsg {
@@ -524,11 +475,10 @@ message RecorderClientCallbacksAsync {
   RECORDER_SERVICE_CB_CMDS cmd = 1;
   oneof callback {
     NotifyRecorderEventMsg recorder_event = 2;
-    NotifySessionEventMsg session_event = 3;
-    NotifySnapshotDataMsg snapshot_data = 4;
-    NotifyOfflineJpegDataMsg offline_jpeg_data = 5;
-    NotifyVideoTrackDataMsg video_track_data = 6;
-    NotifyVideoTrackEventMsg video_track_event = 7;
-    NotifyCameraResultMsg camera_result = 8;
+    NotifySnapshotDataMsg snapshot_data = 3;
+    NotifyOfflineJpegDataMsg offline_jpeg_data = 4;
+    NotifyVideoTrackDataMsg video_track_data = 5;
+    NotifyVideoTrackEventMsg video_track_event = 6;
+    NotifyCameraResultMsg camera_result = 7;
   }
 }

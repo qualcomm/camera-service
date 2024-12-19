@@ -69,6 +69,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
@@ -83,12 +84,9 @@ class RecorderClient;
 /*! @brief Client interface for video recording and image capture.
 
     To start an video recording
-    clients first should create a session.
-    A session can contain multiple video tracks.
-    All tracks in a session changes state change
-    (say start, stop, pause etc) together.
+    clients first should create a track.
 
-    Multiple sessions can be created and run at the same time.
+    Multiple tracks can be created and run at the same time.
     Recorder provides elementary stream callback to clients and clients
     manage the muxer. A/V muxer is not part of the
     Recorder class and hence clients
@@ -96,8 +94,6 @@ class RecorderClient;
 
     For image capture, Recorder API provides single, burst and
     timed image capture
-    Image capture APIs are  not associated with session and can
-    be triggered independent of session.
 
     Some of the APIs in the class are sync and others async.
     The API documentation explicitly says whether the API is async.
@@ -134,67 +130,12 @@ class Recorder {
   /// associated with camera.
   ///
   /// StopCamera cannot be called when there is an
-  /// active video record session or image capture session.
+  /// active video record track or image capture track.
   status_t StopCamera(const uint32_t camera_id);
 
-  /// @brief Creates session and returns session id.
-  /// session id is used to idenfity the session in subsequent API calls.
-  ///
-  /// A session can contain multiple video tracks. All tracks within
-  /// a session changes states (like start, stop, pause) together.
-  ///
-  /// A callback(cb) must be registered along with session creation. This cb
-  /// is used by the recorder to notify state change event notification and
-  /// session specific errors back to clients asynchronously.
-  ///
-  /// Clients may create and run multiple sessions concurrently. All tracks
-  /// within a session changes state (start, pause, stop etc) together.
-  status_t CreateSession(const SessionCb &cb, uint32_t* session_id);
-
-  /// @brief Deletes session corresponding to id. Session must be stopped before
-  /// calling delete.
-  ///
-  /// All tracks within the sesion must be deleted before calling DeleteSession
-  status_t DeleteSession(const uint32_t session_id);
-
-  /// @brief Starts session corresponding to id.
-  /// Session shall contain at least one
-  /// track before calling start.
-  ///
-  /// This is an async API. When start is completed, session specific event cb
-  /// is called by recorder
-  status_t StartSession(const uint32_t session_id);
-
-  /// @brief Stops session corresponding to id.
-  /// If the do_flush flag is set to true,
-  /// the pending buffers in the pipeline is discarded else stop waits till
-  /// buffers in its pipeline is encoded.
-  ///
-  /// EOS flag is set along with last buffer cb of each track within the
-  /// session. This is an async API. When stop is completed, session specific
-  /// event cb is called by recorder
-  status_t StopSession(const uint32_t session_id, bool do_flush);
-
-  /// @brief Pause session corresponding to id.
-  /// When the pause is called the camera
-  /// device is not paused, but only encoding of the tracks
-  /// is paused.
-  ///
-  /// This is an async API. When pause is completed, session
-  /// specific event cb is called by recoder
-  status_t PauseSession(const uint32_t session_id);
-
-  /// @brief Resumes session corresponding to id. When the session is resumed,
-  /// the timestamp for all tracks in the session are resumed ignoring the
-  /// duration of pause.
-  ///
-  /// This is an async API. When resume is completed,
-  /// session specific event cb is called by recorder
-  status_t ResumeSession(const uint32_t session_id);
-
   /// @brief Creates an video track with additional configurations set in
-  /// extra_param container and associates it to the session uuid provided.
-  /// User must specify the unique track_id for the session.
+  /// extra_param container.
+  /// User must specify the unique track_id.
   ///
   /// params must specify the video track characteristics such as codec,
   /// bitrate etc.
@@ -202,7 +143,7 @@ class Recorder {
   /// surface dimensions, multi-camera mode, etc.
   /// cb is used by the recorder to inform clients about track data
   /// availability and track specific async errors
-  status_t CreateVideoTrack(const uint32_t session_id, const uint32_t track_id,
+  status_t CreateVideoTrack(const uint32_t track_id,
                             const VideoTrackParam &param,
                             const VideoExtraParam& xtraparam,
                             const TrackCb &cb);
@@ -211,8 +152,7 @@ class Recorder {
   ///
   /// Track output buffers are passed to clietns through track callbacks.
   /// Clients returns these buffers through this API
-  status_t ReturnTrackBuffer(const uint32_t session_id,
-                             const uint32_t track_id,
+  status_t ReturnTrackBuffer(const uint32_t track_id,
                              ::std::vector<BufferDescriptor> &buffers);
 
   /// @brief Changes runtime video track params such as video encoder
@@ -220,15 +160,25 @@ class Recorder {
   ///
   /// The type of *param* data depends on the enum value of *type*
   /// param_size should be set to sizeof the param data structure
-  status_t SetVideoTrackParam(const uint32_t session_id,
-                              const uint32_t track_id,
+  status_t SetVideoTrackParam(const uint32_t track_id,
                               VideoParam type, const void *param,
                               size_t size);
 
-  /// @brief Deletes video track. The track can be deleted only when the session
-  /// the track is associated with is in stopped state
-  status_t DeleteVideoTrack(const uint32_t session_id,
-                            const uint32_t track_id);
+  /// @brief Deletes video track. The track can be deleted only when
+  /// is in stopped state
+  status_t DeleteVideoTrack(const uint32_t track_id);
+
+  /// @brief Starts track corresponding to id.
+  ///
+  /// This is an async API. When start is completed, track specific event cb
+  /// is called by recorder
+  status_t StartVideoTracks(const std::unordered_set<uint32_t>& track_ids);
+
+  /// @brief Stops track corresponding to id.
+  ///
+  /// This is an async API. When stop is completed, tracks specific
+  /// event cb is called by recorder
+  status_t StopVideoTracks(const std::unordered_set<uint32_t>& track_ids);
 
   /// @brief Capture burst or single images from a camera
   ///

@@ -598,20 +598,48 @@ status_t CameraSource::DeleteTrackSource(const uint32_t track_id) {
   return ret;
 }
 
-status_t CameraSource::StartTrackSource(const uint32_t track_id) {
+status_t CameraSource::StartTrackSources(
+    const std::unordered_set<uint32_t>& track_ids) {
 
+  status_t ret = 0;
   QMMF_KPI_DETAIL();
-  if (!IsTrackIdValid(track_id)) {
-    QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return -EINVAL;
+
+  for (auto it = track_ids.begin(); it != track_ids.end(); ++it) {
+    uint32_t track_id = *it;
+    auto const& track = track_sources_[track_id];
+    bool cached = std::next(it) != track_ids.end();
+
+    ret = track->StartTrack(cached);
+    assert(ret == 0);
+
+    QMMF_VERBOSE("%s: TrackSource id(%x) cached(%d) Started Successfully!",
+        __func__, track_id, cached);
   }
-  auto const& track = track_sources_[track_id];
 
-  auto ret = track->StartTrack();
-  assert(ret == 0);
+  return ret;
+}
 
-  QMMF_VERBOSE("%s: TrackSource id(%x) Started Successfully!", __func__,
-      track_id);
+status_t CameraSource::StopTrackSources(
+    const std::unordered_set<uint32_t>& track_ids) {
+
+  status_t ret = 0;
+  QMMF_KPI_DETAIL();
+
+  for (auto it = track_ids.begin(); it != track_ids.end(); ++it) {
+    uint32_t track_id = *it;
+    auto const& track = track_sources_[track_id];
+    bool cached = std::next(it) != track_ids.end();
+
+    ret = track->StopTrack(cached);
+    if (ret != 0) {
+      QMMF_ERROR("%s: Track(%x): Stop failed !!", __func__, track_id);
+      return ret;
+    }
+
+    QMMF_VERBOSE("%s: TrackSource id(%x) cached(%d) Stopped Successfully!",
+        __func__, track_id, cached);
+  }
+
   return ret;
 }
 
@@ -628,60 +656,6 @@ status_t CameraSource::FlushTrackSource(const uint32_t track_id) {
   assert(ret == 0);
 
   QMMF_VERBOSE("%s: TrackSource id(%x) Flush Buffers Successfully!", __func__,
-      track_id);
-  return ret;
-}
-
-status_t CameraSource::StopTrackSource(const uint32_t track_id) {
-
-  QMMF_KPI_DETAIL();
-  if (!IsTrackIdValid(track_id)) {
-    QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return -EINVAL;
-  }
-  auto const& track = track_sources_[track_id];
-
-  auto ret = track->StopTrack();
-  if (ret != 0) {
-    QMMF_ERROR("%s: Track(%x): Stop failed !!", __func__, track_id);
-    return ret;
-  }
-
-  QMMF_VERBOSE("%s: TrackSource id(%x) Stopped Successfully!", __func__,
-      track_id);
-  return ret;
-}
-
-status_t CameraSource::PauseTrackSource(const uint32_t track_id) {
-
-  QMMF_KPI_DETAIL();
-  if (!IsTrackIdValid(track_id)) {
-    QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return -EINVAL;
-  }
-  auto const& track = track_sources_[track_id];
-
-  auto ret = track->PauseTrack();
-  assert(ret == 0);
-
-  QMMF_VERBOSE("%s: TrackSource id(%x) Paused Successfully!", __func__,
-      track_id);
-  return ret;
-}
-
-status_t CameraSource::ResumeTrackSource(const uint32_t track_id) {
-
-  QMMF_KPI_DETAIL();
-  if (!IsTrackIdValid(track_id)) {
-    QMMF_ERROR("%s: Track(%x): does not exist !!", __func__, track_id);
-    return -EINVAL;
-  }
-  auto const& track = track_sources_[track_id];
-
-  auto ret = track->ResumeTrack();
-  assert(ret == 0);
-
-  QMMF_VERBOSE("%s: TrackSource id(%x) Resumed Successfully!", __func__,
       track_id);
   return ret;
 }
@@ -1052,7 +1026,6 @@ TrackSource::TrackSource(const uint32_t id,
       extraparams_(extraparams),
       buffer_cb_(cb),
       is_stop_(false),
-      is_paused_(false),
       is_idle_(true),
       fsc_(nullptr),
       frc_(nullptr),
@@ -1294,7 +1267,7 @@ status_t TrackSource::DeInit() {
   return ret;
 }
 
-status_t TrackSource::StartTrack() {
+status_t TrackSource::StartTrack(bool cached) {
 
   QMMF_DEBUG("%s: Enter Track(%x)", __func__, id_);
   std::lock_guard<std::mutex> lock(lock_);
@@ -1306,7 +1279,7 @@ status_t TrackSource::StartTrack() {
 
   status_t ret = 0;
   if (slave_track_source_ == false) {
-    ret = camera_->StartStream(id_);
+    ret = camera_->StartStream(id_, cached);
     assert(ret == 0);
   }
 
@@ -1349,11 +1322,10 @@ status_t TrackSource::Flush() {
   return 0;
 }
 
-status_t TrackSource::StopTrack() {
+status_t TrackSource::StopTrack(bool cached) {
   status_t ret;
 
   QMMF_DEBUG("%s: Enter Track(%x)", __func__, id_);
-  is_paused_ = false;
 
   std::lock_guard<std::mutex> lock(lock_);
   {
@@ -1383,7 +1355,7 @@ status_t TrackSource::StopTrack() {
   }
 
   if (slave_track_source_ == false) {
-    ret = camera_->StopStream(id_);
+    ret = camera_->StopStream(id_, cached);
     assert(ret == 0);
   }
 
@@ -1395,44 +1367,6 @@ status_t TrackSource::StopTrack() {
   }
 
   QMMF_DEBUG("%s: Exit Track(%x)", __func__, id_);
-  return 0;
-}
-
-status_t TrackSource::PauseTrack() {
-
-  QMMF_DEBUG("%s: Enter Track(%x)", __func__, id_);
-
-  std::lock_guard<std::mutex> lock(lock_);
-  is_paused_ = true;
-
-  assert(camera_.get() != nullptr);
-
-  if (slave_track_source_ == false) {
-    status_t ret = camera_->PauseStream(id_);
-    assert(ret == 0);
-  }
-
-  std::lock_guard<std::mutex> idle_lock(idle_lock_);
-  is_idle_ = true;
-
-  return 0;
-}
-
-status_t TrackSource::ResumeTrack() {
-
-  QMMF_DEBUG("%s: Enter Track(%x)", __func__, id_);
-
-  std::lock_guard<std::mutex> lock(lock_);
-  is_paused_ = false;
-
-  assert(camera_.get() != nullptr);
-
-  status_t ret = camera_->ResumeStream(id_);
-  assert(ret == 0);
-
-  std::lock_guard<std::mutex> idle_lock(idle_lock_);
-  is_idle_ = false;
-
   return 0;
 }
 
@@ -1453,15 +1387,6 @@ void TrackSource::OnFrameAvailable(StreamBuffer& buffer) {
       }
       buffer_producer_->NotifyBuffer(buffer);
     }
-  }
-
-  if (IsPaused()) {
-    QMMF_DEBUG("%s: Track(%x): Pause is triggred, return buffer fd: %d ts: %lld",
-        __func__, id_, buffer.fd, buffer.timestamp);
-
-    std::lock_guard<std::mutex> lock(frame_lock_);
-    ReturnBufferToProducer(buffer);
-    return;
   }
 
   if (IsStop()) {
@@ -1558,11 +1483,6 @@ bool TrackSource::IsStop() {
   std::lock_guard<std::mutex> lock(stop_lock_);
   QMMF_VERBOSE("%s: Exit Track(%x)", __func__, id_);
   return is_stop_;
-}
-
-bool TrackSource::IsPaused() {
-
-  return is_paused_;
 }
 
 void TrackSource::UpdateFrameRate(const float framerate) {

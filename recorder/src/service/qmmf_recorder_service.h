@@ -208,23 +208,20 @@ class RecorderServiceCallbackProxy: public IRecorderServiceCallback {
   void NotifyRecorderEvent(EventType event_type, void *event_data,
                                    size_t event_data_size) override;
 
-  void NotifySessionEvent(EventType event_type, void *event_data,
-                                  size_t event_data_size) override;
-
   void NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
                                   BnBuffer& buffer, BufferMeta& meta) override;
 
   void NotifyOfflineJpegData(int32_t buf_fd,
                                      uint32_t encoded_size) override;
 
-  void NotifyVideoTrackData(uint32_t session_id, uint32_t track_id,
-                                    std::vector<BnBuffer>& buffers,
-                                    std::vector<BufferMeta>& metas) override;
+  void NotifyVideoTrackData(uint32_t track_id,
+                            std::vector<BnBuffer>& buffers,
+                            std::vector<BufferMeta>& metas) override;
 
-  void NotifyVideoTrackEvent(uint32_t session_id, uint32_t track_id,
-                                     EventType event_type,
-                                     void *event_data,
-                                     size_t event_data_size) override;
+  void NotifyVideoTrackEvent(uint32_t track_id,
+                             EventType event_type,
+                             void *event_data,
+                             size_t event_data_size) override;
 
   void NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result) override;
 
@@ -288,41 +285,27 @@ class RecorderService : public IRecorderService {
   status_t StopCamera(const uint32_t client_id,
                       const uint32_t camera_id) override;
 
-  status_t CreateSession(const uint32_t client_id,
-                         uint32_t *session_id) override;
-
-  status_t DeleteSession(const uint32_t client_id,
-                         const uint32_t session_id) override;
-
-  status_t StartSession(const uint32_t client_id,
-                        const uint32_t session_id) override;
-
-  status_t StopSession(const uint32_t client_id,
-                       const uint32_t session_id, bool do_flush) override;
-
-  status_t PauseSession(const uint32_t client_id,
-                        const uint32_t session_id) override;
-
-  status_t ResumeSession(const uint32_t client_id,
-                         const uint32_t session_id) override;
-
   status_t CreateVideoTrack(const uint32_t client_id,
-                            const uint32_t session_id,
                             const uint32_t track_id,
                             const VideoTrackParam& param,
                             const VideoExtraParam& xtraparam) override;
 
   status_t DeleteVideoTrack(const uint32_t client_id,
-                            const uint32_t session_id,
                             const uint32_t track_id) override;
 
+  status_t StartVideoTracks(
+      const uint32_t client_id,
+      const std::unordered_set<uint32_t>& track_ids) override;
+
+  status_t StopVideoTracks(
+      const uint32_t client_id,
+      const std::unordered_set<uint32_t>& track_ids) override;
+
   status_t ReturnTrackBuffer(const uint32_t client_id,
-                             const uint32_t session_id,
                              const uint32_t track_id,
                              std::vector<BnBuffer> &buffers) override;
 
   status_t SetVideoTrackParam(const uint32_t client_id,
-                              const uint32_t session_id,
                               const uint32_t track_id,
                               VideoParam type,
                               void *param,

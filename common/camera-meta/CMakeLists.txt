@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_camera_metadata)
+project(qmmf_camera_metadata VERSION 1.0)
 
 add_library(qmmf_camera_metadata SHARED ${exclude}
   ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_vendor_tag_descriptor.cpp
@@ -16,6 +16,11 @@ install(FILES
   ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_camera_metadata.h
   ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_vendor_tag_descriptor.h
   DESTINATION include/qmmf-sdk)
+
+set_target_properties(qmmf_camera_metadata PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS qmmf_camera_metadata DESTINATION lib OPTIONAL)
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_recorder_service)
+project(qmmf_recorder_service VERSION 1.0)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAEC_WAIT_TIMEOUT=500000000")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++11-narrowing")
@@ -70,6 +70,11 @@ target_include_directories(qmmf_recorder_service
 
 target_include_directories(qmmf_recorder_service
  PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+set_target_properties(qmmf_recorder_service PROPERTIES
+ VERSION ${PROJECT_VERSION}
+ SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS qmmf_recorder_service DESTINATION lib OPTIONAL)
 target_link_libraries(qmmf_recorder_service dl pthread camera_metadata

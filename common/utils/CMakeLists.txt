@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_utils)
+project(qmmf_utils VERSION 1.0)
 
 if (NOT QMMF_UTILS_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
@@ -15,6 +15,11 @@ add_dependencies(qmmf_utils qmmf_propertyvault)
 
 target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY})
 target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+set_target_properties(qmmf_utils PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS qmmf_utils DESTINATION lib OPTIONAL)
 target_link_libraries(qmmf_utils pthread)

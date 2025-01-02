@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_camera_adaptor)
+project(qmmf_camera_adaptor VERSION 1.0)
 
 if (NOT CAMERAADAPTOR_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
@@ -41,6 +41,11 @@ target_include_directories(qmmf_camera_adaptor
 
 target_compile_definitions(qmmf_camera_adaptor PRIVATE
   $<$<BOOL:${HAVE_MMM_COLOR_FMT_H}>:HAVE_MMM_COLOR_FMT_H>
+)
+
+set_target_properties(qmmf_camera_adaptor PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 install(TARGETS qmmf_camera_adaptor DESTINATION lib OPTIONAL)

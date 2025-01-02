@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_recorder_client)
+project(qmmf_recorder_client VERSION 1.0)
 
 if (NOT RECORDER_CLIENT_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
@@ -30,6 +30,11 @@ target_include_directories(qmmf_recorder_client
 
 target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+set_target_properties(qmmf_recorder_client PROPERTIES
+ VERSION ${PROJECT_VERSION}
+ SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
 target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata)

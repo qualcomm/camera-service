@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_memory_interface)
+project(qmmf_memory_interface VERSION 1.0)
 
 if (NOT MEMORY_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
@@ -22,6 +22,11 @@ target_include_directories(qmmf_memory_interface
 
 target_include_directories(qmmf_memory_interface
  PRIVATE ${TOP_DIRECTORY}/common/utils)
+
+set_target_properties(qmmf_memory_interface PROPERTIES
+ VERSION ${PROJECT_VERSION}
+ SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS qmmf_memory_interface DESTINATION lib OPTIONAL)
 target_link_libraries(qmmf_memory_interface qmmf_utils dl qmmf_propertyvault)

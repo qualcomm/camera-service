@@ -41,6 +41,7 @@ SupplementaryGroups=system
 Restart=always
 EnvironmentFile=/etc/cam-server-env
 ExecStartPre=/bin/mkdir -p /tmp/socket/cam_server
+ExecStartPre=+/bin/chmod 0775 /tmp/socket/cam_server
 CacheDirectory=camera
 ExecStart=/usr/bin/cam-server
 

@@ -774,6 +774,12 @@ status_t RecorderService::SetupSocket() {
     return -errno;
   }
 
+  // Set permissions for the socket
+  if (chmod(addr.sun_path, 0775) == -1) {
+    QMMF_ERROR("%s: chmod failure - %s", __func__, strerror(errno));
+    return -errno;
+  }
+
   // Listen for incoming connections
   if (listen(socket_, 5) == -1) {
     QMMF_ERROR("%s: listen failure %s", __func__, strerror(errno));

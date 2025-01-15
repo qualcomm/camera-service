@@ -6,7 +6,7 @@ link_directories(${SYSROOT_LIBDIR})
 
 project(qmmf-sdk)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(TOP_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 

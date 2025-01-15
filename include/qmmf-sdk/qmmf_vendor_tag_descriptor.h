@@ -26,19 +26,23 @@
 #include <map>
 #include <vector>
 #include <mutex>
+#include <string>
 
 #include <stdint.h>
 
+#ifdef HAVE_BINDER
 namespace android {
   class Parcel;
 };
+#endif // HAVE_BINDER
 
 typedef int32_t status_t;
 
 namespace qmmf {
 
+#ifdef HAVE_BINDER
 using Parcel = ::android::Parcel;
-
+#endif // HAVE_BINDER
 /**
  * VendorTagDescriptor objects are parcelable containers for the vendor tag
  * definitions provided, and are typically used to pass the vendor tag

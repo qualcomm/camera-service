@@ -615,6 +615,22 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   }
 #endif // VHDR_MODES_ENABLE
 
+  // Offline IFE
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kOfflineIFEEnable)) {
+    int32_t offline_ife = 1;
+
+    res = session_metadata_.getTagFromName(
+        "org.codeaurora.qcamera3.sessionParameters.EnableOfflineIFE",
+        vtags.get(), &tag_id);
+    if (res == 0) {
+      QMMF_VERBOSE("%s: Setting EnableOfflineIFE to %d\n", __func__, offline_ife);
+      session_metadata_.update(tag_id, &offline_ife, 1);
+    } else {
+      QMMF_WARN("%s: Failed to get session parameter EnableOfflineIFE",
+          __func__);
+    }
+  }
+
   config.session_parameters = session_metadata_.getAndLock();
 #endif
 

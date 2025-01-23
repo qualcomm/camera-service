@@ -537,6 +537,22 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
     }
   }
 
+  if (extra_param.Exists(QMMF_OFFLINE_IFE)) {
+    size_t entry_count = extra_param.EntryCount(QMMF_OFFLINE_IFE);
+    if (entry_count == 1) {
+      OfflineIFE offline_ife;
+      extra_param.Fetch(QMMF_OFFLINE_IFE, offline_ife, 0);
+      if (offline_ife.enable == true) {
+        QMMF_INFO("%s: Offline IFE usecase is ON..", __func__);
+        camera_parameters_.cam_feature_flags |=
+            static_cast<uint32_t>(CamFeatureFlag::kOfflineIFEEnable);
+      }
+    } else {
+      QMMF_ERROR("%s: Invalid Offline IFE param received", __func__);
+      return -EINVAL;
+    }
+  }
+
   camera_parameters_.batch_size = 1;
 
   if (!camera_device_) {

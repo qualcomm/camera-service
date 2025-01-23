@@ -93,6 +93,7 @@ enum ParamTag {
   QMMF_IFE_DIRECT_STREAM,
   QMMF_CAM_OP_MODE_CONTROL,
   QMMF_INPUT_ROI,
+  QMMF_OFFLINE_IFE,
 };
 
 enum class SlaveMode {
@@ -342,6 +343,16 @@ struct InputROISetup: DataTagBase {
   bool enable;
   InputROISetup() :
     DataTagBase(QMMF_INPUT_ROI), enable(false) {
+  }
+};
+
+  struct OfflineIFE: DataTagBase {
+  /**< Add support for client to enable/disable */
+  /**< Offline IFE usecase */
+  /**< Default: False */
+  bool enable;
+  OfflineIFE() :
+    DataTagBase(QMMF_OFFLINE_IFE), enable(false) {
   }
 };
 

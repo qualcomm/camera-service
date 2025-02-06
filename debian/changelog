@@ -1,0 +1,5 @@
+qcom-camera-server (1.0.-1ubuntu1) jammy; urgency=medium
+
+  * Initial release.
+
+ -- Tushar Darote <quic_tdarote@quicinc.com>  Wed, 23 Jan 2025 13:14:14 -0800

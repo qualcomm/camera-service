@@ -1,0 +1,9 @@
+# Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+#!/bin/sh
+
+adduser --system --group --home /nonexistent --no-create-home system
+usermod -a -G video,render,dmaheap system
+
+#DEBHELPER#

@@ -1,0 +1,49 @@
+Source: qcom-camera-server
+Section: misc
+Priority: optional
+Maintainer: Tushar Darote <quic_tdarote@quicinc.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-cmake,
+ cmake,
+ libglib2.0-dev,
+ syslog-plumber-dev,
+ camx-kt,
+ protobuf-compiler,
+ protobuf-c-compiler,
+ libprotobuf-dev (>= 3.19), libprotobuf-dev (<< 3.20),
+ libprotobuf-c-dev,
+ libgtest-dev,
+ qcom-property-vault-dev,
+ linux-libc-dev-qcom,
+Standards-Version: 4.6.2
+Homepage: https://git.codelinaro.org/clo/le/platform/vendor/qcom-opensource/le-services.git
+
+Package: libqmmf-dev
+Section: libdevel
+Architecture: arm64
+Depends:
+ libqmmf1 (= ${binary:Version}),
+ ${misc:Depends},
+Description: Qualcomm MultiMedia Framework libraries
+ Development package.
+
+Package: libqmmf1
+Section: libs
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ camx-kt,
+Description: Qualcomm MultiMedia Framework libraries
+ Library package.
+
+Package: qcom-camera-server
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ libqmmf1,
+Description: Qualcomm Linux Embedded Camera Server
+ Package containing the camera service and test programs.

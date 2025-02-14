@@ -1,5 +1,203 @@
-qcom-camera-server (1.0.-1ubuntu1) jammy; urgency=medium
+qcom-camera-server (1.0.0) noble; urgency=medium
 
   * Initial release.
 
  -- Tushar Darote <quic_tdarote@quicinc.com>  Wed, 23 Jan 2025 13:14:14 -0800
+
+  [ Linux Build Service Account ]
+  *  Merge "le-services: Add files to build using dpkg tools" into le-services.lnx.1.0
+
+  [ Tushar Darote ]
+  *  le-services: Add files to build using dpkg tools
+
+  [ QCTECMDR Service ]
+  *  Merge "cam-server: Change cam_server directory and socket permissions"
+
+  [ skomakul ]
+  *  camera-server: define camx android api version
+
+  [ Linux Build Service Account ]
+  *  Merge "camera-server: scarthgap upgrade" into le-services.lnx.1.0
+
+  [ Kemal Rasim Sh ]
+  *  cam-server: Change cam_server directory and socket permissions
+
+  [ skomakul ]
+  *  camera-server: scarthgap upgrade
+
+  [ Aashish Patel ]
+  *  camera-server: Add DMAbuf memory interface
+
+  [ QCTECMDR Service ]
+  *  Merge "cam-server : Fix CMake file for shared library versioning conformant to standard Linux community practice."
+
+  [ shrasoma ]
+  *  cam-server : Fix CMake file for shared library versioning conformant to standard Linux community practice.
+
+  [ QCTECMDR Service ]
+  *  Merge "recoder: should not erase client_track_map_ before using it"
+
+  [ Linux Build Service Account ]
+  *  Merge "camera-server: session clean-up" into le-services.lnx.1.0
+
+  [ Kin Zhao ]
+  *  recoder: should not erase client_track_map_ before using it
+
+  [ Kin Zhao ]
+  *  cam-server: uninitialized fields
+
+  [ FengChen ]
+  *  camera-server: session clean-up
+
+  [ QCTECMDR Service ]
+  *  Merge "cam-server: add support for qcs8300 target"
+
+  [ Jai Shiv ]
+  *  cam-server: add support for qcs8300 target
+
+  [ Stilyan Uzunov ]
+  *  le-camera-server: Add new config for qimsdk compilation
+
+  [ Stilyan Uzunov ]
+  *  le-camera-server: Load lib propertyvault dynamically
+
+  [ Stilyan Uzunov ]
+  *  le-camera-server: Load libcamera_metadata dynamically
+
+  [ Stilyan Uzunov ]
+  *  le-camera-server: Load gbm dependency dynamically
+
+  [ QCTECMDR Service ]
+  *  Merge "cam-server: change socket API for send and recv data"
+
+  [ Jai Shiv ]
+  *  cam-server: change socket API for send and recv data
+
+  [ QCTECMDR Service ]
+  *  Merge "qmmf-sdk: clear current request as it will not be submmitted to camera"
+
+  [ QCTECMDR Service ]
+  *  Merge "cam-server: add support for color formats"
+
+  [ Jai Shiv ]
+  *  cam-server: add support for color formats
+
+  [ Jai Shiv ]
+  *  cam-server : fix for crash issue
+
+  [ QCTECMDR Service ]
+  *  Merge "camera-server: add config file for qcs9100 target"
+
+  [ Kin Zhao ]
+  *  qmmf-sdk: clear current request as it will not be submmitted to camera
+
+  [ Jai Shiv ]
+  *  camera-server: add config file for qcs9100 target
+
+  [ Kin Zhao ]
+  *  qmmf-sdk: some potential issues fixes
+
+  [ QCTECMDR Service ]
+  *  Merge "camera-server: Changing log level of logs"
+
+  [ Yashaswini Guvvala ]
+  *  qmmf-sdk: create /var/cache/camera directory on start of service
+
+  [ Shyam Komakula ]
+  *  camera-server: Changing log level of logs
+
+  [ Shyam Komakula ]
+  *  camera-server: SHDR switch enhancement.
+
+  [ Yashaswini Guvvala ]
+  *  qmmf-sdk: Add system in the SupplementaryGroups for cam-server
+
+  [ Aashish Patel ]
+  *  camera-server: fix fd leak during SYS_pidfd_getfd
+
+  [ Aashish Patel ]
+  *  camera-server: add support for vhdr modes and minor updates
+
+  [ qctecmdr ]
+  *  Merge "cam-server: multiROI fix for K2L"
+
+  [ Shyam Komakula ]
+  *  cam-server: multiROI fix for K2L
+
+  [ Shyam Komakula ]
+  *  camera-server: Add support for new EIS modes
+
+  [ qctecmdr ]
+  *  Merge "camera-server: Use O_RDONLY | O_CLOEXEC to open dma_heap/qcom,system and /dev/ion"
+
+  [ Yashaswini Guvvala ]
+  *  camera-server: Use O_RDONLY | O_CLOEXEC to open dma_heap/qcom,system and /dev/ion
+
+  [ ppachang ]
+  *  le-camera-server: Fix fd leak in continuous snapshot mode
+
+  [ Raja Ganapathi Busam ]
+  *  le-camera-server: Fix for fd map cleanup
+
+  [ qctecmdr ]
+  *  Merge "camera-server: correcting map usage in cameraadaptor"
+
+  [ Shyam Komakula ]
+  *  camera-server: correcting map usage in cameraadaptor
+
+  [ Aashish Patel ]
+  *  client: update callback socket permissions
+
+  [ qctecmdr ]
+  *  Merge "qmmf-sdk: modify the user and group of cam-server"
+
+  [ Yashaswini Guvvala ]
+  *  le-camera-server: resolve klockwork issues
+
+  [ Yashaswini Guvvala ]
+  *  qmmf-sdk: modify the user and group of cam-server
+
+  [ Aashish Patel ]
+  *  camera-server: update KPI logs to use ftrace
+
+  [ Aashish Patel ]
+  *  camera-server: fix stability issues and cleanup
+
+  [ Aashish Patel ]
+  *  camera-server: fix metadata handling
+
+  [ Aashish Patel ]
+  *  camera-server: enable snapshot and vendortag
+
+  [ Alexander Nikolov ]
+  *  camera-server: allow socket ipc to pass vtags
+
+  [ Aashish Patel ]
+  *  cam-server: minor fixes for LOST and stability
+
+  [ Aashish Patel ]
+  *  qmmf-sdk: add ipc socket and k2c changes
+
+  [ Linux Build Service Account ]
+  *  Merge changes I2822f46c,I5673abe9,I304f4f8b,I648c4585 into le-services.lnx.1.0
+
+  [ Tushar Patra Jamula ]
+  *  qmmf-sdk: Handle Androidisms
+
+  [ Alexander Nikolov ]
+  *  qmmf-sdk: AOSP hal-adaptation moved to qmmf
+
+  [ Shyam Komakula ]
+  *  qmmf-sdk: support colorimetry
+
+  [ Shyam Komakula ]
+  *  qmmf-sdk: cache stream for 3 stream (HFR) fast switch
+
+  [ Shyam Komakula ]
+  *  qmmf-sdk: disable HFR logic to support fast-switch
+
+  [ Girish K ]
+  *  merge qmmf-sdk project to le-services project
+
+  [ Gerrit SelfHelp Service Account ]
+  *  Initial empty repository

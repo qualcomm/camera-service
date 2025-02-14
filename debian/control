@@ -8,8 +8,8 @@ Build-Depends:
  dh-cmake,
  cmake,
  libglib2.0-dev,
- syslog-plumber-dev,
- camx-kt,
+ qcom-syslog-plumber-dev,
+ qcom-camx-kt,
  protobuf-compiler,
  protobuf-c-compiler,
  libprotobuf-dev (>= 3.19), libprotobuf-dev (<< 3.20),
@@ -35,7 +35,6 @@ Architecture: arm64
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- camx-kt,
 Description: Qualcomm MultiMedia Framework libraries
  Library package.
 

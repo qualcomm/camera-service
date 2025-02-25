@@ -102,19 +102,6 @@ volatile uint32_t kpi_debug_level = BASE_KPI_FLAG;
 int ftrace_fd = -1;
 #endif
 
-#define QMMF_KPI_GET_MASK(FUNC) ({                         \
-char prop[PROP_VALUE_MAX];                                 \
-FUNC("persist.qmmf.kpi.debug", prop,                       \
-  std::to_string(DEFAULT_KPI_FLAG).c_str());               \
-kpi_debug_level = atoi (prop);})
-
-#define QMMF_GET_LOG_LEVEL(FUNC)                           \
-  ({                                                       \
-    char prop[PROP_VALUE_MAX];                             \
-    FUNC("persist.qmmf.sdk.log.level", prop, "0");         \
-    qmmf_log_level = atoi(prop);                           \
-  })
-
 uint32_t qmmf_log_level;
 
 namespace qmmf {

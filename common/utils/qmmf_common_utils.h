@@ -80,7 +80,6 @@
 
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <hardware/camera3.h>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"

@@ -1376,6 +1376,25 @@ status_t CameraContext::GetDefaultCaptureParam(CameraMetadata &meta) {
   return ret;
 }
 
+status_t CameraContext::GetCamStaticInfo(std::vector<CameraMetadata> &meta) {
+
+  QMMF_DEBUG("%s: Enter", __func__);
+  uint32_t num_of_cameras = camera_device_->GetNumberOfCameras();
+  meta.resize(num_of_cameras);
+
+  for (int i=0; i < num_of_cameras; i++) {
+    meta[i].clear();
+    int32_t res = camera_device_->GetCameraInfo(i, &meta[i]);
+    if (0 != res) {
+      QMMF_ERROR("%s: Error during camera static info query: %s!\n", __func__,
+                 strerror(-res));
+      return -ENODEV;
+    }
+  }
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
+}
+
 status_t CameraContext::GetCameraCharacteristics(CameraMetadata &meta) {
 
   QMMF_DEBUG("%s: Enter", __func__);

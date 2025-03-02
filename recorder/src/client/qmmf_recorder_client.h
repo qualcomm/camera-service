@@ -168,6 +168,8 @@ class RecorderClient {
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
                                   CameraMetadata &meta);
 
+  status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta);
+
   status_t GetCameraCharacteristics(const uint32_t camera_id,
                                     CameraMetadata &meta);
 

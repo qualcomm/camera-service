@@ -1210,6 +1210,27 @@ status_t RecorderImpl::GetDefaultCaptureParam(const uint32_t client_id,
   return 0;
 }
 
+status_t RecorderImpl::GetCamStaticInfo(const uint32_t client_id,
+                                        std::vector<CameraMetadata> &meta) {
+
+  QMMF_DEBUG("%s: Enter client_id(%u)", __func__, client_id);
+
+  if (!IsClientValid(client_id)) {
+    QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
+    return -EINVAL;
+  }
+
+  assert(camera_source_ != nullptr);
+  auto ret = camera_source_->GetCamStaticInfo(meta);
+  if (ret != 0) {
+    QMMF_ERROR("%s: GetCamStaticInfo failed!", __func__);
+    return ret;
+  }
+  QMMF_DEBUG("%s: Exit client_id(%u)", __func__,
+      client_id);
+  return 0;
+}
+
 status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,
                                                 const uint32_t camera_id,
                                                 CameraMetadata &meta) {

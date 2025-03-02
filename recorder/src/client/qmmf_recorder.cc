@@ -348,6 +348,19 @@ status_t Recorder::GetDefaultCaptureParam(const uint32_t camera_id,
   return ret;
 }
 
+status_t Recorder::GetCamStaticInfo(std::vector<CameraMetadata> &meta) {
+
+  QMMF_DEBUG("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->GetCamStaticInfo(meta);
+  if (0 != ret) {
+      QMMF_ERROR("%s: GetCamStaticInfo failed!", __func__);
+  }
+
+  QMMF_DEBUG("%s: Exit", __func__);
+  return ret;
+}
+
 status_t Recorder::GetCameraCharacteristics(const uint32_t camera_id,
                                             CameraMetadata &meta) {
 

@@ -213,6 +213,9 @@ class RecorderImpl {
                                   const uint32_t camera_id,
                                   CameraMetadata &meta);
 
+  status_t GetCamStaticInfo(const uint32_t client_id,
+                            std::vector<CameraMetadata> &meta);
+
   /// Get static metadata
   status_t GetCameraCharacteristics(const uint32_t client_id,
                                     const uint32_t camera_id,

@@ -756,6 +756,40 @@ class RecorderServiceProxy: public IRecorderService {
     return ret;
   }
 
+  status_t GetCamStaticInfo(const uint32_t client_id,
+                            std::vector<CameraMetadata> &meta) {
+    RecorderClientReqMsg cmd;
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_STATIC_INFO);
+    cmd.mutable_get_cam_static_info()->set_client_id(client_id);
+    status_t ret;
+    ret = SendRequest(cmd);
+    if (ret < 0) {
+      return ret;
+    }
+
+    RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret < 0) {
+      return ret;
+    }
+
+    for (const auto &meta_proto: resp.get_cam_static_info_resp().caps()) {
+      CameraMetadata caps;
+      uint8_t *raw_buf = new uint8_t[meta_proto.size()];
+      camera_metadata_t *meta_buffer =
+          copy_camera_metadata_ (raw_buf, meta_proto.size(),
+              reinterpret_cast<const camera_metadata_t *>(meta_proto.data()));
+      if (!meta_buffer) {
+        QMMF_ERROR ("%s: Failed to copy metadata", __func__);
+        return -1;
+      }
+      caps.clear();
+      caps.acquire(meta_buffer);
+      meta.push_back(caps);
+    }
+    return resp.status();
+  }
+
   status_t GetCameraCharacteristics(const uint32_t client_id,
                                     const uint32_t camera_id,
                                     CameraMetadata &meta) {
@@ -1550,6 +1584,22 @@ status_t RecorderClient::GetDefaultCaptureParam(const uint32_t camera_id,
                                                        meta);
   if (0 != ret) {
     QMMF_ERROR("%s GetDefaultCaptureParam failed!", __func__);
+  }
+  QMMF_DEBUG("%s Exit ", __func__);
+  return ret;
+}
+
+status_t RecorderClient::GetCamStaticInfo(std::vector<CameraMetadata> &meta) {
+
+  QMMF_DEBUG("%s Enter ", __func__);
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!CheckServiceStatus()) {
+    return -ENODEV;
+  }
+  assert(client_id_ > 0);
+  auto ret = recorder_service_->GetCamStaticInfo(client_id_, meta);
+  if (0 != ret) {
+    QMMF_ERROR("%s GetCamStaticInfo failed!", __func__);
   }
   QMMF_DEBUG("%s Exit ", __func__);
   return ret;
@@ -2524,6 +2574,37 @@ class RecorderServiceProxy: public BpInterface<IRecorderService> {
     auto ret = reply.readInt32();
     if (0 == ret) {
       ret = meta.readFromParcel(&reply);
+    }
+    return ret;
+  }
+
+  status_t GetCamStaticInfo(const uint32_t client_id,
+                            std::vector<CameraMetadata> &meta) {
+    Parcel data, reply;
+    data.writeInterfaceToken(IRecorderService::getInterfaceDescriptor());
+    data.writeUint32(client_id);
+    remote()->transact(uint32_t(QMMF_RECORDER_SERVICE_CMDS::
+                                RECORDER_GET_STATIC_CAMERA_INFO), data,
+                                &reply);
+    auto ret = reply.readInt32();
+    if (0 == ret) {
+      uint32_t meta_size;
+      reply.readUint32(&meta_size);
+      for (uint32_t i = 0; i < meta_size; ++i) {
+        CameraMetadata caps;
+        camera_metadata_t *m = nullptr;
+        ret = caps.readFromParcel(reply, &m);
+        if ((0 != ret) || (nullptr == m)) {
+          QMMF_ERROR("%s: Metadata parcel read failed: %d meta(%p)",
+              __func__, ret, m);
+          return ret;
+        }
+        caps.clear();
+        caps.append(m);
+        meta.push_back(caps);
+        //We need to release this memory as meta.append() makes copy of this memory
+        free(m);
+      }
     }
     return ret;
   }

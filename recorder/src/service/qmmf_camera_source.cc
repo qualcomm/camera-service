@@ -772,6 +772,18 @@ status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
   return camera->GetDefaultCaptureParam(meta);
 }
 
+status_t CameraSource::GetCamStaticInfo(std::vector<CameraMetadata> &meta) {
+  std::shared_ptr<CameraInterface> camera;
+
+  camera = std::make_shared<CameraContext>();
+  if (!camera) {
+    QMMF_ERROR("%s: Can't Instantiate Camera Context!", __func__);
+    return -ENOMEM;
+  }
+
+  return camera->GetCamStaticInfo(meta);
+}
+
 status_t CameraSource::GetCameraCharacteristics(const uint32_t camera_id,
                                                 CameraMetadata &meta) {
 

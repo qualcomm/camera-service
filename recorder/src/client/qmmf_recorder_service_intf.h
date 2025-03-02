@@ -196,6 +196,7 @@ enum QMMF_RECORDER_SERVICE_CMDS {
   RECORDER_CONFIGURE_OFFLINE_JPEG,
   RECORDER_ENCODE_OFFLINE_JPEG,
   RECORDER_DESTROY_OFFLINE_JPEG,
+  RECORDER_GET_STATIC_CAMERA_INFO,
 };
 
 class IRecorderService : public IInterface {
@@ -296,6 +297,9 @@ class IRecorderService {
   virtual status_t GetDefaultCaptureParam(const uint32_t client_id,
                                           const uint32_t camera_id,
                                           CameraMetadata &meta) = 0;
+
+  virtual status_t GetCamStaticInfo(const uint32_t client_id,
+                                    std::vector<CameraMetadata> &meta) = 0;
 
   virtual status_t GetCameraCharacteristics(const uint32_t client_id,
                                             const uint32_t camera_id,

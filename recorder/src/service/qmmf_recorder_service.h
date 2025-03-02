@@ -357,6 +357,9 @@ class RecorderService : public IRecorderService {
                                   const uint32_t camera_id,
                                   CameraMetadata &meta) override;
 
+  status_t GetCamStaticInfo(const uint32_t client_id,
+                            std::vector<CameraMetadata> &meta) override;
+
   status_t GetCameraCharacteristics(const uint32_t client_id,
                                     const uint32_t camera_id,
                                     CameraMetadata &meta) override;

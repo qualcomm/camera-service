@@ -158,6 +158,8 @@ class CameraContext : public CameraInterface {
 
   status_t GetDefaultCaptureParam(CameraMetadata &meta) override;
 
+  status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta) override;
+
   status_t GetCameraCharacteristics(CameraMetadata &meta) override;
 
   status_t ReturnAllImageCaptureBuffers() override;

@@ -277,6 +277,14 @@ class Recorder {
   status_t GetCameraCharacteristics(const uint32_t camera_id,
                                     CameraMetadata &meta);
 
+  /// @brief Get Camera Static Metadata
+  ///
+  /// Get Camera Static Capabilities of each camera connected
+  ///
+  /// @param meta: this is passed as reference to get the metadata filled
+  /// for each camera.
+  status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta);
+
   /// @brief Create Offline JPEG
   ///
   /// When creation is ready, clients can submit requests

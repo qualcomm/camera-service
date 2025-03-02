@@ -593,6 +593,19 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         return 0;
       }
       break;
+      case RECORDER_GET_STATIC_CAMERA_INFO: {
+        uint32_t client_id;
+        data.readUint32(&client_id);
+        std::vector<CameraMetadata> meta;
+        ret = GetCamStaticInfo(client_id, meta);
+        reply->writeInt32(ret);
+        reply->writeUint32(meta.size());
+        for (uint8_t i = 0; i < meta.size(); ++i) {
+          meta[i].writeToParcel(reply);
+        }
+        return 0;
+      }
+      break;
       case RECORDER_GET_VENDOR_TAG_DESCRIPTOR: {
         std::shared_ptr<VendorTagDescriptor> desc;
         ret = GetVendorTagDescriptor(desc);
@@ -1024,6 +1037,29 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
       resp_msg.set_status(-1);
     }
     meta.unlock(meta_buffer);
+    break;
+  }
+  case RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_STATIC_INFO:
+  {
+    uint32_t client_id = req_msg.get_cam_static_info().client_id();
+    std::vector<CameraMetadata> meta;
+    auto ret = GetCamStaticInfo (client_id, meta);
+
+    // sending response
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_STATIC_INFO);
+    resp_msg.set_status(ret);
+
+    uint32_t size = meta.size();
+    for (uint32_t i = 0; i < size; i++) {
+      const camera_metadata_t *meta_buffer = meta[i].getAndLock();
+      uint32_t size = get_camera_metadata_compact_size (meta_buffer);
+      std::string *data =
+          resp_msg.mutable_get_cam_static_info_resp()->add_caps();
+      data->resize(size);
+      copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+      const_cast<CameraMetadata&>(meta[i]).unlock(meta_buffer);
+    }
     break;
   }
   case RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_PARAMS:
@@ -1846,6 +1882,25 @@ status_t RecorderService::GetDefaultCaptureParam(const uint32_t client_id,
     return ret;
   }
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
+  return 0;
+}
+
+status_t RecorderService::GetCamStaticInfo(const uint32_t client_id,
+                                           std::vector<CameraMetadata> &meta) {
+
+  QMMF_DEBUG("%s: Enter client_id(%d)", __func__, client_id);
+
+  if (!IsRecorderInitialized()) {
+    QMMF_ERROR("%s: Recorder not initialized!", __func__);
+    return -ENODEV;
+  }
+
+  auto ret = recorder_->GetCamStaticInfo(client_id, meta);
+  if (ret != 0) {
+    QMMF_ERROR("%s: GetCamStaticInfo failed!", __func__);
+    return ret;
+  }
+  QMMF_DEBUG("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
 

@@ -169,7 +169,11 @@ class CameraInterface {
   /// Return default capture parameters
   virtual status_t GetDefaultCaptureParam(CameraMetadata &meta) = 0;
 
+  /// Return static metadata of the camera
   virtual status_t GetCameraCharacteristics(CameraMetadata &meta) = 0;
+
+  /// Return static metadata of all the camera's connected without opening the camera
+  virtual status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta) = 0;
 
   /// Return All Image Capture buffers
   virtual status_t ReturnAllImageCaptureBuffers() = 0;

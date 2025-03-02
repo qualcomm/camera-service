@@ -98,7 +98,7 @@ using namespace recorder;
 typedef int32_t status_t;
 
 const int64_t kWaitDelay = 2000000000;  // 2 sec
-const uint32_t kMaxSocketBufSize = 65536;
+const uint32_t kMaxSocketBufSize = 150000;
 
 struct StreamBuffer {
   BufferMeta info;

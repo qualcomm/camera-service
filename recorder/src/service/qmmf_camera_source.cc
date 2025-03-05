@@ -115,7 +115,7 @@ CameraSource::CameraSource()
 
   QMMF_INFO("%s: Enter", __func__);
 
-  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
+  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 1);
 
   // Preload camera interefaces.
   for (int32_t idx = 0; idx < n_preload; ++idx) {

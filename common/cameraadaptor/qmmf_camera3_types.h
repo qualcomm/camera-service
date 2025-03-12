@@ -118,6 +118,7 @@ enum class CamFeatureFlag : uint32_t {
   kQBCHDRSnapshot = 1 << 14,   /// QBC (in sensor) HDR on snapshot is on
 #endif // VHDR_MODES_ENABLE
   kOfflineIFEEnable = 1 <<15,  /// Offline IFE Enable
+  kSWTNR = 1 <<16,             /// SW TNR
 };
 
 enum class CamOperationMode {

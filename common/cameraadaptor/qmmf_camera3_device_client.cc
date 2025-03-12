@@ -657,6 +657,21 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
     }
   }
 
+  if (cam_feature_flags_ & static_cast<uint32_t>(CamFeatureFlag::kSWTNR)) {
+    uint8_t sw_tnr = true;
+
+    res = session_metadata_.getTagFromName(
+        "org.codeaurora.qcamera3.sessionParameters.EnableSWMCTF",
+        vtags.get(), &tag_id);
+    if (res == 0) {
+      QMMF_VERBOSE("%s:Setting EnableSWMCTF to %d\n", __func__, sw_tnr);
+      session_metadata_.update(tag_id, &sw_tnr, 1);
+    } else {
+      QMMF_WARN("%s: Failed to get session parameter for EnableSWMCTF",
+          __func__);
+    }
+  }
+
   config.session_parameters = session_metadata_.getAndLock();
 #endif
 

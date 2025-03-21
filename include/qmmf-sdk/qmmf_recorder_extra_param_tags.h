@@ -95,6 +95,7 @@ enum ParamTag {
   QMMF_INPUT_ROI,
   QMMF_OFFLINE_IFE,
   QMMF_SUPER_FRAMES,
+  QMMF_SW_TNR,
 };
 
 enum class SlaveMode {
@@ -362,6 +363,15 @@ struct SuperFrames: DataTagBase {
   /**< the frame_count in one super buffer */
   int8_t n_frames;
   SuperFrames() : DataTagBase(QMMF_SUPER_FRAMES), n_frames(1) {}
+};
+
+struct SWTNR: DataTagBase {
+  /**< Add support for client to enable/disable */
+  /**< SW TNR */
+  /**< Default: False */
+  bool enable;
+  SWTNR() :
+    DataTagBase(QMMF_SW_TNR), enable(false) {}
 };
 
 }; //namespace recorder.

@@ -94,6 +94,7 @@ add_subdirectory(recorder/src/client)
 add_subdirectory(common/memory)
 
 add_subdirectory(common/cameraadaptor/gtest)
+add_subdirectory(common/cameraadaptor/test)
 
 add_subdirectory(common/cameraadaptor)
 

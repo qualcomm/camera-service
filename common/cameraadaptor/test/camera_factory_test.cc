@@ -9,6 +9,12 @@
 #define PREVIEW_HEIGHT 720
 #define STREAM_BUFFER_COUNT 4
 
+#define CAMERA_MENU "\n----------------- Camera Menu -----------------\n"
+#define CAMERA_HEADER "Option | Cam ID | Sensor Type | Power State\n"
+#define POWER_MENU "\n----------------- Power Menu -----------------\n"
+#define POWER_HEADER "Option | Power State\n"
+#define DASH "\n==============================================\n"
+
 using namespace qcamera;
 
 Camera::Camera(uint32_t cam_id)
@@ -27,6 +33,8 @@ Camera::Camera(uint32_t cam_id)
     ShutterCb(extras, ts);
   };
   client_cb_.resultCb = [&](const CaptureResult &result) { ResultCb(result); };
+  SetUp();
+  color_filter_ = GetColorFilterArrangement();
 }
 
 Camera::~Camera() {}
@@ -40,32 +48,71 @@ void Camera::TearDown() {
 }
 
 void Camera::SetUp() {
-  device_client_ = std::make_unique<Camera3DeviceClient>(client_cb_);
-  if (NULL == device_client_.get()) {
-    std::cout << "error occured at device3 client creation \n";
-  }
+  if (device_client_ == nullptr) {
+    device_client_ = std::make_unique<Camera3DeviceClient>(client_cb_);
+    if (NULL == device_client_.get()) {
+      std::cerr << "error occured at device3 client creation \n";
+    }
 
-  auto ret = device_client_->Initialize();
-  if (ret != 0) {
-    std::cout << "error occured at device3 client init \n";
-  }
+    auto ret = device_client_->Initialize();
+    if (ret != 0) {
+      std::cerr << "error occured at device3 client init \n";
+    }
 
-  ret = device_client_->OpenCamera(camera_idx_);
-  if (ret != 0) {
-    std::cout << "open camera failed \n";
+    ret = device_client_->OpenCamera(camera_idx_);
+    if (ret != 0) {
+      std::cerr << "open camera failed \n";
+    }
   }
 }
 
-void Camera::ErrorCb(CameraErrorCode errorCode,
-                     const CaptureResultExtras &extras) {}
+std::string Camera::GetColorFilterArrangement() {
+  CameraMetadata staticInfo;
+  std::string msg;
+  auto ret = device_client_->GetCameraInfo(camera_idx_, &staticInfo);
+  if (ret != 0) {
+    std::cerr << "GetCameraInfo failed with error code: " << ret << std::endl;
+    return "";
+  }
 
-void Camera::IdleCb() {}
+  if (staticInfo.exists(ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT)) {
+    int32_t value =
+        staticInfo.find(ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT)
+            .data.i32[0];
+    switch (value) {
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB:
+        msg = "RGGB";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG:
+        msg = "GRBG";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG:
+        msg = "GBRG";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR:
+        msg = "BGGR";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGB:
+        msg = "RGB";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_MONO:
+        msg = "MONO";
+        break;
+      case ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_NIR:
+        msg = "NIR";
+        break;
+      default:
+        msg = "Unknown";
+        break;
+    }
+  } else {
+    std::cerr
+        << "ANDROID_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT tag does not exist"
+        << std::endl;
+  }
 
-void Camera::ShutterCb(const CaptureResultExtras &, int64_t) {}
-
-void Camera::PreparedCb(int stream_id) {}
-
-void Camera::ResultCb(const CaptureResult &result) {}
+  return msg;
+}
 
 int32_t Camera::PowerOn() {
   CameraStreamParameters streamParams;
@@ -133,11 +180,11 @@ bool CameraFactoryTest::CameraMenu() {
   camera_list_.clear();
   for (uint32_t i = 0; i < number_of_cameras_; ++i) {
     camera_list_.emplace(i, std::make_shared<Camera>(i));
+    camera_list_[i]->SetUp();
   }
 
   while (active) {
     PrintCameraOptions();
-    std::cout << "\n\nChoose an option: ";
     if (!WaitForInput(cam_input)) return false;
 
     if (cam_input == "q") {
@@ -196,11 +243,14 @@ bool CameraFactoryTest::CameraMenu() {
 }
 
 void CameraFactoryTest::PrintPowerOptions() {
-  std::cout << "\n--- MENU ---\n";
-  std::cout << "(0) Power ON\n";
-  std::cout << "(1) Power OFF\n";
-  std::cout << "-------------\n";
-  std::cout << "(b) Back\n";
+  std::cout << POWER_MENU;
+  std::cout << DASH;
+  std::cout << POWER_HEADER;
+  std::cout << DASH;
+  std::cout << "(0)    | Power ON\n";
+  std::cout << "(1)    | Power OFF\n";
+  std::cout << "(b)    | Back\n";
+  std::cout << DASH;
   std::cout << "\nChoose an option: ";
 }
 
@@ -210,16 +260,22 @@ bool CameraFactoryTest::WaitForInput(std::string &input) {
 }
 
 void CameraFactoryTest::PrintCameraOptions() {
-  std::cout << "--------- Menu ---------\n";
-  for (auto &it : camera_list_) {
-    std::cout << "(" << it.first << ") Camera " << it.second->GetCameraId()
-              << " - "
+  std::cout << CAMERA_MENU;
+  std::cout << DASH;
+  std::cout << CAMERA_HEADER;
+  std::cout << DASH;
+
+  for (const auto &it : camera_list_) {
+    std::cout << "(" << it.first << ") | " << it.second->GetCameraId() << " | "
+              << it.second->GetColorFilter() << " | "
               << (it.second->GetState() == STATE_ON ? "POWERED ON"
                                                     : "POWERED OFF")
               << "\n";
   }
-  std::cout << "--------------------\n";
+
   std::cout << "(q) Quit\n";
+  std::cout << DASH;
+  std::cout << "\nChoose an option: ";
 }
 
 void CameraFactoryTest::StartThread() {
@@ -238,9 +294,9 @@ void CameraFactoryTest::Join() {
 
 int main() {
   auto test = CameraFactoryTest();
-  std::cout << "===========================================\n"
+  std::cout << DASH
             << "Number of cameras connected : " << test.GetNumsOfCamera()
-            << "\n===========================================\n\n";
+            << DASH;
   if (test.GetNumsOfCamera() != 0) {
     test.StartThread();
     test.Join();

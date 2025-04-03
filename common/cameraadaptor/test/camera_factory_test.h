@@ -33,23 +33,26 @@ class Camera {
 
   CameraState GetState() { return state_; }
   uint32_t GetCameraId() { return camera_idx_; }
-
-  void StreamCb(StreamBuffer buffer);
-  void ErrorCb(CameraErrorCode errorCode, const CaptureResultExtras &);
-  void IdleCb();
-  void ShutterCb(const CaptureResultExtras &, int64_t);
-  void PreparedCb(int);
-  void ResultCb(const CaptureResult &result);
+  std::string GetColorFilter() { return color_filter_; }
 
   int32_t PowerOn();
   int32_t PowerOff();
 
  private:
+  void StreamCb(StreamBuffer buffer) {}
+  void ErrorCb(CameraErrorCode errorCode, const CaptureResultExtras &) {}
+  void IdleCb() {}
+  void ShutterCb(const CaptureResultExtras &, int64_t) {}
+  void PreparedCb(int) {}
+  void ResultCb(const CaptureResult &result) {}
+  std::string GetColorFilterArrangement();
+
   uint32_t camera_idx_;
   int32_t stream_idx_;
   CameraClientCallbacks client_cb_;
   std::unique_ptr<Camera3DeviceClient> device_client_;
   CameraState state_;
+  std::string color_filter_;
 };
 
 class CameraFactoryTest {

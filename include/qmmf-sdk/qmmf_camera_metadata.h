@@ -209,6 +209,11 @@ class CameraMetadata {
     }
 
     /**
+     * Base update entry method
+     */
+    status_t updateImpl(uint32_t tag, const void *data, size_t data_count);
+
+    /**
      * Check if a metadata entry exists for a given tag id
      *
      */
@@ -321,11 +326,6 @@ class CameraMetadata {
      * Check if tag has a given type
      */
     status_t checkType(uint32_t tag, uint8_t expectedType);
-
-    /**
-     * Base update entry method
-     */
-    status_t updateImpl(uint32_t tag, const void *data, size_t data_count);
 
     /**
      * Resize metadata buffer if needed by reallocating it and copying it over.

@@ -2340,8 +2340,30 @@ void RecorderServiceCallbackProxy::NotifyVideoTrackEvent(uint32_t track_id,
 
 }
 
-void RecorderServiceCallbackProxy::NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result) {
+void RecorderServiceCallbackProxy::NotifyCameraResult(
+    uint32_t camera_id, const CameraMetadata &result) {
+  QMMF_VERBOSE("%s: Enter", __func__);
 
+  RecorderClientCallbacksAsync async_msg;
+  async_msg.set_cmd(RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_CAMERA_RESULT);
+  auto ncr = async_msg.mutable_camera_result();
+  ncr->set_camera_id(camera_id);
+  const camera_metadata_t *meta_buffer = result.getAndLock();
+  uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+  if (size <= 0) {
+    const_cast<CameraMetadata &>(result).unlock(meta_buffer);
+    return;
+  }
+
+  std::string data;
+  data.resize(size);
+  copy_camera_metadata(&data.at(0), data.size(), meta_buffer);
+
+  ncr->set_result_meta(data);
+  const_cast<CameraMetadata &>(result).unlock(meta_buffer);
+  SendCallbackData(async_msg);
+
+  QMMF_VERBOSE("%s: Exit", __func__);
 }
 
 void RecorderServiceCallbackProxy::NotifyCancelCaptureImage() {

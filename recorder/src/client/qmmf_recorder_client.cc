@@ -3375,6 +3375,19 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
     }
     break;
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_CAMERA_RESULT: {
+      NotifyCameraResultMsg data = msg.camera_result();
+      uint32_t cam_id = data.camera_id();
+      CameraMetadata meta;
+      const std::string &result_data = data.result_meta();
+
+      uint8_t *raw_buf = new uint8_t[result_data.size()];
+      camera_metadata_t *meta_buffer =
+          ::qmmf::CameraMetadata::copy_camera_metadata(
+              raw_buf, result_data.size(),
+              reinterpret_cast<const camera_metadata_t *>(result_data.data()));
+      meta.clear();
+      meta.acquire(meta_buffer);
+      NotifyCameraResult(cam_id, meta);
       return 0;
     }
     break;

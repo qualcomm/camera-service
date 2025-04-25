@@ -755,6 +755,16 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
       info.planes[1].size = stride * (scanline / 2);
       info.planes[1].offset = info.planes[0].size;
       break;
+    case HAL_PIXEL_FORMAT_RGB_888:
+      info.format = BufferFormat::kRGB;
+      info.n_planes = 1;
+      info.planes[0].width = width;
+      info.planes[0].height = height;
+      info.planes[0].stride = stride;
+      info.planes[0].scanline = scanline;
+      info.planes[0].size = stride * scanline;
+      info.planes[0].offset = 0;
+      break;
     default:
       QMMF_ERROR("%s: Unsupported format: %d\n", __func__,
                  handle->GetFormat());

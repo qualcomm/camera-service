@@ -555,10 +555,6 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
       goto FAIL;
     }
   } else {
-    if (params.format == VideoFormat::kRGB) {
-      QMMF_ERROR("%s Unsupported format: RGB", __func__);
-      goto FAIL;
-    }
     ret = track_source->Init();
     if (ret != 0) {
       QMMF_ERROR("%s: Track(%x): TrackSource Init failed!", __func__,

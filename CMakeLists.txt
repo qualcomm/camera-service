@@ -94,7 +94,10 @@ add_subdirectory(recorder/src/client)
 add_subdirectory(common/memory)
 
 add_subdirectory(common/cameraadaptor/gtest)
+
+if(ENABLE_CAMERA_FACTORY_TEST)
 add_subdirectory(common/cameraadaptor/test)
+endif()
 
 add_subdirectory(common/cameraadaptor)
 

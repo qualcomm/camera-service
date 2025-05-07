@@ -185,7 +185,7 @@ bool CameraFactoryTest::CameraMenu() {
 
   while (active) {
     PrintCameraOptions();
-    if (!WaitForInput(cam_input)) return false;
+    if (!WaitForInput(cam_input)) continue;
 
     if (cam_input == "q") {
       std::cout << "\nQuit pressed!!\n";
@@ -201,7 +201,7 @@ bool CameraFactoryTest::CameraMenu() {
 
     while (true) {
       PrintPowerOptions();
-      if (!WaitForInput(power_input)) return false;
+      if (!WaitForInput(power_input)) continue;
 
       if (power_input == "b") {
         break;

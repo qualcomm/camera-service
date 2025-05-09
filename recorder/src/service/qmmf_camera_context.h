@@ -378,7 +378,6 @@ class CameraContext : public CameraInterface {
   std::vector<HFRMode_t>   hfr_batch_modes_list_;
   std::vector<Camera3Request> streaming_active_requests_;
 
-  std::map<uint32_t, int32_t> snapshot_buffer_stream_list_;
   int32_t                  batch_stream_id_;
 
   std::mutex               pending_frames_lock_;

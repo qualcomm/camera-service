@@ -288,6 +288,9 @@ class Common {
       case BufferFormat::kP010:
       case BufferFormat::kTP10UBWC:
       case BufferFormat::kNV12UBWCFLEX:
+      case BufferFormat::kNV12FLEX:
+      case BufferFormat::kP010FLEX:
+      case BufferFormat::kTP10UBWCFLEX:
         return HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
         break;
       case BufferFormat::kNV21:
@@ -345,17 +348,33 @@ class Common {
       case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
       case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
       case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
         return BufferFormat::kNV12UBWCFLEX;
         break;
       case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
         return BufferFormat::kNV12;
         break;
+      case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
+      case HAL_PIXEL_FORMAT_NV12_FLEX:
+        return BufferFormat::kNV12FLEX;
       case HAL_PIXEL_FORMAT_YCbCr_422_I_10BIT:
         return BufferFormat::kP010;
         break;
+      case HAL_PIXEL_FORMAT_P010_FLEX_2_BATCH:
+      case HAL_PIXEL_FORMAT_P010_FLEX_4_BATCH:
+      case HAL_PIXEL_FORMAT_P010_FLEX_8_BATCH:
+      case HAL_PIXEL_FORMAT_P010_FLEX:
+        return BufferFormat::kP010FLEX;
       case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
         return BufferFormat::kTP10UBWC;
         break;
+      case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_2_BATCH:
+      case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_4_BATCH:
+      case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_8_BATCH:
+      case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX:
+        return BufferFormat::kTP10UBWCFLEX;
       case HAL_PIXEL_FORMAT_YCbCr_420_888:
         return BufferFormat::kNV21;
         break;
@@ -440,6 +459,8 @@ class Common {
       case VideoFormat::kNV12:
         return BufferFormat::kNV12;
         break;
+      case VideoFormat::kNV12FLEX:
+        return BufferFormat::kNV12FLEX;
       case VideoFormat::kNV12UBWC:
         return BufferFormat::kNV12UBWC;
         break;
@@ -449,9 +470,13 @@ class Common {
       case VideoFormat::kP010:
         return BufferFormat::kP010;
         break;
+      case VideoFormat::kP010FLEX:
+        return BufferFormat::kP010FLEX;
       case VideoFormat::kTP10UBWC:
         return BufferFormat::kTP10UBWC;
         break;
+      case VideoFormat::kTP10UBWCFLEX:
+        return BufferFormat::kTP10UBWCFLEX;
       case VideoFormat::kNV16:
         return BufferFormat::kNV16;
         break;

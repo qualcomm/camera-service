@@ -231,9 +231,25 @@ const std::unordered_map<int32_t, int32_t> GBMBuffer::from_gbm_ = {
 
   {GBM_FORMAT_IMPLEMENTATION_DEFINED,   HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED},
 
+  {GBM_FORMAT_NV12_UBWC_FLEX,           HAL_PIXEL_FORMAT_NV12_UBWC_FLEX},
   {GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH},
   {GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH},
   {GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH,   HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH},
+
+  {GBM_FORMAT_NV12_FLEX,                HAL_PIXEL_FORMAT_NV12_FLEX},
+  {GBM_FORMAT_NV12_FLEX_2_BATCH,        HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH},
+  {GBM_FORMAT_NV12_FLEX_4_BATCH,        HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH},
+  {GBM_FORMAT_NV12_FLEX_8_BATCH,        HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH},
+
+  {GBM_FORMAT_YCbCr_420_P010_FLEX,              HAL_PIXEL_FORMAT_P010_FLEX},
+  {GBM_FORMAT_YCbCr_420_P010_FLEX_2_BATCH,      HAL_PIXEL_FORMAT_P010_FLEX_2_BATCH},
+  {GBM_FORMAT_YCbCr_420_P010_FLEX_4_BATCH,      HAL_PIXEL_FORMAT_P010_FLEX_4_BATCH},
+  {GBM_FORMAT_YCbCr_420_P010_FLEX_8_BATCH,      HAL_PIXEL_FORMAT_P010_FLEX_8_BATCH},
+
+  {GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX,         HAL_PIXEL_FORMAT_TP10_UBWC_FLEX},
+  {GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_2_BATCH, HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_2_BATCH},
+  {GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_4_BATCH, HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_4_BATCH},
+  {GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_8_BATCH, HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_8_BATCH},
 
   {GBM_FORMAT_NV12_ENCODEABLE,          HAL_PIXEL_FORMAT_NV12_ENCODEABLE},
   {GBM_FORMAT_YCbCr_420_SP_VENUS,       HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS},
@@ -319,7 +335,8 @@ int GBMBuffer::GetFormat() {
   QMMF_VERBOSE("%s: gbm_format = 0x%x", __func__, gbm_format);
 
   for (auto &it : from_gbm_) {
-    if ((uint32_t)it.first == gbm_format) {
+    uint32_t first = (uint32_t)it.first;
+    if ((first == gbm_format) && (first != GBM_FORMAT_NOT_DEFIEND)) {
       format = (int)it.second;
       break;
     }
@@ -402,6 +419,158 @@ gbm_device *GBMDevice::GetDevice() const {
   return (gbm_device_);
 }
 
+// items corresponding to complex flag combinations need to be placed
+// before those of simple combinations especially when
+// the simple flag combination is a subset of the complex combination
+// for example, item with flag (kPrivateAllocUbwc | kPrivateAllocTP10)
+// must be placed ahead of item with flag (kPrivateAllocUbwc)
+GBMFormatTranslateEntry GBMDevice::gbm_format_translate_table_[] = {
+    // flex2 UBWC, TP10 & P010
+    {
+      IMemAllocUsage::kFlex2Batch |
+      IMemAllocUsage::kPrivateAllocUbwc |
+      IMemAllocUsage::kPrivateAllocTP10,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_2_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex2Batch |
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex2Batch |
+      IMemAllocUsage::kPrivateAllocP010,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_FLEX_2_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex2Batch,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_FLEX_2_BATCH
+    },
+
+    // flex4 UBWC, TP10 & P010
+    {
+      IMemAllocUsage::kFlex4Batch |
+      IMemAllocUsage::kPrivateAllocUbwc |
+      IMemAllocUsage::kPrivateAllocTP10,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_4_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex4Batch |
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex4Batch |
+      IMemAllocUsage::kPrivateAllocP010,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_FLEX_4_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex4Batch,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_FLEX_4_BATCH
+    },
+
+    // flex8 UBWC, TP10 & P010
+    {
+      IMemAllocUsage::kFlex8Batch |
+      IMemAllocUsage::kPrivateAllocUbwc |
+      IMemAllocUsage::kPrivateAllocTP10,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_8_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex8Batch |
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex8Batch |
+      IMemAllocUsage::kPrivateAllocP010,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_FLEX_8_BATCH
+    },
+
+    {
+      IMemAllocUsage::kFlex8Batch,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_FLEX_8_BATCH
+    },
+
+    // flex16 UBWC, TP10 & P010
+    {
+      IMemAllocUsage::kFlexBatch |
+      IMemAllocUsage::kPrivateAllocUbwc |
+      IMemAllocUsage::kPrivateAllocTP10,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX
+    },
+
+    {
+      IMemAllocUsage::kFlexBatch |
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_UBWC_FLEX
+    },
+
+    {
+      IMemAllocUsage::kFlexBatch |
+      IMemAllocUsage::kPrivateAllocP010,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_FLEX
+    },
+
+    {
+      IMemAllocUsage::kFlexBatch,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_NV12_FLEX
+    },
+
+    // TP10
+    {
+      IMemAllocUsage::kPrivateAllocTP10 |
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_TP10_UBWC
+    },
+
+    // UBWC
+    {
+      IMemAllocUsage::kPrivateAllocUbwc,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC
+    },
+
+    // P010
+    {
+      IMemAllocUsage::kPrivateAllocP010,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_VENUS
+    },
+
+    // HEIF
+    {
+      IMemAllocUsage::kPrivateAllocHEIF,
+      GBM_FORMAT_YCbCr_420_888,
+      GBM_FORMAT_NV12_HEIF
+    },
+};
+
 MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
 #ifdef HAVE_BINDER
   int32_t height, int32_t format,
@@ -414,26 +583,34 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   GBMBuffer* gbm_hnd = static_cast<GBMBuffer*>(handle);
   struct gbm_bo *bo;
   uint32_t local_usage = 0;
-  uint32_t gbm_format = 0;
+  uint32_t gbm_format = GBM_FORMAT_NOT_DEFIEND;
 
   local_usage = GBMUsage().ToLocal(usage);
   gbm_format = gbm_hnd->GetLocalFormat(format);
 
-  if (gbm_format == GBM_FORMAT_IMPLEMENTATION_DEFINED) {
-    if (usage.Exists(IMemAllocUsage::kFlex2Batch)) {
-      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH;
-    } else if (usage.Exists(IMemAllocUsage::kFlex4Batch)) {
-      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH;
-    } else if (usage.Exists(IMemAllocUsage::kFlex8Batch)) {
-      gbm_format = GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH;
-    } else if (usage.Exists(IMemAllocUsage::kPrivateAllocP010)) {
-      gbm_format = GBM_FORMAT_YCbCr_420_P010_VENUS;
-    } else if (usage.Exists(IMemAllocUsage::kPrivateAllocTP10) &&
-               usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {
-      gbm_format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
-    } else if (usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {
-      gbm_format = GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+  uint32_t table_size =
+      (sizeof(gbm_format_translate_table_) / sizeof(gbm_format_translate_table_[0]));
+
+  for (uint32_t i = 0; i < table_size; i++) {
+    if ((gbm_format == gbm_format_translate_table_[i].input_format) &&
+            ((gbm_format_translate_table_[i].usage_flags == 0) ||
+                (usage.Matches(gbm_format_translate_table_[i].usage_flags)))) {
+        gbm_format = gbm_format_translate_table_[i].output_format;
+
+        QMMF_INFO("%s: index = %d, flags = 0x%x input format (%x) "
+            "to output format (%x)",
+            __func__, i,
+            gbm_format_translate_table_[i].usage_flags,
+            gbm_format_translate_table_[i].input_format,
+            gbm_format);
+
+        break;
     }
+  }
+
+  if (gbm_format == GBM_FORMAT_NOT_DEFIEND) {
+    QMMF_ERROR("%s: GBM Format not defined !\n", __func__);
+    return MemAllocError::kAllocFail;
   }
 
   // TODO: to be updated in to_gbm_ map post confirmation
@@ -441,10 +618,6 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   if (gbm_format == GBM_FORMAT_YCbCr_420_888) {
     gbm_format = GBM_FORMAT_NV21_ZSL;
   }
-
-  if (gbm_format == GBM_FORMAT_YCbCr_420_888 &&
-      usage.Exists(IMemAllocUsage::kPrivateAllocHEIF))
-    gbm_format = GBM_FORMAT_NV12_HEIF;
 
   bo = gbm_bo_create(gbm_device_, (uint32_t)width, (uint32_t)height,
     gbm_format, local_usage);

@@ -3197,23 +3197,25 @@ status_t CameraPort::Init() {
     } else if (camera_parameters_.super_frames == 8) {
       cam_stream_params_.allocFlags.flags |=
           IMemAllocUsage::kFlex8Batch;
+    } else if (camera_parameters_.super_frames == 16) {
+      cam_stream_params_.allocFlags.flags |=
+          IMemAllocUsage::kFlexBatch;
     }
 
     switch (params_.format) {
       case BufferFormat::kNV12UBWC:
-        cam_stream_params_.allocFlags.flags |=
-            IMemAllocUsage::kPrivateAllocUbwc;
-        break;
       case BufferFormat::kNV12UBWCFLEX:
         cam_stream_params_.allocFlags.flags |=
             IMemAllocUsage::kPrivateAllocUbwc;
         break;
       case BufferFormat::kP010:
+      case BufferFormat::kP010FLEX:
         cam_stream_params_.data_space = HAL_DATASPACE_TRANSFER_GAMMA2_8;
         cam_stream_params_.allocFlags.flags |=
             IMemAllocUsage::kPrivateAllocP010;
         break;
       case BufferFormat::kTP10UBWC:
+      case BufferFormat::kTP10UBWCFLEX:
         cam_stream_params_.data_space = HAL_DATASPACE_TRANSFER_GAMMA2_8;
         cam_stream_params_.allocFlags.flags |=
             IMemAllocUsage::kPrivateAllocTP10 |

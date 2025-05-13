@@ -1799,6 +1799,16 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
     case BufferFormat::kNV12:
       format = GBM_FORMAT_NV12;
       break;
+    case BufferFormat::kNV12FLEX:
+      if (meta.n_frames == 2)
+        format = GBM_FORMAT_NV12_FLEX_2_BATCH;
+      else if (meta.n_frames == 4)
+        format = GBM_FORMAT_NV12_FLEX_4_BATCH;
+      else if (meta.n_frames == 8)
+        format = GBM_FORMAT_NV12_FLEX_8_BATCH;
+      else if (meta.n_frames == 16)
+        format = GBM_FORMAT_NV12_FLEX;
+      break;
     case BufferFormat::kNV21:
       format = GBM_FORMAT_NV21_ZSL;
       break;
@@ -1820,12 +1830,34 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
         format = GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH;
       else if (meta.n_frames == 8)
         format = GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH;
+      else if (meta.n_frames == 16)
+        format = GBM_FORMAT_NV12_UBWC_FLEX;
       break;
     case BufferFormat::kP010:
       format = GBM_FORMAT_YCbCr_420_P010_VENUS;
       break;
+    case BufferFormat::kP010FLEX:
+      if (meta.n_frames == 2)
+        format = GBM_FORMAT_YCbCr_420_P010_FLEX_2_BATCH;
+      else if (meta.n_frames == 4)
+        format = GBM_FORMAT_YCbCr_420_P010_FLEX_4_BATCH;
+      else if (meta.n_frames == 8)
+        format = GBM_FORMAT_YCbCr_420_P010_FLEX_8_BATCH;
+      else if (meta.n_frames == 16)
+        format = GBM_FORMAT_YCbCr_420_P010_FLEX;
+      break;
     case BufferFormat::kTP10UBWC:
       format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
+      break;
+    case BufferFormat::kTP10UBWCFLEX:
+      if (meta.n_frames == 2)
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_2_BATCH;
+      else if (meta.n_frames == 4)
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_4_BATCH;
+      else if (meta.n_frames == 8)
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_8_BATCH;
+      else if (meta.n_frames == 16)
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX;
       break;
     case BufferFormat::kYUY2:
       format = GBM_FORMAT_YCrCb_422_I;
@@ -1837,7 +1869,7 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
       format = GBM_FORMAT_NV12_HEIF;
       break;
     default:
-      format = 0;
+      format = GBM_FORMAT_NOT_DEFIEND;
   }
 
   gbm_buf_info bufinfo = { fd, metafd, width , height, format };

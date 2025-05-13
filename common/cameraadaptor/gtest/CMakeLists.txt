@@ -15,9 +15,6 @@ target_include_directories(qmmf_camera_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(qmmf_camera_adaptor_gtest
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(qmmf_camera_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/cameraadaptor)
 
 target_include_directories(qmmf_camera_adaptor_gtest
@@ -27,10 +24,6 @@ install(TARGETS qmmf_camera_adaptor_gtest DESTINATION bin OPTIONAL)
 target_link_libraries(qmmf_camera_adaptor_gtest gtest gtest_main camera_metadata qmmf_camera_adaptor)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_adaptor_gtest log cutils utils)
-endif()
-
-if(NOT CAMERA_CLIENT_DISABLED)
-target_link_libraries(qmmf_camera_adaptor_gtest camera_client)
 endif()
 
 add_executable(qmmf_ccamera_dual_adaptor_gtest ${exclude} qmmf_dual_camera_adaptor_gtest.cc)
@@ -43,16 +36,10 @@ target_include_directories(qmmf_ccamera_dual_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/cameraadaptor)
 
 target_include_directories(qmmf_ccamera_dual_adaptor_gtest
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(qmmf_ccamera_dual_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_ccamera_dual_adaptor_gtest DESTINATION bin OPTIONAL)
 target_link_libraries(qmmf_ccamera_dual_adaptor_gtest gtest gtest_main camera_metadata qmmf_camera_adaptor)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_ccamera_dual_adaptor_gtest log cutils utils)
-endif()
-if(NOT CAMERA_CLIENT_DISABLED)
-target_link_libraries(qmmf_ccamera_dual_adaptor_gtest camera_client)
 endif()

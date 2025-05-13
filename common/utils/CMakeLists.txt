@@ -11,8 +11,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_condition.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_thread.cc
 )
 
-add_dependencies(qmmf_utils qmmf_propertyvault)
-
 target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY})
 target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY}/common/memory)
 

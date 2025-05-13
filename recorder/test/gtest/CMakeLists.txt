@@ -8,18 +8,21 @@ if (NOT RECORDER_GTEST_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
 endif()
 
+if (NOT CAMERA_HAL1_SUPPORT)
 add_executable(qmmf_recorder_gtest ${exclude}
   qmmf_gtest_common.cc
   qmmf_gtest.cc
 )
-
+else()
+add_executable(qmmf_recorder_gtest ${exclude}
+  qmmf_gtest_common.cc
+  qmmf_hal1_gtest.cc
+)
+endif()
 add_dependencies(qmmf_recorder_gtest qmmf_recorder_client qmmf_utils)
 
 target_include_directories(qmmf_recorder_gtest
  PRIVATE ${TOP_DIRECTORY})
-
-target_include_directories(qmmf_recorder_gtest
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
 
 target_include_directories(qmmf_recorder_gtest
  PRIVATE ${TOP_DIRECTORY}/recorder/test/gtest)
@@ -34,7 +37,4 @@ target_link_libraries(qmmf_recorder_gtest log utils cutils)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
 target_link_libraries(qmmf_recorder_gtest qmmf_propertyvault)
-endif()
-if(NOT CAMERA_CLIENT_DISABLED)
-target_link_libraries(qmmf_recorder_gtest camera_client)
 endif()

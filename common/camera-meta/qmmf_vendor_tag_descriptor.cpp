@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -24,6 +24,7 @@
 #include <binder/Parcel.h>
 #include <utils/String8.h>
 #endif
+#include <system/camera_metadata.h>
 
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include <common/utils/qmmf_log.h>

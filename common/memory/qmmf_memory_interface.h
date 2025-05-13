@@ -26,52 +26,18 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #pragma once
 
-#ifdef HAVE_ANDROID_UTILS
-#include <system/window.h>
-#else
-// TODO: update when camera exports this header
-#include <unordered_map>
-#include <hardware/graphics.h>
-#include <hardware/native_handle.h>
-
-#ifdef TARGET_USES_GBM
+#include <string>
+#ifdef TARGET_USES_GRALLOC1
+#include <grallocusage/GrallocUsageConversion.h>
+#include <libgralloc1/gralloc_priv.h>
+#elif USE_LIBGBM
 #include <gbm.h>
 #include <gbm_priv.h>
 #ifndef GBM_FORMAT_NV12_UBWC_FLEX_2_BATCH
@@ -79,14 +45,18 @@
 #define GBM_FORMAT_NV12_UBWC_FLEX_4_BATCH 0
 #define GBM_FORMAT_NV12_UBWC_FLEX_8_BATCH 0
 #endif
+#ifdef __LIBGBM__
+#include <hardware/camera.h>
+#else
+#include <system/window.h>
 #endif
-
-#define GRALLOC_USAGE_PROTECTED                  0x00004000
-#define GRALLOC_USAGE_SW_READ_OFTEN              0x00000003
-#define GRALLOC_USAGE_SW_WRITE_OFTEN             0x00000030
-#define GRALLOC_USAGE_HW_FB                      0x00001000
-#define GRALLOC_USAGE_HW_CAMERA_ZSL              0x00060000
-#endif // HAVE_ANDROID_UTILS
+#elif defined(HAVE_BINDER) && !defined(USE_LIBGBM)
+#include <qcom/display/gralloc_priv.h>
+#else
+#include <hardware/graphics.h>
+#include <hardware/native_handle.h>
+#endif
+#include <unordered_map>
 
 // todo: add and move to platform specific header
 #define HAL_PIXEL_FORMAT_RAW8                    0x123
@@ -97,6 +67,11 @@
 #define HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH  0x128
 #define HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH  0x129
 #define HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH  0x130
+#define GRALLOC_USAGE_PROTECTED                  0x00004000
+#define GRALLOC_USAGE_SW_READ_OFTEN              0x00000003
+#define GRALLOC_USAGE_SW_WRITE_OFTEN             0x00000030
+#define GRALLOC_USAGE_HW_FB                      0x00001000
+#define GRALLOC_USAGE_HW_CAMERA_ZSL              0x00060000
 #define GRALLOC_USAGE_HW_TEXTURE                 0x00000100
 #define GRALLOC_USAGE_HW_RENDER                  0x00000200
 #define GRALLOC_USAGE_HW_COMPOSER                0x00000800
@@ -109,14 +84,16 @@
 #define GRALLOC_USAGE_PRIVATE_UNCACHED           0x02000000
 #define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP         0x0
 #define GRALLOC_USAGE_PRIVATE_MM_HEAP            0x0
-#ifndef HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS      0x7FA30C04
-#endif
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC 0x7FA30C06
 #define HAL_PIXEL_FORMAT_YCbCr_422_I_10BIT       0x4C595559
 #define HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC     0x7FA30C09
 
+#ifdef __LIBGBM__
+struct private_handle_t : public gbm_bo {
+#else
 struct private_handle_t : public native_handle {
+#endif
   enum {
       PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
       PRIV_FLAGS_VIDEO_ENCODER = 0x00010000
@@ -135,8 +112,13 @@ struct private_handle_t : public native_handle {
 
   static const int sNumFds = 2;
   static inline int sNumInts() {
+#ifdef __LIBGBM__
+      return (((sizeof(private_handle_t) - sizeof(struct gbm_bo*)) /
+              sizeof(int)) - sNumFds);
+#else
       return (((sizeof(private_handle_t) - sizeof(native_handle_t)) /
               sizeof(int)) - sNumFds);
+#endif
   }
 
   private_handle_t(int fd, unsigned int size, int flags, int bufferType,
@@ -144,9 +126,11 @@ struct private_handle_t : public native_handle {
       fd(fd), flags(flags), size(size), offset(0), bufferType(bufferType),
       format(format), width(width), height(height), unaligned_width(width),
       unaligned_height(height) {
+#ifndef __LIBGBM__
     version = (int) sizeof(native_handle);
     numInts = sNumInts();
     numFds = sNumFds;
+#endif
   };
 
   ~private_handle_t() {
@@ -349,7 +333,11 @@ class IAllocDevice {
   **/
   virtual MemAllocError AllocBuffer(IBufferHandle& handle, int32_t width,
                                     int32_t height, int32_t format,
+#ifdef HAVE_BINDER
+                                    MemAllocFlags usage,
+#else
                                     int override_format, MemAllocFlags usage,
+#endif
                                     uint32_t* stride) = 0;
 
   virtual MemAllocError ImportBuffer(IBufferHandle& handle,
@@ -438,10 +426,19 @@ class AllocUsageFactory {
  */
 
 // Support for code with hard dependency to native handles.
-#ifdef USE_LIBGBM
+#ifdef TARGET_USES_GRALLOC1
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
+gralloc1_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
+#elif TARGET_USES_GRALLOC2
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
+gralloc2_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
+#elif USE_LIBGBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle);
 struct gbm_device *GetAllocDeviceHandle(const IAllocDevice &handle);
 buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle);
+#elif defined(HAVE_BINDER) && !defined(USE_LIBGBM)
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
+alloc_device_t *GetAllocDeviceHandle(const IAllocDevice &handle);
 #else
 buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle);
-#endif // USE_LIBGBM
+#endif

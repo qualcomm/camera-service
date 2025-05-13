@@ -11,9 +11,6 @@ target_include_directories(camera_factory_test
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(camera_factory_test
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(camera_factory_test
  PRIVATE ${TOP_DIRECTORY}/common/cameraadaptor)
 
 target_include_directories(camera_factory_test

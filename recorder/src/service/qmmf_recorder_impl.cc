@@ -26,45 +26,17 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 
 #define LOG_TAG "RecorderImpl"
 
+#ifndef HAVE_BINDER
 #include "common/propertyvault/qmmf_propertyvault.h"
+#endif
 #include "recorder/src/service/qmmf_recorder_impl.h"
 
 #include <functional>
@@ -102,7 +74,7 @@ RecorderImpl::RecorderImpl() : camera_source_(nullptr) {
   QMMF_KPI_DETAIL();
   QMMF_INFO("%s: Enter", __func__);
 #ifdef ENABLE_OFFLINE_JPEG
-  offline_jpeg_encoder_ = nullptr;
+  offline_process_ = nullptr;
 #endif
 
   QMMF_INFO("%s: Exit", __func__);
@@ -119,9 +91,9 @@ RecorderImpl::~RecorderImpl() {
   }
 
 #ifdef ENABLE_OFFLINE_JPEG
-  if (offline_jpeg_encoder_) {
-    delete offline_jpeg_encoder_;
-    offline_jpeg_encoder_ = nullptr;
+  if (offline_process_) {
+    delete offline_process_;
+    offline_process_ = nullptr;
   }
 #endif
 
@@ -146,17 +118,17 @@ status_t RecorderImpl::Init(const RemoteCallbackHandle& remote_cb_handle) {
       __func__);
 
 #ifdef ENABLE_OFFLINE_JPEG
-  offline_jpeg_encoder_ = new OfflineJpegEncoder;
-  if (!offline_jpeg_encoder_) {
-    QMMF_ERROR("%s: Can't Create OfflineJpegEncoder Instance!", __func__);
-    return -ENOMEM;
+  offline_process_ = new OfflineProcess;
+  if (!offline_process_) {
+    QMMF_ERROR("%s: Can't Create OfflineProcess Instance!", __func__);
+    return NO_MEMORY;
   }
 
-  status_t ret = offline_jpeg_encoder_->Init(remote_cb_handle);
+  status_t ret = offline_process_->Init(remote_cb_handle);
   if (0 != ret) {
-    QMMF_ERROR("%s: Offline JPEG lib initialization failed!", __func__);
-    delete offline_jpeg_encoder_;
-    offline_jpeg_encoder_ = nullptr;
+    QMMF_ERROR("%s: Offline Process lib initialization failed!", __func__);
+    delete offline_process_;
+    offline_process_ = nullptr;
     return ret;
   }
 #endif
@@ -176,10 +148,10 @@ status_t RecorderImpl::DeInit() {
   }
 
 #ifdef ENABLE_OFFLINE_JPEG
-  if (offline_jpeg_encoder_) {
-    offline_jpeg_encoder_->DeInit();
-    delete offline_jpeg_encoder_;
-    offline_jpeg_encoder_ = nullptr;
+  if (offline_process_) {
+    offline_process_->DeInit();
+    delete offline_process_;
+    offline_process_ = nullptr;
   }
 #endif
 
@@ -225,8 +197,8 @@ status_t RecorderImpl::RegisterClient(const uint32_t client_id) {
   client_cameraid_map_.emplace(client_id, std::map<uint32_t, bool>());
 
 #ifdef ENABLE_OFFLINE_JPEG
-  if (offline_jpeg_encoder_) {
-    offline_jpeg_encoder_->RegisterClient(client_id);
+  if (offline_process_) {
+    offline_process_->RegisterClient(client_id);
   }
 #endif
 
@@ -257,8 +229,8 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
   }
 
 #ifdef ENABLE_OFFLINE_JPEG
-  if (offline_jpeg_encoder_) {
-    offline_jpeg_encoder_->DeRegisterClient(client_id);
+  if (offline_process_) {
+    offline_process_->DeRegisterClient(client_id);
   }
 #endif
 
@@ -314,6 +286,7 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     }
 
     client_track_lock_.lock();
+    client_track_map_.erase(client_id);
     client_tracks_state_.erase(client_id);
     if (client_mutex_map_.count(client_id) != 0)
       delete client_mutex_map_[client_id];
@@ -339,7 +312,6 @@ status_t RecorderImpl::DeRegisterClient(const uint32_t client_id,
     }
 
     lk.lock();
-    client_track_map_.erase(client_id);
     client_cameraid_map_.erase(client_id);
   }
 
@@ -475,13 +447,16 @@ status_t RecorderImpl::StopCamera(const uint32_t client_id,
   assert(camera_source_ != nullptr);
 
   // Notify all clients, except this one, that the camera is about to be closed.
-  for (auto it : client_cameraid_map_) {
-    auto& client = it.first;
-    if (client != client_id) {
-      remote_cb_handle_(client)->NotifyRecorderEvent(
-          EventType::kCameraClosing,
-          const_cast<void*>(reinterpret_cast<const void*>(&camera_id)),
-          sizeof(uint32_t));
+  {
+    std::lock_guard<std::mutex> lock(camera_map_lock_);
+    for (auto it : client_cameraid_map_) {
+      auto& client = it.first;
+      if (client != client_id) {
+        remote_cb_handle_(client)->NotifyRecorderEvent(
+            EventType::kCameraClosing,
+            const_cast<void*>(reinterpret_cast<const void*>(&camera_id)),
+            sizeof(uint32_t));
+      }
     }
   }
 
@@ -914,7 +889,7 @@ status_t RecorderImpl::CaptureImage(const uint32_t client_id,
                                     const uint32_t n_images,
                                     const std::vector<CameraMetadata> &meta) {
 
-  QMMF_DEBUG("%s: Enter client_id(%u):camera_id(%d)", __func__,
+  QMMF_ERROR("%s: Enter client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);
 
   if (!IsClientValid(client_id)) {
@@ -934,13 +909,14 @@ status_t RecorderImpl::CaptureImage(const uint32_t client_id,
           CameraSnapshotCb(client_id, camera_id, count, buf, meta);
       };
 
+  QMMF_ERROR ("%s: calling camera source capture image", __func__);
   auto ret = camera_source_->CaptureImage(camera_id, type, n_images, meta, cb);
   if (ret != 0) {
     QMMF_ERROR("%s: client_id(%u):camera_id(%d) CaptureImage failed!",
         __func__, client_id, camera_id);
     return ret;
   }
-  QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__,
+  QMMF_ERROR("%s: Exit client_id(%u):camera_id(%d)", __func__,
       client_id, camera_id);;
   return 0;
 }
@@ -1004,11 +980,6 @@ status_t RecorderImpl::CancelCaptureImage(const uint32_t client_id,
     QMMF_ERROR("%s: CancelCaptureImage failed!", __func__);
     return ret;
   }
-
-  // This method doesn't go up to client as a callback, it is just to update
-  // Internal data structure used for buffer mapping.
-  remote_cb_handle_(client_id)->NotifyCancelCaptureImage();
-
   QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d):image_id(%d)", __func__,
       client_id, camera_id, image_id);
   return 0;
@@ -1260,24 +1231,24 @@ status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,
   return 0;
 }
 
-status_t RecorderImpl::CreateOfflineJPEG(const uint32_t client_id,
-                                      const OfflineJpegCreateParams& params) {
+status_t RecorderImpl::CreateOfflineProcess(const uint32_t client_id,
+                                      const OfflineCameraCreateParams& params) {
 
   QMMF_DEBUG("%s Enter client_id(%u)", __func__, client_id);
 
 #ifdef ENABLE_OFFLINE_JPEG
-  assert(offline_jpeg_encoder_ != nullptr);
-  if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
+  assert(offline_process_ != nullptr);
+  if (!offline_process_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
     return -EINVAL;
   }
-  auto ret = offline_jpeg_encoder_->Create(client_id, params);
+  auto ret = offline_process_->Create(client_id, params);
   if (ret != 0) {
-    QMMF_ERROR("%s: Offline JPEG encoder create failed!", __func__);
+    QMMF_ERROR("%s: Offline Proc create failed!", __func__);
     return ret;
   }
 #else
-  QMMF_ERROR("Offline JPEG not supported on this platform");
+  QMMF_ERROR("Offline Process not supported on this platform");
   return -ENOSYS;
 #endif
 
@@ -1285,26 +1256,26 @@ status_t RecorderImpl::CreateOfflineJPEG(const uint32_t client_id,
   return 0;
 }
 
-status_t RecorderImpl::EncodeOfflineJPEG(const uint32_t client_id,
+status_t RecorderImpl::ProcOfflineProcess(const uint32_t client_id,
                                          const BnBuffer& in_buf,
                                          const BnBuffer& out_buf,
-                                         const OfflineJpegMeta& meta) {
+                                         const CameraMetadata& meta) {
 
   QMMF_DEBUG("%s Enter client_id(%u)", __func__, client_id);
 
 #ifdef ENABLE_OFFLINE_JPEG
-  assert(offline_jpeg_encoder_ != nullptr);
-  if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
+  assert(offline_process_ != nullptr);
+  if (!offline_process_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
     return -EINVAL;
   }
-  auto ret = offline_jpeg_encoder_->Process(client_id, in_buf, out_buf, meta);
+  auto ret = offline_process_->Process(client_id, in_buf, out_buf, meta);
   if (ret != 0) {
-    QMMF_ERROR("%s: Offline JPEG encoder process failed!", __func__);
+    QMMF_ERROR("%s: Offline Proc process failed!", __func__);
     return ret;
   }
 #else
-  QMMF_ERROR("Offline JPEG not supported on this platform");
+  QMMF_ERROR("Offline Process not supported on this platform");
   return -ENOSYS;
 #endif
 
@@ -1312,23 +1283,23 @@ status_t RecorderImpl::EncodeOfflineJPEG(const uint32_t client_id,
   return 0;
 }
 
-status_t RecorderImpl::DestroyOfflineJPEG(const uint32_t client_id) {
+status_t RecorderImpl::DestroyOfflineProcess(const uint32_t client_id) {
 
   QMMF_DEBUG("%s Enter client_id(%u)", __func__, client_id);
 
 #ifdef ENABLE_OFFLINE_JPEG
-  assert(offline_jpeg_encoder_ != nullptr);
-  if (!offline_jpeg_encoder_->IsClientFound(client_id)) {
+  assert(offline_process_ != nullptr);
+  if (!offline_process_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
     return -EINVAL;
   }
-  auto ret = offline_jpeg_encoder_->Destroy(client_id);
+  auto ret = offline_process_->Destroy(client_id);
   if (ret != 0) {
-    QMMF_ERROR("%s: Offline JPEG encoder destroy failed!", __func__);
+    QMMF_ERROR("%s: Offline Proc destroy failed!", __func__);
     return ret;
   }
 #else
-  QMMF_ERROR("Offline JPEG not supported on this platform");
+  QMMF_ERROR("Offline Process not supported on this platform");
   return -ENOSYS;
 #endif
 

@@ -15,9 +15,6 @@ target_include_directories(qmmf_common_resizer_fastcv
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(qmmf_common_resizer_fastcv
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(qmmf_common_resizer_fastcv
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_common_resizer_fastcv DESTINATION lib OPTIONAL)

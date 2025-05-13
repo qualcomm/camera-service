@@ -26,43 +26,19 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#ifdef USE_LIBGBM
+#ifdef TARGET_USES_GRALLOC1
+#include "qmmf_gralloc1_interface.h"
+#elif TARGET_USES_GRALLOC2
+#include "qmmf_gralloc2_interface.h"
+#elif USE_LIBGBM
 #include "qmmf_gbm_interface.h"
+#elif HAVE_BINDER
+#include "qmmf_gralloc_interface.h"
 #else
 #include "qmmf_dmabuf_interface.h"
 #endif // USE_LIBGBM
@@ -92,8 +68,14 @@ const int IMemAllocUsage::kFlex4Batch           = (1 << 19);
 const int IMemAllocUsage::kFlex8Batch           = (1 << 20);
 
 IAllocDevice *AllocDeviceFactory::CreateAllocDevice() {
-#ifdef USE_LIBGBM
+#ifdef TARGET_USES_GRALLOC1
+  return new Gralloc1Device;
+#elif TARGET_USES_GRALLOC2
+  return new Gralloc2Device;
+#elif USE_LIBGBM
   return GBMDevice::CreateGBMDevice();
+#elif HAVE_BINDER
+  return new GrallocDevice;
 #else
   return new DMABufDevice;
 #endif // USE_LIBGBM
@@ -108,15 +90,45 @@ void AllocDeviceFactory::DestroyAllocDevice(IAllocDevice* alloc_device_interface
 }
 
 const IMemAllocUsage &AllocUsageFactory::GetAllocUsage() {
-#ifdef USE_LIBGBM
+#ifdef TARGET_USES_GRALLOC1
+  static const Gralloc1Usage x = Gralloc1Usage();
+#elif TARGET_USES_GRALLOC2
+  static const Gralloc2Usage x = Gralloc2Usage();
+#elif USE_LIBGBM
   static const GBMUsage x = GBMUsage();
+#elif HAVE_BINDER
+  static const GrallocUsage x = GrallocUsage();
 #else
   static const DMABufUsage x = DMABufUsage();
 #endif // USE_LIBGBM
   return x;
 }
 
-#ifdef USE_LIBGBM
+#ifdef TARGET_USES_GRALLOC1
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  Gralloc1Buffer *b = static_cast<Gralloc1Buffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+gralloc1_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const Gralloc1Device &b = static_cast<const Gralloc1Device &>(handle);
+  return b.GetDevice();
+}
+
+#elif TARGET_USES_GRALLOC2
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  const Gralloc2Buffer *b = static_cast<const Gralloc2Buffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+gralloc2_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const Gralloc2Device &b = static_cast<const Gralloc2Device &>(handle);
+  return b.GetDevice();
+}
+
+#elif USE_LIBGBM
 struct gbm_bo *GetAllocBufferHandle(const IBufferHandle &handle) {
   GBMBuffer *b = static_cast<GBMBuffer *>(handle);
   assert(b != nullptr);
@@ -133,6 +145,19 @@ buffer_handle_t &GetGrallocBufferHandle(const IBufferHandle &handle) {
   assert(b != nullptr);
   return b->RepackToGralloc();
 }
+
+#elif HAVE_BINDER
+buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
+  GrallocBuffer *b = static_cast<GrallocBuffer *>(handle);
+  assert(b != nullptr);
+  return b->GetNativeHandle();
+}
+
+alloc_device_t *GetAllocDeviceHandle(const IAllocDevice &handle) {
+  const GrallocDevice &b = static_cast<const GrallocDevice &>(handle);
+  return b.GetDevice();
+}
+
 #else
 buffer_handle_t &GetAllocBufferHandle(const IBufferHandle &handle) {
   DMABuffer *b = static_cast<DMABuffer *>(handle);

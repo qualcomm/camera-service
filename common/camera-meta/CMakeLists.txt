@@ -11,6 +11,7 @@ target_include_directories(qmmf_camera_metadata
  PRIVATE ${TOP_DIRECTORY})
 
 include_directories(${SYSROOT_INCDIR}/camx-api/camx/service)
+
 #EXPORT_HEADERS
 install(FILES
   ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_camera_metadata.h
@@ -24,7 +25,7 @@ set_target_properties(qmmf_camera_metadata PROPERTIES
 
 install(TARGETS qmmf_camera_metadata DESTINATION lib OPTIONAL)
 
-target_link_libraries(qmmf_camera_metadata pthread ${CMAKE_DL_LIBS})
+target_link_libraries(qmmf_camera_metadata pthread ${CMAKE_DL_LIBS} camera_metadata)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_metadata log binder utils cutils)
 else()

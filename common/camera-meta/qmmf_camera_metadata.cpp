@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -32,7 +32,9 @@
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 
+#ifdef HAVE_BINDER
 using namespace android;
+#endif
 
 namespace qmmf {
 
@@ -377,6 +379,10 @@ CameraMetadata &CameraMetadata::operator=(const camera_metadata_t *buffer) {
 CameraMetadata::~CameraMetadata() {
     mLocked = false;
     clear();
+}
+
+camera_metadata_t* CameraMetadata::getbuffer() {
+    return mBuffer;
 }
 
 const camera_metadata_t* CameraMetadata::getAndLock() const {

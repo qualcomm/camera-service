@@ -28,8 +28,8 @@
  */
 
 /*
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -44,9 +44,9 @@
 #include <cutils/properties.h>
 #else
 #include "properties.h"
+#include "common/propertyvault/qmmf_propertyvault.h"
 #endif
 
-#include "common/propertyvault/qmmf_propertyvault.h"
 #include "common/utils/qmmf_log.h"
 
 namespace qmmf {

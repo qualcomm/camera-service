@@ -28,8 +28,8 @@
 */
 
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -47,9 +47,9 @@
 #include <cutils/properties.h>
 #else
 #include "properties.h"
+#include "common/propertyvault/qmmf_propertyvault.h"
 #endif
 
-#include "common/propertyvault/qmmf_propertyvault.h"
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/service/qmmf_recorder_service.h"
 
@@ -59,6 +59,9 @@
  */
 #define QMMF_BOOT_COMPLETE "vendor.qmmf.boot.complete"
 
+#ifdef HAVE_BINDER
+using namespace android;
+#endif
 using namespace qmmf;
 using namespace recorder;
 
@@ -75,6 +78,10 @@ int32_t main(int32_t argc, char **argv) {
   QMMF_GET_LOG_LEVEL();
 
 #ifdef HAVE_BINDER
+#ifdef ANDROID_O_OR_ABOVE
+  ProcessState::initWithDriver("/dev/vndbinder");
+#endif
+
   //Add Recorder service.
   defaultServiceManager()->addService(String16(QMMF_RECORDER_SERVICE_NAME),
                   new qmmf::recorder::RecorderService(), false);

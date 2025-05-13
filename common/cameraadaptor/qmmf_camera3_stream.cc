@@ -18,39 +18,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "qmmf_camera3_utils.h"
@@ -62,6 +32,9 @@
 #ifdef HAVE_MMM_COLOR_FMT_H
 #include <display/media/mmm_color_fmt.h>
 #else
+#ifdef HAVE_BINDER
+#include <media/msm_media_info.h>
+#endif
 #define MMM_COLOR_FMT_NV12_UBWC COLOR_FMT_NV12_UBWC
 #define MMM_COLOR_FMT_NV12_BPP10_UBWC COLOR_FMT_NV12_BPP10_UBWC
 #define MMM_COLOR_FMT_ALIGN MSM_MEDIA_ALIGN
@@ -81,6 +54,8 @@
 namespace qmmf {
 
 namespace cameraadaptor {
+
+buffer_handle_t* Camera3Stream::DUMMY_BUFFER = (buffer_handle_t *)0xFFFFFFFF;
 
 Camera3Stream::Camera3Stream(int id, size_t maxSize,
                              const CameraStreamParameters &outputConfiguration,
@@ -106,7 +81,10 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
       monitor_(monitor),
       monitor_id_(Camera3Monitor::INVALID_ID),
       is_stream_active_(false),
-      prepared_buffers_count_(0) {
+      is_stream_idle_(true),
+      prepared_buffers_count_(0),
+      dummy_buffer_{},
+      stream_camera_id() {
   camera3_stream::stream_type = CAMERA3_STREAM_OUTPUT;
   camera3_stream::width = outputConfiguration.width;
   camera3_stream::height = outputConfiguration.height;
@@ -129,6 +107,11 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
 #if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0307)
   camera3_stream::group_id  = -1;
 #endif
+  stream_camera_id = outputConfiguration.stream_camera_id;
+  if (stream_camera_id.empty())
+    camera3_stream::physical_camera_id = nullptr;
+  else
+    camera3_stream::physical_camera_id = stream_camera_id.c_str();
 
   if ((HAL_PIXEL_FORMAT_BLOB == format) && (0 == maxSize)) {
     QMMF_ERROR("%s: blob with zero size\n", __func__);
@@ -141,6 +124,12 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
   }
 
   mem_alloc_interface_ = device;
+
+  dummy_buffer_.stream = this;
+  dummy_buffer_.buffer = DUMMY_BUFFER;
+  dummy_buffer_.acquire_fence = -1;
+  dummy_buffer_.release_fence = -1;
+  dummy_buffer_.status = CAMERA3_BUFFER_STATUS_OK;
 
   pthread_mutex_init(&lock_, NULL);
   cond_init(&output_buffer_returned_signal_);
@@ -470,6 +459,34 @@ exit:
   return res;
 }
 
+int32_t Camera3Stream::GetDummyBuffer(camera3_stream_buffer *buffer) {
+  int32_t res = 0;
+
+  pthread_mutex_lock(&lock_);
+
+  if (status_ != STATUS_CONFIGURED) {
+    QMMF_ERROR(
+        "%s: Stream %d: Can't retrieve buffer when stream"
+        "is not configured%d\n",
+        __func__, id_, status_);
+    res = -ENOSYS;
+    goto exit;
+  }
+
+  *buffer = dummy_buffer_;
+
+  if (is_stream_idle_ && status_ != STATUS_CONFIG_ACTIVE &&
+      status_ != STATUS_RECONFIG_ACTIVE) {
+    monitor_.ChangeStateToActive(monitor_id_);
+    is_stream_idle_ = false;
+  }
+
+exit:
+
+  pthread_mutex_unlock(&lock_);
+  return res;
+}
+
 int32_t Camera3Stream::GetBuffer(camera3_stream_buffer *buffer) {
   int32_t res = 0;
 
@@ -781,8 +798,22 @@ void Camera3Stream::ReturnBufferToClient(const camera3_stream_buffer &buffer,
 
   pthread_mutex_lock(&lock_);
 
+  if (buffer.buffer == DUMMY_BUFFER) {
+    QMMF_INFO("%s: Camera HAL return dummy buffer", __func__);
+    pthread_mutex_unlock(&lock_);
+    return;
+  }
+
   hal_buffer_cnt_--;
   client_buffer_cnt_++;
+
+  if (status_ != STATUS_CONFIG_ACTIVE && status_ != STATUS_RECONFIG_ACTIVE) {
+    if (hal_buffer_cnt_ == 0) {
+      // notify hal is idle for this stream i.e. buffers are returned by hal
+      QMMF_DEBUG("%s: Stream(%d): Changing state to idle", __func__, id_);
+      monitor_.ChangeStateToIdle(monitor_id_);
+    }
+  }
 
   StreamBuffer b;
   memset(&b, 0, sizeof(b));
@@ -814,6 +845,31 @@ void Camera3Stream::ReturnBufferToClient(const camera3_stream_buffer &buffer,
         b.frame_number, b.timestamp);
     ReturnBuffer(b);
   }
+}
+
+void Camera3Stream::ReturnBuffer(const buffer_handle_t &buffer) {
+
+  pthread_mutex_lock(&lock_);
+
+  hal_buffer_cnt_--;
+  client_buffer_cnt_++;
+
+  if (status_ != STATUS_CONFIG_ACTIVE && status_ != STATUS_RECONFIG_ACTIVE) {
+    if (hal_buffer_cnt_ == 0) {
+      // notify hal is idle for this stream i.e. buffers are returned by hal
+      QMMF_DEBUG("%s: Stream(%d): Changing state to idle", __func__, id_);
+      monitor_.ChangeStateToIdle(monitor_id_);
+    }
+  }
+
+  StreamBuffer b;
+  memset(&b, 0, sizeof(b));
+  b.handle = buffers_map[buffer];
+  assert(b.handle != nullptr);
+
+  pthread_mutex_unlock(&lock_);
+
+  ReturnBuffer(b);
 }
 
 int32_t Camera3Stream::ReturnBuffer(const StreamBuffer &buffer) {
@@ -870,16 +926,11 @@ int32_t Camera3Stream::ReturnBufferLocked(const StreamBuffer &buffer) {
       pending_buffer_count_);
 
   if (status_ != STATUS_CONFIG_ACTIVE && status_ != STATUS_RECONFIG_ACTIVE) {
-    if (pending_buffer_count_ == client_buffer_cnt_) {
-      // notify hal is idle for this stream i.e. buffers are returned by hal
-      QMMF_DEBUG("%s: Stream(%d): Changing state to idle", __func__, id_);
-      monitor_.ChangeStateToIdle(monitor_id_);
-    }
-
     if (pending_buffer_count_ == 0) {
       // notify stream is idle i.e. all buffers are returned
       QMMF_DEBUG("%s: Stream(%d): Stream is idle", __func__, id_);
       pthread_cond_signal(&idle_signal_);
+      is_stream_idle_ = true;
     }
   }
 
@@ -899,6 +950,7 @@ void Camera3Stream::WaitForIdle() {
         QMMF_ERROR("%s: Error during state change wait: %s (%d)\n", __func__,
                    strerror(-res), res);
       }
+      PrintBuffersInfoLocked();
     }
   }
   pthread_mutex_unlock(&lock_);
@@ -963,7 +1015,9 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
         buf_width,
         buf_height,
         camera3_stream::format,
+#ifndef HAVE_BINDER
         camera3_stream::override_format,
+#endif
         memusage,
         &current_buffer_stride_);
 
@@ -996,9 +1050,11 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
 
    buffers_map.emplace(*streamBuffer->buffer, mem_alloc_slots_[idx]);
 
-    if (pending_buffer_count_ == 0 && status_ != STATUS_CONFIG_ACTIVE &&
+    if (is_stream_idle_ && hal_buffer_cnt_ == 0 &&
+        status_ != STATUS_CONFIG_ACTIVE &&
         status_ != STATUS_RECONFIG_ACTIVE) {
       monitor_.ChangeStateToActive(monitor_id_);
+      is_stream_idle_ = false;
     }
 
     hal_buffer_cnt_++;

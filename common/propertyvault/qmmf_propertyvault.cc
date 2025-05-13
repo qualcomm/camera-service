@@ -1,9 +1,9 @@
 /*
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
-#include "qmmf_propertyvault.h"
+#include "common/utils/qmmf_common_utils.h"
 
 using property_get_fnp = decltype(property_get);
 using property_set_fnp = decltype(property_set);

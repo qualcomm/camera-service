@@ -25,6 +25,10 @@
 * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <errno.h>
@@ -62,6 +66,16 @@ int32_t cond_wait_relative(pthread_cond_t *cond, pthread_mutex_t *mutex,
   }
 
   return -pthread_cond_timedwait(cond, mutex, &ts);
+}
+
+int compare(const int32_t *left, const int32_t *right) {
+    if (*left < *right) {
+        return -1;
+    } else if (*left > *right) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 }  // namespace cameraadaptor ends here

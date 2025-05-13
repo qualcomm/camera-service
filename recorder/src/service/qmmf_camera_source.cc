@@ -26,39 +26,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "RecorderCameraSource"
@@ -69,9 +39,13 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <errno.h>
+#ifndef CAMERA_HAL1_SUPPORT
 #include <hardware/camera3.h>
+#endif
+#ifndef HAVE_BINDER
+#include "common/utils/qmmf_common_utils.h"
+#endif
 
-#include "common/propertyvault/qmmf_propertyvault.h"
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
@@ -83,6 +57,9 @@
 namespace qmmf {
 
 namespace recorder {
+
+#define FRAME_RATE_TIMEBASE      1000000000.0f // 1 second
+#define FPS_MEASUREMENT_INTERVAL 3000000000    // 3 seconds
 
 using ::std::make_shared;
 using ::std::shared_ptr;
@@ -491,8 +468,10 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
     QMMF_INFO("%s: Master->slave 0x%x->0x%x", __func__, source_track_id,
         track_id);
 
+    track_source_lock_.lock();
     assert(track_sources_.count(source_track_id) != 0);
     auto track = track_sources_[source_track_id];
+    track_source_lock_.unlock();
 
     if (ValidateSlaveTrackParam(params, track->GetParams())) {
       linked_mode = CheckLinkedStream(params, track->GetParams());
@@ -543,8 +522,10 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
       rescalers_.emplace(track_id, rescaler);
     }
 
+    track_source_lock_.lock();
     assert(track_sources_.count(source_track_id) != 0);
     master_track = track_sources_[source_track_id];
+    track_source_lock_.unlock();
     assert(master_track.get() != nullptr);
 
     ret = track_source->InitCopy(master_track, rescaler);
@@ -563,7 +544,9 @@ status_t CameraSource::CreateTrackSource(const uint32_t track_id,
     }
   }
 
+  track_source_lock_.lock();
   track_sources_.emplace(track_id, track_source);
+  track_source_lock_.unlock();
 
   QMMF_DEBUG("%s: Exit", __func__);
   return ret;
@@ -837,6 +820,7 @@ bool CameraSource::IsTrackIdValid(const uint32_t track_id) {
 uint32_t CameraSource::GetJpegSize(uint8_t *blobBuffer, uint32_t size) {
 
   uint32_t ret = size;
+#ifndef CAMERA_HAL1_SUPPORT
   uint32_t blob_size = sizeof(struct camera3_jpeg_blob);
 
   if (size > blob_size) {
@@ -853,7 +837,7 @@ uint32_t CameraSource::GetJpegSize(uint8_t *blobBuffer, uint32_t size) {
     QMMF_ERROR("%s Buffer size: %u equal or smaller than Blob size: %u\n",
         __func__, size, blob_size);
   }
-
+#endif
   return ret;
 }
 
@@ -1039,7 +1023,11 @@ TrackSource::TrackSource(const uint32_t id,
       frc_(nullptr),
       rescaler_(nullptr),
       num_consumers_(0),
-      slave_track_source_(false) {
+      slave_track_source_(false),
+      input_frame_count_(0),
+      measurement_interval_(0),
+      previous_input_ts_(0),
+      input_frame_interval_(0) {
 
   QMMF_GET_LOG_LEVEL();
 
@@ -1378,6 +1366,25 @@ status_t TrackSource::StopTrack(bool cached) {
   return 0;
 }
 
+void TrackSource::CalculateFPS(StreamBuffer& buffer) {
+  input_frame_interval_ =
+      (previous_input_ts_ == 0) ? 0 : (buffer.timestamp - previous_input_ts_);
+
+  measurement_interval_ += input_frame_interval_;
+  input_frame_count_ ++;
+  previous_input_ts_ = buffer.timestamp;
+
+  if (measurement_interval_ >= FPS_MEASUREMENT_INTERVAL) {
+    int64_t frame_interval = measurement_interval_ / input_frame_count_;
+    float fps = FRAME_RATE_TIMEBASE / frame_interval;
+
+    QMMF_DEBUG("%s: Track(%x) FPS: %.2f", __func__, id_, fps);
+
+    input_frame_count_    = 0;
+    measurement_interval_ = 0;
+  }
+}
+
 void TrackSource::OnFrameAvailable(StreamBuffer& buffer) {
 
   QMMF_VERBOSE("%s: Enter Track(%x)", __func__, id_);
@@ -1403,7 +1410,16 @@ void TrackSource::OnFrameAvailable(StreamBuffer& buffer) {
 
     std::unique_lock<std::mutex> lock(frame_lock_);
     ReturnBufferToProducer(buffer);
+
+    input_frame_count_ = 0;
+    measurement_interval_ = 0;
+    previous_input_ts_ = 0;
+    input_frame_interval_ = 0;
     return;
+  } else {
+    if (fsc_.get() == nullptr && frc_.get() == nullptr) {
+      CalculateFPS(buffer);
+    }
   }
 
   BnBuffer bn_buffer{};

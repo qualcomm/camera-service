@@ -26,42 +26,16 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "Recorder"
+
+#ifdef HAVE_BINDER
+#include <binder/IPCThreadState.h>
+#endif
 
 #include "qmmf-sdk/qmmf_recorder.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
@@ -381,9 +355,20 @@ status_t Recorder::CreateOfflineJPEG(
 
   QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->CreateOfflineJPEG(params, cb);
+  OfflineCameraCreateParams offline_params;
+  offline_params.process_mode = params.process_mode;
+  offline_params.in_buffer.width = params.in_buffer.width;
+  offline_params.in_buffer.height = params.in_buffer.height;
+  offline_params.in_buffer.format = params.in_buffer.format;
+
+  offline_params.out_buffer.width = params.out_buffer.width;
+  offline_params.out_buffer.height = params.out_buffer.height;
+  offline_params.out_buffer.format = params.out_buffer.format;
+
+  OfflineCameraCb offline_cb = cb;
+  auto ret = recorder_client_->CreateOfflineProcess(offline_params, offline_cb);
   if (0 != ret) {
-    QMMF_ERROR("%s: CreateOfflineJPEG failed!", __func__);
+    QMMF_ERROR("%s: CreateOfflineProcess failed!", __func__);
   }
   QMMF_DEBUG("%s: Exit", __func__);
   return ret;
@@ -392,10 +377,18 @@ status_t Recorder::CreateOfflineJPEG(
 status_t Recorder::EncodeOfflineJPEG(const OfflineJpegProcessParams& params) {
   QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->EncodeOfflineJPEG(params);
+  OfflineCameraProcessParams proc_params;
+  CameraMetadata meta(1, 128);
+  meta.update(ANDROID_JPEG_QUALITY, (uint8_t *)(&params.metadata.quality), 1);
+  proc_params.meta = meta;
+  proc_params.in_buf_fd = params.in_buf_fd;
+  proc_params.out_buf_fd = params.out_buf_fd;
+
+  auto ret = recorder_client_->ProcOfflineProcess(proc_params);
   if (0 != ret) {
-    QMMF_ERROR("%s: EncodeOfflineJPEG failed!", __func__);
+    QMMF_ERROR("%s: ProcOfflineProcess failed!", __func__);
   }
+
   QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
@@ -403,11 +396,47 @@ status_t Recorder::EncodeOfflineJPEG(const OfflineJpegProcessParams& params) {
 status_t Recorder::DestroyOfflineJPEG() {
   QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
-  auto ret = recorder_client_->DestroyOfflineJPEG();
+  auto ret = recorder_client_->DestroyOfflineProcess();
   if (0 != ret) {
-    QMMF_ERROR("%s: DestroyOfflineJPEG failed!", __func__);
+    QMMF_ERROR("%s: DestroyOfflineProcess failed!", __func__);
   }
   QMMF_DEBUG("%s: Exit", __func__);
+  return ret;
+}
+
+status_t Recorder::CreateOfflineCamera(const OfflineCameraCreateParams &params,
+                              const OfflineCameraCb &cb) {
+  QMMF_INFO("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->CreateOfflineProcess(params, cb);
+  if (ret != 0) {
+    QMMF_ERROR("%s: CreateOfflineProcess failed!", __func__);
+  }
+  QMMF_INFO("%s: Exit", __func__);
+  return ret;
+}
+
+status_t Recorder::ProcessOfflineCamera(const OfflineCameraProcessParams &params) {
+  QMMF_INFO("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->ProcOfflineProcess(params);
+  if (ret != 0) {
+    QMMF_ERROR("%s: ProcOfflineProcess failed", __func__);
+  }
+
+  QMMF_INFO("%s: Exit", __func__);
+  return ret;
+}
+
+status_t Recorder::DestroyOfflineCamera() {
+  QMMF_INFO("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  auto ret = recorder_client_->DestroyOfflineProcess();
+  if (ret != 0) {
+    QMMF_ERROR("%s: DestroyOfflineProcess failed!", __func__);
+  }
+
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 

@@ -26,39 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -121,27 +91,47 @@ enum class CamFeatureFlag : uint32_t {
   kSWTNR = 1 <<16,             /// SW TNR
 };
 
-enum class CamOperationMode {
-  // camera in normal mode
-  kCamOperationModeNone,
-
-  // use frame selection node after IFE to filter frames
-  kCamOperationModeFrameSelection,
-
-  // camera pipeline switch between preview and preview plus video
-  kCamOperationModeFastSwitch,
-
-  kCamOperationModeEnd,
-};
-
 #define FORCE_SENSOR_MODE_MASK      (0x00F00000)
 #define FORCE_SENSOR_MODE_DATA(idx) ((idx + 1) << 20)
 
+typedef uint32_t CamOperationMode;
+
+enum CamOperationModeEnum {
+  kCamOpModeFrameSelectionEnum = 0,
+  kCamOpModeFastSwitchEnum,
+  kCamOpModeMaxEnum,
+};
+
+enum StreamUsecase {
+  kStreamUsecaseNone        = 0x00000,
+  kStreamUsecaseSideBySide  = 0x10002,
+  kStreamUsecasePanorama    = 0x10003,
+};
+
+#define CAM_OPMODE_FLAG_FRAMESELECTION      (1 << kCamOpModeFrameSelectionEnum)
+#define CAM_OPMODE_FLAG_FASTSWITCH          (1 << kCamOpModeFastSwitchEnum)
+#define CAM_OPMODE_FLAG_MASK                ((1 << kCamOpModeMaxEnum) - 1)
+
+#define CAM_OPMODE_FLAG_VALID(mode) \
+  (!(mode & (~CAM_OPMODE_FLAG_MASK)))
+
+#define CAM_OPMODE_SET_FRAMESELECTION(mode) \
+  (mode = (mode | CAM_OPMODE_FLAG_FRAMESELECTION))
+
+#define CAM_OPMODE_CLR_FRAMESELECTION(mode) \
+  (mode = ((mode & (~CAM_OPMODE_FLAG_FRAMESELECTION)) & CAM_OPMODE_FLAG_MASK))
+
 #define CAM_OPMODE_IS_FRAMESELECTION(mode) \
-  (mode == CamOperationMode::kCamOperationModeFrameSelection)
+  (mode & CAM_OPMODE_FLAG_FRAMESELECTION)
+
+#define CAM_OPMODE_SET_FASTSWITCH(mode) \
+  (mode = (mode | CAM_OPMODE_FLAG_FASTSWITCH))
+
+#define CAM_OPMODE_CLR_FASTSWITCH(mode) \
+  (mode = ((mode & (~CAM_OPMODE_FLAG_FASTSWITCH)) & CAM_OPMODE_FLAG_MASK))
 
 #define CAM_OPMODE_IS_FASTSWTICH(mode) \
-  (mode == CamOperationMode::kCamOperationModeFastSwitch)
+  (mode & CAM_OPMODE_FLAG_FASTSWITCH)
 
 struct CameraStreamParameters {
   uint32_t width;
@@ -156,13 +146,14 @@ struct CameraStreamParameters {
   MemAllocFlags allocFlags;
   uint32_t bufferCount;
   StreamCallback cb;
+  ::std::string stream_camera_id;
   CameraStreamParameters() :
       width(0), height(0), format(-1), data_space(HAL_DATASPACE_UNKNOWN),
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
       usecase(0), hdrmode(0),
 #endif
       rotation(CAMERA3_STREAM_ROTATION_0), allocFlags(), bufferCount(0),
-      cb(nullptr) {}
+      cb(nullptr), stream_camera_id() {}
 };
 
 struct CameraParameters {
@@ -178,7 +169,7 @@ struct CameraParameters {
       is_constrained_high_speed(false), is_raw_only(false), batch_size(1),
       super_frames(1), fps_sensormode_index(0), frame_rate_range{},
       cam_feature_flags(static_cast<uint32_t>(CamFeatureFlag::kNone)),
-      cam_opmode(CamOperationMode::kCamOperationModeNone) {}
+      cam_opmode(0) {}
 };
 
 typedef struct Camera3Request_t {

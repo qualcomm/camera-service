@@ -26,8 +26,8 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -474,7 +474,7 @@ TEST_F(VideoGtest, SessionWithThreeStream) {
     };
 
     VideoExtraParam xtraparam;
-    ret = recorder_.CreateVideoTrack(video_track_1,
+    ret = recorder_.CreateVideoTrack( video_track_1,
                                      video_track_param_1, xtraparam,
                                      video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -498,9 +498,9 @@ TEST_F(VideoGtest, SessionWithThreeStream) {
       xtraparam.Update(QMMF_SOURCE_VIDEO_TRACK_ID, surface_video_copy);
     }
 
-    ret = recorder_.CreateVideoTrack(video_track_2,
-                                     video_track_param_2, xtraparam,
-                                     video_track_cb);
+    ret = recorder_.CreateVideoTrack( video_track_2,
+                                      video_track_param_2, xtraparam,
+                                      video_track_cb);
     ASSERT_TRUE(ret == 0);
 
     track_ids.emplace(video_track_2);
@@ -667,7 +667,7 @@ TEST_F(VideoGtest, SessionWithFourStream) {
     };
 
     VideoExtraParam xtraparam;
-    ret = recorder_.CreateVideoTrack(video_track_1,
+    ret = recorder_.CreateVideoTrack( video_track_1,
                                      video_track_param_1, xtraparam,
                                      video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -691,7 +691,7 @@ TEST_F(VideoGtest, SessionWithFourStream) {
       xtraparam.Update(QMMF_SOURCE_VIDEO_TRACK_ID, surface_video_copy);
     }
 
-    ret = recorder_.CreateVideoTrack(video_track_2,
+    ret = recorder_.CreateVideoTrack( video_track_2,
                                       video_track_param_2, xtraparam,
                                       video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -714,7 +714,7 @@ TEST_F(VideoGtest, SessionWithFourStream) {
       xtraparam.Update(QMMF_SOURCE_VIDEO_TRACK_ID, surface_video_copy);
     }
 
-    ret = recorder_.CreateVideoTrack(video_track_3,
+    ret = recorder_.CreateVideoTrack( video_track_3,
                                       video_track_param_3, xtraparam,
                                       video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -737,7 +737,7 @@ TEST_F(VideoGtest, SessionWithFourStream) {
       xtraparam.Update(QMMF_SOURCE_VIDEO_TRACK_ID, surface_video_copy);
     }
 
-    ret = recorder_.CreateVideoTrack(video_track_4,
+    ret = recorder_.CreateVideoTrack( video_track_4,
                                       video_track_param_4, xtraparam,
                                       video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -919,7 +919,7 @@ TEST_F(VideoGtest, SessionWithFiveStream) {
       xtraparam.Update(QMMF_SOURCE_VIDEO_TRACK_ID, surface_video_copy);
     }
 
-    ret = recorder_.CreateVideoTrack(video_track_2,
+    ret = recorder_.CreateVideoTrack( video_track_2,
                                       video_track_param_2, xtraparam,
                                       video_track_cb);
     ASSERT_TRUE(ret == 0);
@@ -1102,8 +1102,8 @@ TEST_F(VideoGtest, SessionWithTwoConcurrentCam1080p) {
                                    video_track_cb);
   ASSERT_TRUE(ret == 0);
 
-  std::unordered_set<uint32_t> cam_track_ids;
-  cam_track_ids.emplace(cam0_video_track_id_1080p);
+  std::unordered_set<uint32_t> cam0_track_ids;
+  cam0_track_ids.emplace(cam0_video_track_id_1080p);
 
   video_track_cb.data_cb = [&](
       uint32_t track_id, std::vector<BufferDescriptor> buffers,
@@ -1117,16 +1117,17 @@ TEST_F(VideoGtest, SessionWithTwoConcurrentCam1080p) {
                                    video_track_cb);
   ASSERT_TRUE(ret == 0);
 
-  cam_track_ids.emplace(cam1_video_track_id_1080p);
+  std::unordered_set<uint32_t> cam1_track_ids;
+  cam1_track_ids.emplace(cam1_video_track_id_1080p);
 
-  ret = recorder_.StartVideoTracks(cam_track_ids);
+  ret = recorder_.StartVideoTracks(cam1_track_ids);
   ASSERT_TRUE(ret == 0);
 
   // Let session run for time record_duration_, during this time buffer with
   // valid data would be received in track callback (VideoTrackYUVDataCb).
   sleep(record_duration_);
 
-  ret = recorder_.StopVideoTracks(cam_track_ids);
+  ret = recorder_.StopVideoTracks(cam1_track_ids);
   ASSERT_TRUE(ret == 0);
 
   ret = recorder_.DeleteVideoTrack(cam0_video_track_id_1080p);

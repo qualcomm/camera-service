@@ -15,17 +15,12 @@ target_include_directories(qmmf_common_resizer_neon
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(qmmf_common_resizer_neon
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-# Headers path for msm-5.4 media on qrbx210 targets.
-target_include_directories(qmmf_common_resizer_neon
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include/vidc>)
-
-target_include_directories(qmmf_common_resizer_neon
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_common_resizer_neon DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_common_resizer_neon pthread qmmf_utils qmmf_propertyvault)
+target_link_libraries(qmmf_common_resizer_neon pthread qmmf_utils)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_common_resizer_neon log utils cutils)
+else()
+target_link_libraries(qmmf_common_resizer_neon qmmf_propertyvault)
 endif()

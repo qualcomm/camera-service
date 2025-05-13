@@ -32,6 +32,9 @@ include(CheckIncludeFileCXX)
 check_include_file_cxx("binder/IBinder.h" HAVE_BINDER_H)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -fno-short-enums -O2")
+if (HAVE_ANDROID_UTILS)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DANDROID")
+endif()
 # uncomment to generate debug information
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
@@ -62,10 +65,6 @@ if (RESIZER_NEON_ENABLED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_RESCALER_NEON")
 endif()
 
-if (ENABLE_OFFLINE_JPEG)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OFFLINE_JPEG")
-endif()
-
 if(HAVE_ANDROID_UTILS)
 add_compile_definitions(HAVE_ANDROID_UTILS)
 include_directories(${SYSROOT_INCDIR}/mm-core)
@@ -93,13 +92,15 @@ add_subdirectory(recorder/src/client)
 
 add_subdirectory(common/memory)
 
+add_subdirectory(common/cameraadaptor)
+
+if (NOT CAMERA_HAL1_SUPPORT)
 add_subdirectory(common/cameraadaptor/gtest)
+endif()
 
 if(ENABLE_CAMERA_FACTORY_TEST)
 add_subdirectory(common/cameraadaptor/test)
 endif()
-
-add_subdirectory(common/cameraadaptor)
 
 if (RESIZER_FASTCV_ENABLED)
 add_subdirectory(common/resizer-fastCV)
@@ -113,8 +114,9 @@ if (RESIZER_NEON_ENABLED)
 add_subdirectory(common/resizer-neon)
 endif()
 
+if (NOT HAVE_ANDROID_UTILS)
 add_subdirectory(common/propertyvault)
-
+endif()
 add_subdirectory(common/utils)
 
 if (NOT HAVE_BINDER_H)

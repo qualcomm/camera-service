@@ -26,39 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2023-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*! @file qmmf_recorder_extra_param_tags.h
@@ -68,6 +38,8 @@
 
 #include "qmmf_recorder_params.h"
 #include "qmmf_recorder_extra_param.h"
+
+#define MAX_CAM_NAME_SIZE 64
 
 namespace qmmf {
 
@@ -93,6 +65,8 @@ enum ParamTag {
   QMMF_IFE_DIRECT_STREAM,
   QMMF_CAM_OP_MODE_CONTROL,
   QMMF_INPUT_ROI,
+  QMMF_STREAM_CAMERA_ID,
+  QMMF_STITCH_LAYOUT,
   QMMF_OFFLINE_IFE,
   QMMF_SUPER_FRAMES,
   QMMF_SW_TNR,
@@ -153,6 +127,15 @@ enum class VHDRMode {
   kQBCHDRSnapshot,
 };
 #endif // VHDR_MODES_ENABLE
+
+enum class StitchLayout {
+  /**< this is invalid usage */
+  kNone,
+  /**< stitch images side by side */
+  kSideBySide,
+  /**< stitch images to panorama */
+  kPanorama,
+};
 
 struct SourceVideoTrack : DataTagBase {
   int32_t source_track_id;  // Default: -1
@@ -348,7 +331,27 @@ struct InputROISetup: DataTagBase {
   }
 };
 
-  struct OfflineIFE: DataTagBase {
+struct StreamCameraId: DataTagBase {
+  /**< Add support to choose camera for a stream */
+  /**< Select to use specific camera for a stream */
+  /**< Default: '\0' */
+  char stream_camera_id[MAX_CAM_NAME_SIZE];
+  StreamCameraId() :
+    DataTagBase(QMMF_STREAM_CAMERA_ID),
+    stream_camera_id{""} {}
+};
+
+struct StitchLayoutSelect: DataTagBase {
+  /**< Add support to select stitch layout for a stream */
+  /**< Select layout to stitch images for a stream */
+  /**< Default: StitchLayout::kNone */
+  StitchLayout stitch_layout;
+  StitchLayoutSelect() :
+    DataTagBase(QMMF_STITCH_LAYOUT),
+    stitch_layout(StitchLayout::kNone) {}
+};
+
+struct OfflineIFE: DataTagBase {
   /**< Add support for client to enable/disable */
   /**< Offline IFE usecase */
   /**< Default: False */

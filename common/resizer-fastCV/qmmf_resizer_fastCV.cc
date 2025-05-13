@@ -26,8 +26,8 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-* Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -57,9 +57,13 @@ FastCVResizer::~FastCVResizer() {
 }
 
 RESIZER_STATUS FastCVResizer::Init() {
-  char prop[PROP_VALUE_MAX];
+  char prop[PROPERTY_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
+#ifdef HAVE_ANDROID_UTILS
+  property_get("persist.qmmf.fastcv.level", prop, "3");
+#else
   qmmf_property_get("persist.qmmf.fastcv.level", prop, "3");
+#endif
   uint32_t level = (uint32_t) atoi(prop);
 
   if ((level == FASTCV_OP_LOW_POWER) ||

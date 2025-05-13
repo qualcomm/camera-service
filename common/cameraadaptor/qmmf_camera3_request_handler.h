@@ -18,8 +18,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifndef CAMERA3REQUESTHANDLER_H_
@@ -47,16 +47,27 @@ namespace qmmf {
 
 namespace cameraadaptor {
 
-typedef union {
+typedef enum EnumFrameSelectionState {
+  kFrameSelStateIdle,
+  kFrameSelStateIdle2Active,
+  kFrameSelStateActive,
+  kFrameSelStateActive2Idle,
+} FrameSelectionState;
+
+typedef struct {
+  // frame selection
   struct frame_selection_params {
     int32_t total_selected_frames;
     uint32_t available_frames;
+    FrameSelectionState cur_state;
+    uint32_t target_frame_num;
   } frame_selection;
 } CamReqModeParams;
 
-typedef union {
+typedef struct {
   struct frame_selection_input_params {
     int32_t total_selected_frames;
+    uint32_t cap_frame_num;
   } frame_selection;
 } CamReqModeInputParams;
 
@@ -71,8 +82,11 @@ class Camera3RequestHandler : public ThreadHelper {
   Camera3RequestHandler(Camera3Monitor &monitor);
   virtual ~Camera3RequestHandler();
 
-  int32_t Initialize(camera3_device_t *device, ErrorCallback error_cb,
-                     MarkRequest mark_cb, SetError set_error);
+  int32_t Initialize(camera3_device_t *device,
+                     uint8_t buffer_api_version,
+                     ErrorCallback error_cb,
+                     MarkRequest mark_cb,
+                     SetError set_error);
 
   int32_t SetRepeatingRequests(const RequestList &requests,
                                int64_t *lastFrameNumber = NULL);
@@ -99,6 +113,12 @@ class Camera3RequestHandler : public ThreadHelper {
 
   void SetRequestMode(CamOperationMode mode);
   void UpdateRequestedStreams(CamReqModeInputParams &params);
+  void RequestModeClear(CamOperationMode mode);
+  void RequestStreamSubmitPreProcess(camera3_capture_request_t &request,
+                                     CaptureRequest &nextRequest);
+  bool RequestStreamSubmitPostProcess(camera3_capture_request_t &request);
+  bool RequestStreamGetProcess(RequestList::iterator it,
+                               CaptureRequest &realRequest, bool first);
 
   int32_t CreateInputBuffer(uint32_t frameNumber,
                             camera3_stream_buffer_t **input_buffer);
@@ -172,11 +192,13 @@ class Camera3RequestHandler : public ThreadHelper {
   std::atomic<bool> run_worker_;
   std::mutex        worker_lock_;
   QCondition        worker_signal_;
+  uint8_t           buffer_api_version_;
 
   // camera request mode params
   CamOperationMode  cam_opmode_;
   CamReqModeParams  cam_reqmode_params_;
   std::mutex        cam_reqmode_lock_;
+  CameraMetadata    request_mdata_;
 };
 
 }  // namespace cameraadaptor ends here

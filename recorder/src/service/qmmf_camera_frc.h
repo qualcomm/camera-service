@@ -28,8 +28,8 @@
  */
 
 /*
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -60,11 +60,10 @@ class FrameRateController {
   // Buffer Producer/Consumer APIs
   status_t AddConsumer(std::shared_ptr<IBufferConsumer>& consumer);
   status_t RemoveConsumer(std::shared_ptr<IBufferConsumer>& consumer);
+  std::shared_ptr<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
 
   void OnFrameAvailable(StreamBuffer& buffer);
   void NotifyBufferReturned(StreamBuffer& buffer);
-
-  std::shared_ptr<IBufferConsumer>& GetConsumer() { return buffer_consumer_; }
 
  private:
   bool SkipFrame(const StreamBuffer& buffer);

@@ -26,39 +26,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 //! @file qmmf_recorder.h
@@ -75,6 +45,7 @@
 #include "qmmf-sdk/qmmf_recorder_params.h"
 #include "qmmf-sdk/qmmf_recorder_extra_param.h"
 #include "qmmf-sdk/qmmf_offline_jpeg_params.h"
+#include "qmmf-sdk/qmmf_offline_camera_params.h"
 
 namespace qmmf {
 namespace recorder {
@@ -309,6 +280,30 @@ class Recorder {
   ///
   /// This API destroys offline JPEG, created with CreateOfflineJPEG()
   status_t DestroyOfflineJPEG();
+
+  /// @brief Create Offline camera module
+  ///
+  /// Load Offline Camera library.
+  /// Create and config Offline Camera session.
+  /// Register Offline camera process result callback function.
+  ///
+  /// @param params: Input and output buffers information and session metadata.
+  /// @param cb: Offline camera process result callback.
+  status_t CreateOfflineCamera(const OfflineCameraCreateParams &params,
+                               const OfflineCameraCb &cb);
+
+  /// @brief Submit request to Offline Camera module
+  ///
+  /// Submit the process task. Once one frame is processed, the OfflineCameraCb
+  /// callback will be triggered to provide the client with the processed data.
+  ///
+  /// @param params: Input and output buffer fd and pre-request metadata.
+  status_t ProcessOfflineCamera(const OfflineCameraProcessParams &params);
+
+  /// @brief Destroy Offline camera module
+  ///
+  /// Close Offline Camera session and destroy all Offline Camera resource.
+  status_t DestroyOfflineCamera();
 
  private:
   RecorderClient* recorder_client_;

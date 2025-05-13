@@ -17,6 +17,17 @@ target_compile_definitions(
   PROPERTY_VAULT_VER="${PROPERTY_VAULT_VERSION_MAJOR}"
 )
 
-target_link_libraries(qmmf_propertyvault ${CMAKE_DL_LIBS})
+add_dependencies(qmmf_camera_adaptor qmmf_utils)
+
+target_include_directories(qmmf_propertyvault
+ PRIVATE ${TOP_DIRECTORY})
+
+target_include_directories(qmmf_propertyvault
+ PRIVATE ${TOP_DIRECTORY}/common/memory)
+
+target_include_directories(qmmf_propertyvault
+ PRIVATE ${TOP_DIRECTORY}/common/utils)
+
+target_link_libraries(qmmf_propertyvault qmmf_utils ${CMAKE_DL_LIBS})
 
 install(TARGETS qmmf_propertyvault DESTINATION lib OPTIONAL)

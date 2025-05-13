@@ -18,8 +18,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -56,7 +56,8 @@ Camera3RequestHandler::Camera3RequestHandler(Camera3Monitor &monitor)
       monitor_id_(Camera3Monitor::INVALID_ID),
       batch_size_(1),
       run_worker_(false),
-      cam_opmode_(CamOperationMode::kCamOperationModeNone) {
+      cam_opmode_(0),
+      request_mdata_(CameraMetadata(128,128)) {
   pthread_mutex_init(&lock_, NULL);
   cond_init(&requests_signal_);
   cond_init(&current_request_signal_);
@@ -65,6 +66,7 @@ Camera3RequestHandler::Camera3RequestHandler(Camera3Monitor &monitor)
   cond_init(&pause_state_signal_);
   ClearCaptureRequest(old_request_);
   ClearCaptureRequest(current_request_);
+  memset(&cam_reqmode_params_, 0, sizeof(cam_reqmode_params_));
 }
 
 Camera3RequestHandler::~Camera3RequestHandler() {
@@ -94,11 +96,13 @@ Camera3RequestHandler::~Camera3RequestHandler() {
 }
 
 int32_t Camera3RequestHandler::Initialize(camera3_device_t *device,
+                                          uint8_t buffer_api_version,
                                           ErrorCallback error_cb,
                                           MarkRequest mark_cb,
                                           SetError set_error) {
   pthread_mutex_lock(&lock_);
   hal3_device_ = device;
+  buffer_api_version_ = buffer_api_version;
   error_cb_ = error_cb;
   mark_cb_ = mark_cb;
   set_error_ = set_error;
@@ -224,6 +228,9 @@ int32_t Camera3RequestHandler::Clear(int64_t *lastFrameNumber) {
       break;
     }
   }
+
+  RequestModeClear(CAM_OPMODE_FLAG_MASK);
+
   pthread_mutex_unlock(&lock_);
   return ret;
 }
@@ -405,6 +412,8 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
     old_request_ = nextRequest;
   }
 
+  RequestStreamSubmitPreProcess(request, nextRequest);
+
   uint32_t totalNumBuffers = 0;
 
   // Handle output buffers
@@ -413,7 +422,12 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
   }
   request.output_buffers = outputBuffers.data();
   for (size_t i = 0; i < nextRequest.streams.size(); i++) {
-    res = nextRequest.streams[i]->GetBuffer(&outputBuffers[i]);
+    if (buffer_api_version_ !=
+        ANDROID_INFO_SUPPORTED_BUFFER_MANAGEMENT_VERSION_HIDL_DEVICE_3_5) {
+      res = nextRequest.streams[i]->GetBuffer(&outputBuffers[i]);
+    } else {
+      res = nextRequest.streams[i]->GetDummyBuffer(&outputBuffers[i]);
+    }
     if (0 != res) {
       QMMF_ERROR(
           "%s: Can't get stream buffer, skip this"
@@ -491,8 +505,10 @@ int32_t Camera3RequestHandler::SubmitRequest(CaptureRequest &nextRequest,
     return res;
   }
 
-  if (request.settings != NULL) {
-    nextRequest.metadata.unlock(request.settings);
+  if (RequestStreamSubmitPostProcess(request) == false) {
+    if (request.settings != nullptr) {
+      nextRequest.metadata.unlock(request.settings);
+    }
   }
 
   pthread_mutex_lock(&lock_);
@@ -577,35 +593,16 @@ int32_t Camera3RequestHandler::GetRequest(CaptureRequest &request) {
     if (!streaming_requests_.empty()) {
       RequestList request_list;
       RequestList::iterator it = streaming_requests_.begin();
+      CaptureRequest realRequest;
 
       for (; it != streaming_requests_.end(); ++it) {
-        CaptureRequest realRequest;
-
-        if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
-          cam_reqmode_lock_.lock();
-          if (cam_reqmode_params_.frame_selection.available_frames <= 0) {
-            realRequest.metadata = (*it).metadata;
-            realRequest.streams.push_back((*it).streams[0]);
-            realRequest.resultExtras = (*it).resultExtras;
-            realRequest.input = (*it).input;
-
-            QMMF_INFO("%s:FrameSel: no frames(%d), generate req for preview",
-                __func__, cam_reqmode_params_.frame_selection.available_frames);
-          } else {
-            realRequest = *it;
-            cam_reqmode_params_.frame_selection.available_frames--;
-            QMMF_INFO("%s:FrameSel: remain frames = %d",
-                __func__, cam_reqmode_params_.frame_selection.available_frames);
-          }
-          cam_reqmode_lock_.unlock();
-        } else {
+        if (RequestStreamGetProcess(it, realRequest,
+            (it == streaming_requests_.begin())) == false) {
           realRequest = *it;
         }
-
         smooth_zoom_.Update(realRequest);
         request_list.push_back(realRequest);
       }
-
 
       const RequestList &requests = request_list;
       RequestList::const_iterator firstRequest = requests.begin();
@@ -740,23 +737,20 @@ void Camera3RequestHandler::SignalError(const char *fmt, ...) {
 }
 
 void Camera3RequestHandler::SetRequestMode(CamOperationMode mode) {
-  if (mode < CamOperationMode::kCamOperationModeNone ||
-       mode >= CamOperationMode::kCamOperationModeEnd) {
-    QMMF_ERROR("%s: Invalide Camera OpMode(%d)", __func__, mode);
-    return;
+  if (!CAM_OPMODE_FLAG_VALID(mode)) {
+    QMMF_ERROR("%s: mode (0x%x) invalid", __func__, mode);
+    return ;
   }
 
   if (mode != cam_opmode_) {
     cam_reqmode_lock_.lock();
 
     cam_opmode_ = mode;
-    switch (cam_opmode_) {
-      case CamOperationMode::kCamOperationModeFrameSelection:
-        cam_reqmode_params_.frame_selection.total_selected_frames = 0;
-        cam_reqmode_params_.frame_selection.available_frames = 0;
-        break;
-      default:
-        break;
+
+    if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+      cam_reqmode_params_.frame_selection.total_selected_frames = 0;
+      cam_reqmode_params_.frame_selection.available_frames = 0;
+      cam_reqmode_params_.frame_selection.cur_state = kFrameSelStateIdle;
     }
 
     cam_reqmode_lock_.unlock();
@@ -766,27 +760,263 @@ void Camera3RequestHandler::SetRequestMode(CamOperationMode mode) {
 }
 
 void Camera3RequestHandler::UpdateRequestedStreams(CamReqModeInputParams &params) {
+
   if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
     int32_t prev_frms, cur_frms;
     uint32_t new_frms;
+    FrameSelectionState cur_state;
+    bool frame_update = false;
+
+    QMMF_VERBOSE("%s:FrameSel: cur_state(%d) "
+        " target frame num(%d) cap frame num(%d)", __func__,
+        cam_reqmode_params_.frame_selection.cur_state,
+        cam_reqmode_params_.frame_selection.target_frame_num,
+        params.frame_selection.cap_frame_num);
 
     cam_reqmode_lock_.lock();
 
-    prev_frms = cam_reqmode_params_.frame_selection.total_selected_frames;
-    cur_frms = params.frame_selection.total_selected_frames;
+    // frame selection state machine
+    // +----------------+
+    // |      Idle      | <+
+    // +----------------+  |
+    //   |                 |
+    //   | video buffer    |
+    //   | added, frame    |
+    //   | number as FN1   |
+    //   v                 |
+    // +----------------+  |
+    // |  Idle2Active   |  |
+    // +----------------+  |
+    //   |                 |
+    //   | HAL return      |
+    //   | FN2 = FN1       | hal return
+    //   v                 | FN4 = FN3
+    // +----------------+  |
+    // |     Active     |  |
+    // +----------------+  |
+    //   |                 |
+    //   | video buffer    |
+    //   | removed,        |
+    //   | frame number    |
+    //   | as FN3          |
+    //   v                 |
+    // +----------------+  |
+    // |  Active2Idle   | -+
+    // +----------------+
 
-    if (prev_frms != cur_frms) {
-      new_frms = (uint32_t)(cur_frms - prev_frms);
-      cam_reqmode_params_.frame_selection.available_frames += new_frms;
-      cam_reqmode_params_.frame_selection.total_selected_frames = cur_frms;
+    if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_)) {
+      cur_state = cam_reqmode_params_.frame_selection.cur_state;
+
+      if (cur_state == kFrameSelStateActive) {
+        frame_update = true;
+      } else if (cur_state == kFrameSelStateIdle2Active) {
+        if (params.frame_selection.cap_frame_num ==
+              cam_reqmode_params_.frame_selection.target_frame_num) {
+          cam_reqmode_params_.frame_selection.cur_state = kFrameSelStateActive;
+          frame_update = true;
+        }
+      } else if (cur_state == kFrameSelStateActive2Idle) {
+        if (params.frame_selection.cap_frame_num ==
+            cam_reqmode_params_.frame_selection.target_frame_num) {
+          cam_reqmode_params_.frame_selection.cur_state = kFrameSelStateIdle;
+        } else {
+          frame_update = true;
+        }
+      } else {
+        // do nothing when FrameSelectionState is idle
+      }
+    } else {
+      frame_update = true;
+    }
+
+    if (frame_update == true) {
+      prev_frms = cam_reqmode_params_.frame_selection.total_selected_frames;
+      cur_frms = params.frame_selection.total_selected_frames;
+
+      if (prev_frms != cur_frms) {
+        new_frms = (uint32_t)(cur_frms - prev_frms);
+        cam_reqmode_params_.frame_selection.available_frames += new_frms;
+        cam_reqmode_params_.frame_selection.total_selected_frames = cur_frms;
+      }
+    } else {
+        cam_reqmode_params_.frame_selection.available_frames = 0;
+        cam_reqmode_params_.frame_selection.total_selected_frames = 0;
     }
 
     cam_reqmode_lock_.unlock();
 
-    QMMF_INFO("%s:FrameSel: total selected frames(prev=%d cur=%d) available=%u",
+    QMMF_VERBOSE("%s:FrameSel:frames(prev=%d cur=%d) available=%u "
+        "update(%d) cur_state(%d)",
         __func__, prev_frms, cur_frms,
-        cam_reqmode_params_.frame_selection.available_frames);
+        cam_reqmode_params_.frame_selection.available_frames,
+        frame_update, cam_reqmode_params_.frame_selection.cur_state);
   }
+}
+
+void Camera3RequestHandler::RequestModeClear(CamOperationMode mode) {
+  QMMF_VERBOSE("%s: clear mode (0x%x)", __func__, mode);
+
+  cam_reqmode_lock_.lock();
+  if (CAM_OPMODE_IS_FRAMESELECTION(mode)) {
+    cam_reqmode_params_.frame_selection.available_frames = 0;
+    cam_reqmode_params_.frame_selection.total_selected_frames = 0;
+    cam_reqmode_params_.frame_selection.cur_state = kFrameSelStateIdle;
+    cam_reqmode_params_.frame_selection.target_frame_num = 0;
+  }
+
+  if (CAM_OPMODE_IS_FASTSWTICH(mode)) {
+    // nothing to do
+  }
+
+  cam_reqmode_lock_.unlock();
+}
+
+void Camera3RequestHandler::RequestStreamSubmitPreProcess(
+    camera3_capture_request_t &request, CaptureRequest &nextRequest) {
+
+  if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_)) {
+    int32_t res = 0;
+    uint32_t tag = 0;
+    uint8_t val;
+    FrameSelectionState cur_state;
+
+    if (request.settings != nullptr) {
+      nextRequest.metadata.unlock(request.settings);
+      request_mdata_ = nextRequest.metadata;
+    }
+
+    const std::shared_ptr<VendorTagDescriptor> vTags =
+        ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+
+    cam_reqmode_lock_.lock();
+
+    // doSwitch tag is required only when frame_selection and hyperlapse is
+    // configured. to help fastswitch in frameselection, we need to monitor
+    // video streams in capture request, when video streams show up, doSwitch
+    // is set, otherwise it's unset.
+    if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+      ::camera::CameraMetadata::getTagFromName(
+          "com.qti.chi.fastswitchControl.doSwitch", vTags.get(), &tag);
+
+      cur_state = cam_reqmode_params_.frame_selection.cur_state;
+
+      if (tag > 0) {
+        if ((cur_state == kFrameSelStateActive) ||
+            (cur_state == kFrameSelStateIdle2Active)) {
+          val = 1;
+        } else {
+          val = 0;
+        }
+
+        res = request_mdata_.update(tag, &val, 1);
+
+        QMMF_VERBOSE("%s:cur_state(%d), val(%d)", __func__, cur_state, val);
+
+        if (res != 0)
+          QMMF_ERROR("%s: fast switch control tag update failed", __func__);
+      } else {
+        QMMF_ERROR("%s: fast switch control tag not found", __func__);
+      }
+    }
+
+    cam_reqmode_lock_.unlock();
+    request.settings = request_mdata_.getAndLock();
+  }
+}
+
+bool Camera3RequestHandler::RequestStreamSubmitPostProcess(
+    camera3_capture_request_t &request) {
+
+  bool ret = false;
+
+  if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_)) {
+    request_mdata_.unlock(request.settings);
+    ret = true;
+  }
+
+  return ret;
+}
+
+bool Camera3RequestHandler::RequestStreamGetProcess(
+    RequestList::iterator it, CaptureRequest &realRequest, bool first) {
+
+  bool ret = false;
+
+  if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+    int64_t frame_number = current_frame_number_;
+    int32_t stream_num = it->streams.size();
+    FrameSelectionState cur_state, next_state;
+    bool found_video_stream = false;
+
+    cam_reqmode_lock_.lock();
+
+    cur_state = next_state = cam_reqmode_params_.frame_selection.cur_state;
+    if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_) && (first == true)) {
+      found_video_stream = false;
+      for (int32_t i = 0; i < stream_num; i++) {
+        if (it->streams[i]->IsPreviewStream() == false) {
+          found_video_stream = true;
+          break;
+        }
+      }
+
+      switch (cur_state) {
+      case kFrameSelStateIdle:
+        if (found_video_stream)
+          next_state = kFrameSelStateIdle2Active;
+        break;
+      case kFrameSelStateActive:
+        if (!found_video_stream)
+          next_state = kFrameSelStateActive2Idle;
+        break;
+      default:
+        break;
+      }
+      if (next_state != cur_state) {
+        cam_reqmode_params_.frame_selection.cur_state = next_state;
+        cam_reqmode_params_.frame_selection.target_frame_num = frame_number;
+      }
+
+      QMMF_VERBOSE("%s:Framesel:stream_num (%d) found_video_stream (%d)"
+          " cur_state (%d) next_state (%d) current frame (%d)",
+          __func__, stream_num, found_video_stream,
+          cur_state, next_state, frame_number);
+      cur_state = cam_reqmode_params_.frame_selection.cur_state;
+
+    } else if (first == true) {
+      cur_state = kFrameSelStateActive;
+    } else {
+      cur_state = kFrameSelStateIdle;
+    }
+
+    if (cur_state == kFrameSelStateActive ||
+       cur_state == kFrameSelStateIdle2Active) {
+      if (cam_reqmode_params_.frame_selection.available_frames <= 0) {
+        realRequest.metadata = (*it).metadata;
+        for (int32_t i = 0; i < stream_num; i++) {
+          if (it->streams[i]->IsPreviewStream()) {
+            realRequest.streams.push_back((*it).streams[i]);
+          }
+        }
+        realRequest.resultExtras = (*it).resultExtras;
+        realRequest.input = (*it).input;
+
+        QMMF_VERBOSE("%s:FrameSel: 0 video frames, generate req for preview",
+            __func__);
+      } else {
+        realRequest = *it;
+        cam_reqmode_params_.frame_selection.available_frames--;
+
+        QMMF_VERBOSE("%s:FrameSel: remain available video frames (%d),"
+            "generate req for preview plus video",
+            __func__, cam_reqmode_params_.frame_selection.available_frames);
+      }
+      ret = true;
+    }
+
+    cam_reqmode_lock_.unlock();
+  }
+  return ret;
 }
 
 }  // namespace cameraadaptor ends here

@@ -26,39 +26,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #pragma once
@@ -84,6 +54,7 @@
 #include "qmmf-sdk/qmmf_recorder_params.h"
 #include "qmmf-sdk/qmmf_recorder_extra_param.h"
 #include "qmmf-sdk/qmmf_offline_jpeg_params.h"
+#include "qmmf-sdk/qmmf_offline_camera_params.h"
 
 namespace qmmf {
 namespace recorder {
@@ -193,9 +164,9 @@ enum QMMF_RECORDER_SERVICE_CMDS {
   RECORDER_GET_DEFAULT_CAPTURE_PARAMS,
   RECORDER_GET_CAMERA_CHARACTERISTICS,
   RECORDER_GET_VENDOR_TAG_DESCRIPTOR,
-  RECORDER_CONFIGURE_OFFLINE_JPEG,
-  RECORDER_ENCODE_OFFLINE_JPEG,
-  RECORDER_DESTROY_OFFLINE_JPEG,
+  RECORDER_CONFIGURE_OFFLINE_PROC,
+  RECORDER_ENCODE_OFFLINE_PROC,
+  RECORDER_DESTROY_OFFLINE_PROC,
   RECORDER_GET_STATIC_CAMERA_INFO,
 };
 
@@ -307,23 +278,23 @@ class IRecorderService {
 
   virtual status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) = 0;
 
-  virtual status_t CreateOfflineJPEG(
+  virtual status_t CreateOfflineProcess(
                                 const uint32_t client_id,
-                                const OfflineJpegCreateParams& params) = 0;
+                                const OfflineCameraCreateParams& params) = 0;
 
-  virtual status_t EncodeOfflineJPEG(const uint32_t client_id,
+  virtual status_t ProcOfflineProcess(const uint32_t client_id,
                                      const BnBuffer& in_buf,
                                      const BnBuffer& out_buf,
-                                     const OfflineJpegMeta& meta) = 0;
+                                     const CameraMetadata& meta) = 0;
 
-  virtual status_t DestroyOfflineJPEG(const uint32_t client_id) = 0;
+  virtual status_t DestroyOfflineProcess(const uint32_t client_id) = 0;
 };
 
 #ifdef HAVE_BINDER
 enum RECORDER_SERVICE_CB_CMDS{
   RECORDER_NOTIFY_EVENT=IBinder::FIRST_CALL_TRANSACTION,
   RECORDER_NOTIFY_SNAPSHOT_DATA,
-  RECORDER_NOTIFY_OFFLINE_JPEG_DATA,
+  RECORDER_NOTIFY_OFFLINE_PROC_DATA,
   RECORDER_NOTIFY_VIDEO_TRACK_DATA,
   RECORDER_NOTIFY_VIDEO_TRACK_EVENT,
   RECORDER_NOTIFY_CAMERA_RESULT,
@@ -347,8 +318,8 @@ class IRecorderServiceCallback {
   virtual void NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
                                   BnBuffer& buffer, BufferMeta& meta) = 0;
 
-  virtual void NotifyOfflineJpegData(int32_t buf_fd,
-                                     uint32_t encoded_size) = 0;
+  virtual void NotifyOfflineProcData(int32_t buf_fd,
+                                     uint32_t out_size) = 0;
 
   virtual void NotifyVideoTrackData(uint32_t track_id,
                                     std::vector<BnBuffer>& buffers,
@@ -367,15 +338,11 @@ class IRecorderServiceCallback {
   // this method.
   virtual void NotifyDeleteVideoTrack(uint32_t track_id
       __attribute__((__unused__))) {}
-
-  // This method is not exposed to client as a callback, it is just to update
-  // internal data structure
-  virtual void NotifyCancelCaptureImage() {}
 };
 
 //This class is responsible to provide callbacks from recoder service.
 #ifdef HAVE_BINDER
-class RecorderServiceCallbackStub : public BnInterface<IRecorderServiceCallback> {
+class BnRecorderServiceCallback : public BnInterface<IRecorderServiceCallback> {
  public:
   virtual status_t onTransact(uint32_t code, const Parcel& data,
                               Parcel* reply, uint32_t flags = 0) override;

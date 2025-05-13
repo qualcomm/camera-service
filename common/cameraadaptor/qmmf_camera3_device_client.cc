@@ -26,39 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -87,11 +57,12 @@
 #include <memory>
 #include <string>
 
-
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera3_device_client.h"
+#ifndef HAVE_BINDER
 #include "common/propertyvault/qmmf_propertyvault.h"
+#endif
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include "common/utils/qmmf_common_utils.h"
 #else
@@ -114,7 +85,6 @@
 #define LCAC_ENABLE                           (0x100000)
 #define IFE_DIRECT_STREAM                     (1 << 25)
 #define CAM_OPMODE_FRAME_SELECTION            (0xF400)
-#define CAM_OPMODE_FAST_SWITCH                (0xF900)
 #endif
 
 // Convenience macros for transitioning to the error state
@@ -128,11 +98,10 @@ uint32_t qmmf_log_level;
 
 namespace qmmf {
 
-namespace cameraadaptor {
+std::mutex CameraModule::lock_;
+CameraModule* CameraModule::instance_ = nullptr;
 
-std::mutex Camera3DeviceClient::vendor_tag_mutex_;
-std::shared_ptr<VendorTagDescriptor> Camera3DeviceClient::vendor_tag_desc_;
-uint32_t Camera3DeviceClient::client_count_ = 0;
+namespace cameraadaptor {
 
 Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
     : client_cb_(clientCb),
@@ -166,7 +135,7 @@ Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
       input_stream_{},
       vendor_tag_ops_{},
       is_camera_device_available_ (true),
-      cam_opmode_ (CamOperationMode::kCamOperationModeNone),
+      cam_opmode_ (0),
       session_metadata_ (CameraMetadata(128, 128)) {
   QMMF_GET_LOG_LEVEL();
   camera3_callback_ops::notify = &notifyFromHal;
@@ -216,15 +185,6 @@ Camera3DeviceClient::~Camera3DeviceClient() {
     alloc_device_interface_ = nullptr;
   }
 
-  {
-    std::lock_guard<std::mutex> lk(vendor_tag_mutex_);
-    if (--client_count_ == 0) {
-      VendorTagDescriptor::clearGlobalVendorTagDescriptor();
-      if (vendor_tag_desc_.get() != nullptr)
-        vendor_tag_desc_.reset();
-    }
-  }
-
   pending_error_requests_vector_.clear();
 
   pthread_cond_destroy(&state_updated_);
@@ -243,8 +203,7 @@ int32_t Camera3DeviceClient::Initialize() {
     goto exit;
   }
 
-  res = LoadHWModule(CAMERA_HARDWARE_MODULE_ID,
-                     (const hw_module_t **)&camera_module_);
+  res = CameraModule::getInstance(&camera_module_);
 
   if ((0 != res) || (NULL == camera_module_)) {
     QMMF_ERROR("%s: Unable to load Hal module: %d\n", __func__, res);
@@ -266,36 +225,6 @@ int32_t Camera3DeviceClient::Initialize() {
   number_of_cameras_ = camera_module_->get_number_of_cameras();
   QMMF_INFO("%s: Number of cameras: %d\n", __func__, number_of_cameras_);
 
-  if (camera_module_->get_vendor_tag_ops) {
-    std::lock_guard<std::mutex> lk(vendor_tag_mutex_);
-    if (client_count_ == 0) {
-      vendor_tag_ops_ = vendor_tag_ops_t();
-      camera_module_->get_vendor_tag_ops(&vendor_tag_ops_);
-
-      res = VendorTagDescriptor::createDescriptorFromOps(&vendor_tag_ops_,
-                                                         vendor_tag_desc_);
-
-      if (0 != res) {
-        QMMF_ERROR("%s: Could not generate descriptor from vendor tag operations,"
-            "received error %s (%d). Camera clients will not be able to use"
-            "vendor tags", __FUNCTION__, strerror(res), res);
-        goto exit;
-      }
-
-      // Set the global descriptor to use with camera metadata
-      res = VendorTagDescriptor::setAsGlobalVendorTagDescriptor(vendor_tag_desc_);
-
-      if (0 != res) {
-        QMMF_ERROR(
-            "%s: Could not set vendor tag descriptor, "
-            "received error %s (%d). \n",
-            __func__, strerror(-res), res);
-        goto exit;
-      }
-    }
-    ++client_count_;
-  }
-
   camera_module_->set_callbacks(this);
 
   alloc_device_interface_ = AllocDeviceFactory::CreateAllocDevice();
@@ -314,18 +243,8 @@ exit:
     alloc_device_interface_ = nullptr;
   }
 
-  {
-    std::lock_guard<std::mutex> lk(vendor_tag_mutex_);
-    if (client_count_ == 0) {
-      VendorTagDescriptor::clearGlobalVendorTagDescriptor();
-      if (vendor_tag_desc_.get() != nullptr)
-        vendor_tag_desc_.reset();
-    }
-  }
+  CameraModule::release();
 
-  if (NULL != camera_module_) {
-    dlclose(camera_module_->common.dso);
-  }
   device_ = NULL;
   camera_module_ = NULL;
 
@@ -338,7 +257,8 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
   int32_t res = 0;
   std::string name;
   std::string id;
-  camera_metadata_entry_t capsEntry;
+  camera_metadata_entry_t entry;
+  uint8_t buffer_api_version = (uint8_t)-1;
   MarkRequest mark_cb = [&] (uint32_t frameNumber, int32_t numBuffers,
                                  CaptureResultExtras resultExtras) {
     return MarkPendingRequest(frameNumber,numBuffers, resultExtras); };
@@ -407,14 +327,19 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
     }
   }
 
-  capsEntry = device_info_.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
-  for (uint32_t i = 0; i < capsEntry.count; ++i) {
-    uint8_t caps = capsEntry.data.u8[i];
+  entry = device_info_.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+  for (uint32_t i = 0; i < entry.count; ++i) {
+    uint8_t caps = entry.data.u8[i];
     if (ANDROID_REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO ==
         caps) {
       is_hfr_supported_ = true;
       break;
     }
+  }
+
+  entry = device_info_.find(ANDROID_INFO_SUPPORTED_BUFFER_MANAGEMENT_VERSION);
+  if (entry.count > 0) {
+    buffer_api_version = *entry.data.u8;
   }
 
   id_ = idx;
@@ -423,7 +348,7 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
   name = "C3-" + id + "-Monitor";
 
   monitor_.SetIdleNotifyCb([&] (bool idle) {NotifyStatus(idle);});
-  monitor_.Run(name);
+  res = monitor_.Run(name);
   if (0 != res) {
     SET_ERR_L("Unable to start monitor: %s (%d)", strerror(-res), res);
     goto exit;
@@ -431,7 +356,8 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
 
   name = "C3-" + id + "-Handler";
 
-  request_handler_.Initialize(device_, client_cb_.errorCb, mark_cb, set_error);
+  request_handler_.Initialize(device_, buffer_api_version, client_cb_.errorCb,
+      mark_cb, set_error);
   res = request_handler_.Run(name);
   if (0 > res) {
     SET_ERR_L("Unable to start request handler: %s (%d)", strerror(-res), res);
@@ -535,6 +461,29 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
   config.operation_mode = GetOpMode();
 
   QMMF_INFO("%s: operation_mode: 0x%x \n", __func__, config.operation_mode);
+
+  if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_)) {
+    uint32_t tag = 0;
+    uint8_t val = 1;
+    int32_t res;
+    const std::shared_ptr<VendorTagDescriptor> vTags =
+        ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+
+    QMMF_VERBOSE("%s: enable fastswitch with session metadata", __func__);
+
+    ::camera::CameraMetadata::getTagFromName(
+        "org.codeaurora.qcamera3.sessionParameters.enableFastSwitch",
+        vTags.get(), &tag);
+
+    if (tag > 0) {
+      res = session_metadata_.update(tag, &val, 1);
+      if (res != 0) {
+        QMMF_ERROR("%s: fast switch enable tag update failed", __func__);
+      }
+    } else {
+      QMMF_ERROR("%s: fast switch enable tag not found", __func__);
+    }
+  }
 
   if (super_frames_ > 1) {
     uint32_t tag = 0;
@@ -1403,8 +1352,8 @@ void Camera3DeviceClient::HandleCaptureResult(
 
     }
 
-    if (result->partial_result == 1 &&
-        CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+    if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_) &&
+        (result->partial_result == 1)) {
       uint32_t tag = 0;
       camera_metadata_ro_entry entry;
       int32_t res;
@@ -1422,8 +1371,14 @@ void Camera3DeviceClient::HandleCaptureResult(
           CamReqModeInputParams params;
 
           params.frame_selection.total_selected_frames = entry.data.i32[0];
+          params.frame_selection.cap_frame_num = frameNumber;
           request_handler_.UpdateRequestedStreams(params);
+        } else {
+          QMMF_VERBOSE("%s:FrameSel:tag updatedPickedFrames found but no entry",
+              __func__);
         }
+      } else {
+        QMMF_VERBOSE("%s:FrameSel:tag updatedPickedFrames not found", __func__);
       }
     }
   }
@@ -1639,17 +1594,82 @@ void Camera3DeviceClient::NotifyShutter(const camera3_shutter_msg_t &msg) {
 }
 
 #if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0307)
-void Camera3DeviceClient::ReturnStreamBuffers(uint32_t num_buffers, const camera3_stream_buffer_t* const* buffers) {
-  QMMF_ERROR("%s: return buffer %d: not supported", __func__, num_buffers);
+camera3_buffer_request_status_t Camera3DeviceClient::RequestStreamBuffers(
+    uint32_t num_buffer_reqs, const camera3_buffer_request_t *buffer_reqs,
+    uint32_t *num_returned_buf_reqs,
+    camera3_stream_buffer_ret_t *returned_buf_reqs) {
+
+  pthread_mutex_lock(&lock_);
+
+  bool failed = false;
+  size_t allocated_buffer_count = 0;
+  *num_returned_buf_reqs = 0;
+  for (uint32_t req_idx = 0; req_idx < num_buffer_reqs; req_idx++) {
+    const camera3_buffer_request_t *buffer_req = buffer_reqs + req_idx;
+    camera3_stream_buffer_ret_t *returned_buf_req = returned_buf_reqs + req_idx;
+
+    returned_buf_req->num_output_buffers = 0;
+    returned_buf_req->stream = buffer_req->stream;
+    returned_buf_req->status = CAMERA3_PS_BUF_REQ_OK;
+
+    for (uint32_t i = 0; i < buffer_req->num_buffers_requested; i++) {
+      Camera3Stream *stream = Camera3Stream::CastTo(buffer_req->stream);
+
+      // GetBuffer() will be pending on condition for running out of buffers
+      // this may cause dead lock. unlock here to help that.
+      pthread_mutex_unlock(&lock_);
+      int32_t res = stream->GetBuffer(returned_buf_req->output_buffers + i);
+      pthread_mutex_lock(&lock_);
+
+      if (res < 0) {
+        if (res == -ETIMEDOUT) {
+          QMMF_ERROR("%s: Error: buffer wait timeout ", __func__);
+          returned_buf_req->status = CAMERA3_PS_BUF_REQ_NO_BUFFER_AVAILABLE;
+        } else if (res == -ENOSYS) {
+          QMMF_ERROR("%s: Error: Ivalid state or input ", __func__);
+          returned_buf_req->status = CAMERA3_PS_BUF_REQ_STREAM_DISCONNECTED;
+        } else if (res == -ENOMEM) {
+          QMMF_ERROR("%s: Error: no availble memory ", __func__);
+          returned_buf_req->status = CAMERA3_PS_BUF_REQ_NO_BUFFER_AVAILABLE;
+        } else {
+          QMMF_ERROR("%s: Error: unknown ", __func__);
+          returned_buf_req->status = CAMERA3_PS_BUF_REQ_UNKNOWN_ERROR;
+        }
+        failed = true;
+        break;
+      }
+
+      returned_buf_req->num_output_buffers++;
+      allocated_buffer_count++;
+    }
+
+    (*num_returned_buf_reqs)++;
+  }
+
+  pthread_mutex_unlock(&lock_);
+
+  if (!failed) {
+    return CAMERA3_BUF_REQ_OK;
+  } else if (allocated_buffer_count > 0) {
+    QMMF_ERROR("%s: Buffer request is partially fulfilled", __func__);
+    return CAMERA3_BUF_REQ_FAILED_PARTIAL;
+  } else {
+    QMMF_ERROR("%s: Buffer request failed", __func__);
+    return CAMERA3_BUF_REQ_FAILED_UNKNOWN;
+  }
 }
 
-camera3_buffer_request_status_t Camera3DeviceClient::RequestStreamBuffers(uint32_t num_buffer_reqs,
-    const camera3_buffer_request_t *buffer_reqs, uint32_t *num_returned_buf_reqs,
-    camera3_stream_buffer_ret_t *returned_buf_reqs) {
-  QMMF_ERROR("%s: request buffer %d: not supported", __func__, num_buffer_reqs);
+void Camera3DeviceClient::ReturnStreamBuffers(uint32_t num_buffers,
+    const camera3_stream_buffer_t* const* buffers) {
 
-  *num_returned_buf_reqs = 0;
-  return CAMERA3_BUF_REQ_FAILED_UNKNOWN;
+  pthread_mutex_lock(&lock_);
+
+  for (uint32_t i = 0; i < num_buffers; i++) {
+    Camera3Stream *stream = Camera3Stream::CastTo(buffers[i]->stream);
+    stream->ReturnBuffer(*(buffers[i]->buffer));
+  }
+
+  pthread_mutex_unlock(&lock_);
 }
 #endif
 
@@ -1823,21 +1843,6 @@ void Camera3DeviceClient::RemovePendingRequestLocked(uint32_t frameNumber) {
 
     pending_requests_vector_.erase(frameNumber);
   }
-}
-
-int32_t Camera3DeviceClient::LoadHWModule(const char *moduleId,
-                                          const struct hw_module_t **pHmi) {
-
-  int32_t status;
-
-  if (NULL == moduleId) {
-    QMMF_ERROR("%s: Invalid module id! \n", __func__);
-    return -EINVAL;
-  }
-
-  status = hw_get_module(moduleId, pHmi);
-
-  return status;
 }
 
 int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
@@ -2029,7 +2034,7 @@ int32_t Camera3DeviceClient::AddRequestListLocked(
     return res;
   }
 
-  WaitUntilStateThenRelock(true, WAIT_FOR_RUNNING);
+  res = WaitUntilStateThenRelock(true, WAIT_FOR_RUNNING);
   if (0 != res) {
     SET_ERR_L("Unable to change to running in %f seconds!",
               WAIT_FOR_RUNNING / 1e9);
@@ -2478,14 +2483,17 @@ camera3_buffer_request_status_t Camera3DeviceClient::requestStreamBuffers(
     const struct camera3_callback_ops *cb, uint32_t num_buffer_reqs,
     const camera3_buffer_request_t *buffer_reqs, uint32_t *num_returned_buf_reqs,
     camera3_stream_buffer_ret_t *returned_buf_reqs) {
+
   Camera3DeviceClient *ctx = const_cast<Camera3DeviceClient *>(
       static_cast<const Camera3DeviceClient *>(cb));
-  if (num_buffer_reqs == 0 || buffer_reqs == nullptr || num_returned_buf_reqs == nullptr || returned_buf_reqs == nullptr)
-  {
+
+  if (num_buffer_reqs == 0 || buffer_reqs == nullptr ||
+      num_returned_buf_reqs == nullptr || returned_buf_reqs == nullptr) {
     return CAMERA3_BUF_REQ_FAILED_ILLEGAL_ARGUMENTS;
   }
 
-  return ctx->RequestStreamBuffers(num_buffer_reqs, buffer_reqs, num_returned_buf_reqs, returned_buf_reqs);
+  return ctx->RequestStreamBuffers(num_buffer_reqs, buffer_reqs,
+      num_returned_buf_reqs, returned_buf_reqs);
 }
 
 void Camera3DeviceClient::returnStreamBuffers(
@@ -2593,9 +2601,6 @@ uint32_t Camera3DeviceClient::GetOpMode() {
 
   if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_))
     operation_mode |= CAM_OPMODE_FRAME_SELECTION;
-
-  if (CAM_OPMODE_IS_FASTSWTICH(cam_opmode_))
-    operation_mode |= CAM_OPMODE_FAST_SWITCH;
 
 #endif
 

@@ -27,13 +27,6 @@ target_include_directories(qmmf_camera_adaptor
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(qmmf_camera_adaptor
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-# Headers path for msm-5.4 media on qrbx210 targets.
-target_include_directories(qmmf_camera_adaptor
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include/vidc>)
-
-target_include_directories(qmmf_camera_adaptor
  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_include_directories(qmmf_camera_adaptor
@@ -58,9 +51,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl 
 target_link_libraries(qmmf_camera_adaptor qmmf_propertyvault camera_hardware)
 endif()
 
-if(NOT CAMERA_CLIENT_DISABLED)
-target_link_libraries(qmmf_camera_adaptor camera_client)
-endif()
 if(USE_LIBGBM)
 target_link_libraries(qmmf_camera_adaptor gbm)
 endif()

@@ -26,46 +26,20 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
-#ifdef HAVE_ANDROID_UTILS
+#ifdef __LIBGBM__
+#include <system/graphics.h>
+#elif HAVE_ANDROID_UTILS
 #include <hardware/gralloc.h>
-#endif // HAVE_ANDROID_UTILS
+#endif
 #include <fcntl.h>
 
+#ifdef HAVE_BINDER
 #include "common/propertyvault/qmmf_propertyvault.h"
+#endif // HAVE_BINDER
 #include "qmmf_gbm_interface.h"
 
 #ifndef LOG_TAG
@@ -411,11 +385,11 @@ GBMDevice::GBMDevice() {
   gbm_fd_ = open("/dev/dri/renderD128", O_RDWR);
   if (gbm_fd_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/dma_heap/qcom,system \n", __func__);
-    gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDWR);
+    gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
   }
   if (gbm_fd_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/ion \n", __func__);
-    gbm_fd_ = open("/dev/ion", O_RDWR);
+    gbm_fd_ = open("/dev/ion", O_RDONLY | O_CLOEXEC);
   }
   assert(gbm_fd_ >= 0);
   gbm_device_ = gbm_create_device(gbm_fd_);
@@ -429,7 +403,11 @@ gbm_device *GBMDevice::GetDevice() const {
 }
 
 MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
+#ifdef HAVE_BINDER
+  int32_t height, int32_t format,
+#else
   int32_t height, int32_t format, int32_t override_format,
+#endif // HAVE_BINDER
   MemAllocFlags usage, uint32_t *stride)
 {
   handle = new GBMBuffer;
@@ -453,6 +431,8 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     } else if (usage.Exists(IMemAllocUsage::kPrivateAllocTP10) &&
                usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {
       gbm_format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
+    } else if (usage.Exists(IMemAllocUsage::kPrivateAllocUbwc)) {
+      gbm_format = GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     }
   }
 
@@ -473,8 +453,12 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     return MemAllocError::kAllocFail;
   }
 
-  char prop[PROP_VALUE_MAX];
+  char prop[PROPERTY_VALUE_MAX];
+#ifdef HAVE_BINDER
+  property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
+#else
   qmmf_property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
+#endif // HAVE_BINDER
   std::string colorspace(prop);
 
   QMMF_INFO("%s: Using color space: %s", __func__, colorspace.c_str());

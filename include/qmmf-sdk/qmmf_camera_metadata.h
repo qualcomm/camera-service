@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -83,7 +83,9 @@ namespace android {
   class Parcel;
 };
 
+#ifdef HAVE_BINDER
 using Parcel = ::android::Parcel;
+#endif
 
 namespace qmmf {
 
@@ -122,6 +124,12 @@ class CameraMetadata {
      * here from being accidentally invalidated by CameraMetadata operations.
      */
     const camera_metadata_t* getAndLock() const;
+
+    /**
+     * Get reference to the underlying metadata buffer without lock and const
+     * modifacation.
+     */
+    camera_metadata_t* getbuffer();
 
     /**
      * Unlock the CameraMetadata for use again. After this unlock, the pointer

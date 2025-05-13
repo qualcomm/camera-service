@@ -26,39 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #pragma once
@@ -66,7 +36,9 @@
 #include <chrono>
 #include <condition_variable>
 #include <cmath>
+#include <dlfcn.h>
 #include <iomanip>
+#include <list>
 #include <map>
 #include <set>
 #include <mutex>
@@ -80,11 +52,19 @@
 
 #include <sys/mman.h>
 #include <sys/time.h>
+#ifndef CAMERA_HAL1_SUPPORT
+#include <hardware/camera3.h>
+#endif
+
+#include <hardware/camera_common.h>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
+#include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
 #include "common/utils/qmmf_log.h"
+#ifndef HAVE_BINDER
 #include "common/utils/qmmf_color_format.h"
+#endif // !HAVE_BINDER
 #include "common/utils/qmmf_condition.h"
 #include "qmmf_memory_interface.h"
 
@@ -99,6 +79,86 @@ typedef int32_t status_t;
 
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
+
+class CameraModule {
+private:
+
+  static std::mutex lock_;
+
+  static CameraModule *instance_;
+
+  camera_module_t *camera_module_;
+
+  int32_t status_;
+
+  vendor_tag_ops_t vendor_tag_ops_;
+  std::shared_ptr<VendorTagDescriptor> vendor_tag_desc_;
+
+  // Private Constructor
+  CameraModule() : status_(-1) {}
+
+  int32_t LoadCamModuleAndVendorTags() {
+    int32_t status = hw_get_module(CAMERA_HARDWARE_MODULE_ID,
+        (const hw_module_t **)&camera_module_);
+
+    if (camera_module_->get_vendor_tag_ops) {
+      vendor_tag_ops_ = vendor_tag_ops_t();
+      camera_module_->get_vendor_tag_ops(&vendor_tag_ops_);
+
+      status = VendorTagDescriptor::createDescriptorFromOps(&vendor_tag_ops_,
+                                                          vendor_tag_desc_);
+
+      if (0 != status) {
+        QMMF_ERROR("%s: Could not generate descriptor from vendor tag operations,"
+            "received error %s (%d). Camera clients will not be able to use"
+            "vendor tags", __FUNCTION__, strerror(status), status);
+        return status;
+      }
+
+      // Set the global descriptor to use with camera metadata
+      status = VendorTagDescriptor::setAsGlobalVendorTagDescriptor(vendor_tag_desc_);
+
+      if (0 != status) {
+        QMMF_ERROR("%s: Could not set vendor tag descriptor, received error %s (%d). \n",
+            __func__, strerror(-status), status);
+        return status;
+      }
+    }
+
+    return status;
+  }
+
+public:
+  // Deleting the copy constructor to prevent copies
+  CameraModule(const CameraModule& obj) = delete;
+
+  // Static method to get the CameraModule instance
+  static int32_t getInstance(camera_module_t **camera_module) {
+
+    std::lock_guard<std::mutex> lock(lock_);
+
+    if (instance_ == nullptr) {
+      instance_ = new CameraModule();
+    }
+
+    if (instance_->status_ != 0 || instance_->camera_module_ == NULL) {
+      instance_->status_ = instance_->LoadCamModuleAndVendorTags();
+    }
+
+    *camera_module = instance_->camera_module_;
+    return instance_->status_;
+  }
+
+  static void release() {
+    std::lock_guard<std::mutex> lock(lock_);
+
+    if (instance_->camera_module_ != NULL) {
+      VendorTagDescriptor::clearGlobalVendorTagDescriptor();
+      dlclose(instance_->camera_module_->common.dso);
+      instance_->camera_module_ = NULL;
+    }
+  }
+};
 
 struct StreamBuffer {
   BufferMeta info;
@@ -138,6 +198,73 @@ struct ReprocEntry {
   StreamBuffer    buffer;
   CameraMetadata  result;
   int64_t         timestamp;
+};
+
+inline void get_qmmf_property(const char *key, char *value, const char *default_value) {
+#ifdef HAVE_BINDER
+    property_get(key, value, default_value);
+#else
+    qmmf_property_get(key, value, default_value);
+#endif // HAVE_BINDER
+}
+
+inline void set_qmmf_property(const char *key, const char *value) {
+#ifdef HAVE_BINDER
+    property_set(key, value);
+#else
+    qmmf_property_set(key, value);
+#endif // HAVE_BINDER
+}
+/** Property:
+ *
+ *  This class defines property operations
+ **/
+class Property {
+ public:
+  /** Get
+   *    @property: property
+   *    @default_value: default value
+   *
+   * Gets requested property value
+   *
+   * return: property value
+   **/
+  template <typename T>
+  static T Get(std::string property, T default_value)  {
+    T value = default_value;
+    char prop_val[PROP_VALUE_MAX];
+
+    std::stringstream s;
+    s << default_value;
+
+    get_qmmf_property(property.c_str(), prop_val, s.str().c_str());
+//#ifdef HAVE_BINDER
+//    property_get(property.c_str(), prop_val, s.str().c_str());
+//#else
+//    qmmf_property_get(property.c_str(), prop_val, s.str().c_str());
+//#endif // HAVE_BINDER
+
+    std::stringstream output(prop_val);
+    output >> value;
+    return value;
+  }
+
+  /** Set
+   *    @property: property
+   *    @value: value
+   *
+   * Sets requested property value
+   *
+   * return: nothing
+   **/
+  template <typename T>
+  static void Set(std::string property, T value) {
+
+    std::stringstream s;
+    s << value;
+
+    set_qmmf_property(property.c_str(), s.str().c_str());
+  }
 };
 
 class Common {

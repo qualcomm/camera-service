@@ -26,39 +26,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "RecorderGTest"
@@ -69,11 +39,13 @@
 #include <random>
 #include <algorithm>
 
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/utils/qmmf_common_utils.h"
 #include "recorder/test/gtest/qmmf_gtest_common.h"
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 
+#ifndef CAMERA_HAL1_SUPPORT
 using namespace qcamera;
+#endif
 
 using ::std::ios;
 using ::std::ofstream;
@@ -130,6 +102,150 @@ void FrameTrace::BufferAvailableCb(BufferDescriptor buffer) {
   previous_timestamp_ = buffer.timestamp;
 }
 
+#ifdef USE_SURFACEFLINGER
+float GetFormatBpp(int32_t format) {
+  //formats taken from graphics.h
+  switch (format) {
+    case HAL_PIXEL_FORMAT_RGBA_8888:
+    case HAL_PIXEL_FORMAT_RGBX_8888:
+    case HAL_PIXEL_FORMAT_BGRA_8888:
+      return 4;
+    case HAL_PIXEL_FORMAT_RGB_565:
+    case HAL_PIXEL_FORMAT_RGBA_5551:
+    case HAL_PIXEL_FORMAT_RGBA_4444:
+    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      return 2;
+    case HAL_PIXEL_FORMAT_YV12:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+      return 1.5;
+    default:
+      return -1;
+  }
+}
+
+SFDisplaySink::SFDisplaySink(uint32_t width, uint32_t height) {
+  TEST_INFO("%s: Enter 0x%p",__func__, this);
+
+  auto ret = CreatePreviewSurface(width, height);
+  if (ret != 0) {
+    TEST_ERROR("%s: CreatePreviewSurface failed!",__func__);
+  }
+
+  TEST_INFO("%s: Exit",__func__);
+}
+
+SFDisplaySink::~SFDisplaySink() {
+  TEST_INFO("%s: Enter 0x%p",__func__, this);
+
+  DestroyPreviewSurface();
+
+  TEST_INFO("%s: Exit",__func__);
+}
+
+int32_t SFDisplaySink::CreatePreviewSurface(uint32_t width, uint32_t height) {
+  TEST_INFO("%s: Enter ",__func__);
+
+  DisplayInfo dinfo;
+  auto ret = NO_ERROR;
+  sp<IBinder> display(SurfaceComposerClient::getBuiltInDisplay(
+      ISurfaceComposer::eDisplayIdMain));
+  SurfaceComposerClient::getDisplayInfo(display, &dinfo);
+
+  surface_client_ = new SurfaceComposerClient();
+
+  if(surface_client_.get() == nullptr) {
+    TEST_ERROR("%s:Connection to Surface Composer failed!", __func__);
+    return -1;
+  }
+  surface_control_ = surface_client_->createSurface(
+      String8("QMMFRecorderService"),
+      width, height, HAL_PIXEL_FORMAT_YCrCb_420_SP, 0);
+
+  if (surface_control_.get() == nullptr) {
+    TEST_ERROR("%s: Preview surface creation failed!",__func__);
+    return -1;
+  }
+
+  preview_surface_ = surface_control_->getSurface();
+  if (preview_surface_.get() == nullptr) {
+    TEST_ERROR("%s: Preview surface creation failed!",__func__);
+  }
+
+  surface_client_->openGlobalTransaction();
+
+  surface_control_->setLayer(0x7fffffff);
+  surface_control_->setPosition(0, 0);
+  surface_control_->setSize(width, height);
+  surface_control_->show();
+
+  surface_client_->closeGlobalTransaction();
+
+  TEST_INFO("%s: Exit ",__func__);
+  return ret;
+}
+
+void SFDisplaySink::DestroyPreviewSurface() {
+  TEST_INFO("%s: Enter ",__func__);
+  if(preview_surface_.get() != nullptr) {
+    preview_surface_.clear();
+  }
+  if(surface_control_.get () != nullptr) {
+    surface_control_->clear();
+    surface_control_.clear();
+  }
+  if(surface_client_.get() != nullptr) {
+    surface_client_->dispose();
+    surface_client_.clear();
+  }
+  TEST_INFO("%s: Exit ",__func__);
+}
+
+void SFDisplaySink::HandlePreviewBuffer(BufferDescriptor &buffer,
+                                        BufferMeta &meta) {
+  TEST_INFO("%s: Enter ",__func__);
+
+  if (buffer.data == nullptr) {
+    TEST_ERROR("%s: No buffer!!", __func__);
+    return;
+  }
+
+  ANativeWindow_Buffer info;
+  preview_surface_->lock(&info, nullptr);
+
+  char* img = reinterpret_cast<char *>(info.bits);
+  if (img == nullptr) {
+    TEST_ERROR("%s: No Surface flinger buffer!!", __func__);
+    return;
+  }
+  uint32_t dst_offset = 0;
+  uint32_t src_offset = 0;
+
+  for ( int32_t i = 0; i < info.height; i++ ) {
+    memcpy(img + dst_offset,
+        reinterpret_cast<unsigned char *>(buffer.data) + src_offset,
+        info.width);
+    src_offset += info.width;
+    dst_offset += info.stride;
+  }
+
+  src_offset += info.width * (info.height % 32);
+
+  for ( int32_t i = 0; i < info.height/2; i++ ) {
+    memcpy(img + dst_offset,
+        reinterpret_cast<unsigned char *>(buffer.data) + src_offset,
+        info.width);
+    src_offset += info.width;
+    dst_offset += info.stride;
+  }
+
+  preview_surface_->unlockAndPost();
+
+  TEST_INFO("%s: Exit ",__func__);
+}
+#endif
+
 void GtestCommon::SetUp() {
 
   TEST_INFO("%s Enter ", __func__);
@@ -141,68 +257,68 @@ void GtestCommon::SetUp() {
       { RecorderCallbackHandler(event_type, event_data, event_data_size); };
 
   char prop_val[PROP_VALUE_MAX];
-  qmmf_property_get(PROP_DUMP_JPEG, prop_val, "0");
+  get_qmmf_property(PROP_DUMP_JPEG, prop_val, "0");
   is_dump_jpeg_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_DUMP_RAW, prop_val, "0");
+  get_qmmf_property(PROP_DUMP_RAW, prop_val, "0");
   is_dump_raw_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_DUMP_YUV_FRAMES, prop_val, "0");
+  get_qmmf_property(PROP_DUMP_YUV_FRAMES, prop_val, "0");
   is_dump_yuv_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_DUMP_YUV_FREQ, prop_val, DEFAULT_YUV_DUMP_FREQ);
+  get_qmmf_property(PROP_DUMP_YUV_FREQ, prop_val, DEFAULT_YUV_DUMP_FREQ);
   dump_yuv_freq_ = atoi(prop_val);
-  qmmf_property_get(PROP_N_ITERATIONS, prop_val, DEFAULT_ITERATIONS);
+  get_qmmf_property(PROP_N_ITERATIONS, prop_val, DEFAULT_ITERATIONS);
   iteration_count_ = atoi(prop_val);
-  qmmf_property_get(PROP_CAMERA_ID, prop_val, "0");
+  get_qmmf_property(PROP_CAMERA_ID, prop_val, "0");
   camera_id_ = atoi(prop_val);
-  qmmf_property_get(PROP_RECORD_DURATION, prop_val, DEFAULT_RECORD_DURATION);
+  get_qmmf_property(PROP_RECORD_DURATION, prop_val, DEFAULT_RECORD_DURATION);
   record_duration_ = atoi(prop_val);
-  qmmf_property_get(PROP_DUMP_THUMBNAIL, prop_val, "0");
+  get_qmmf_property(PROP_DUMP_THUMBNAIL, prop_val, "0");
   is_dump_thumb_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_BURST_N_IMAGES, prop_val, DEFAULT_BURST_COUNT);
+  get_qmmf_property(PROP_BURST_N_IMAGES, prop_val, DEFAULT_BURST_COUNT);
   burst_image_count_ = atoi(prop_val);
-  qmmf_property_get(PROP_JPEG_QUALITY, prop_val, IMAGE_QUALITY);
+  get_qmmf_property(PROP_JPEG_QUALITY, prop_val, IMAGE_QUALITY);
   default_jpeg_quality_ = atoi(prop_val);
-  qmmf_property_get(PROP_CDS_THRESHOLD, prop_val, "600");
+  get_qmmf_property(PROP_CDS_THRESHOLD, prop_val, "600");
   default_cds_threshold_ = atoi(prop_val);
-  qmmf_property_get(PROP_EIS_H_MARGIN, prop_val, "-1.0");
+  get_qmmf_property(PROP_EIS_H_MARGIN, prop_val, "-1.0");
   eis_h_margin_ = atof(prop_val);
-  qmmf_property_get(PROP_EIS_V_MARGIN, prop_val, "-1.0");
+  get_qmmf_property(PROP_EIS_V_MARGIN, prop_val, "-1.0");
   eis_v_margin_ = atof(prop_val);
-  qmmf_property_get(PROP_FRAME_DEBUG, prop_val, "0");
+  get_qmmf_property(PROP_FRAME_DEBUG, prop_val, "0");
   is_frame_debug_enabled_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_SENSOR_CONFIG_FILE, prop_val, "");
+  get_qmmf_property(PROP_SENSOR_CONFIG_FILE, prop_val, "");
   sensor_mode_file_name_ = std::string(prop_val);
-  qmmf_property_get(PROP_MEASURE_SOF_LATENCY, prop_val, "0");
+  get_qmmf_property(PROP_MEASURE_SOF_LATENCY, prop_val, "0");
   enable_sof_latency_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_AF_MODE, prop_val, "0");
+  get_qmmf_property(PROP_AF_MODE, prop_val, "0");
   af_mode_ = atoi(prop_val);
-  qmmf_property_get(PROP_CAMERA_FPS, prop_val, DEFAULT_CAMERA_FPS);
+  get_qmmf_property(PROP_CAMERA_FPS, prop_val, DEFAULT_CAMERA_FPS);
   camera_fps_ = atof(prop_val);
-  qmmf_property_get(PROP_EIS, prop_val, "0");
+  get_qmmf_property(PROP_EIS, prop_val, "0");
   is_eis_on_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_SHDR, prop_val, "0");
+  get_qmmf_property(PROP_SHDR, prop_val, "0");
   is_shdr_on_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_SNAPSHOT_STREAM_ON, prop_val, "0");
+  get_qmmf_property(PROP_SNAPSHOT_STREAM_ON, prop_val, "0");
   is_snap_stream_on_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_LDC, prop_val, "0");
+  get_qmmf_property(PROP_LDC, prop_val, "0");
   is_ldc_on_ = (atoi(prop_val) == 0) ? false : true;
-  qmmf_property_get(PROP_LCAC, prop_val, "0");
+  get_qmmf_property(PROP_LCAC, prop_val, "0");
   is_lcac_on_ = (atoi(prop_val) == 0) ? false : true;
 
   // Read First Video Stream Params
   VideoStreamInfo stream { };
-  qmmf_property_get(PROP_FIRST_STREAM_WIDTH, prop_val, DEFAULT_FIRST_STREAM_WIDTH);
+  get_qmmf_property(PROP_FIRST_STREAM_WIDTH, prop_val, DEFAULT_FIRST_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_FIRST_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_FIRST_STREAM_HEIGHT, prop_val,
                DEFAULT_FIRST_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_FIRST_STREAM_FPS, prop_val, DEFAULT_FIRST_STREAM_FPS);
+  get_qmmf_property(PROP_FIRST_STREAM_FPS, prop_val, DEFAULT_FIRST_STREAM_FPS);
   stream.fps = atof(prop_val);
 
   stream.source_stream_id = 0; // First Stream, Linked ID should be 0.
 
-  qmmf_property_get(PROP_FIRST_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_FIRST_STREAM_FORMAT, prop_val,
                DEFAULT_FIRST_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -210,21 +326,21 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFirstStreamID, stream);
 
   // Read Second Video Stream Params
-  qmmf_property_get(PROP_SECOND_STREAM_WIDTH, prop_val,
+  get_qmmf_property(PROP_SECOND_STREAM_WIDTH, prop_val,
                DEFAULT_SECOND_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_SECOND_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_SECOND_STREAM_HEIGHT, prop_val,
                DEFAULT_SECOND_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_SECOND_STREAM_FPS, prop_val, DEFAULT_SECOND_STREAM_FPS);
+  get_qmmf_property(PROP_SECOND_STREAM_FPS, prop_val, DEFAULT_SECOND_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  qmmf_property_get(PROP_SECOND_STREAM_SOURCE_ID, prop_val, "0");
+  get_qmmf_property(PROP_SECOND_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  qmmf_property_get(PROP_SECOND_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_SECOND_STREAM_FORMAT, prop_val,
                DEFAULT_SECOND_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -232,20 +348,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kSecondStreamID, stream);
 
   // Read Third Video Stream Params
-  qmmf_property_get(PROP_THIRD_STREAM_WIDTH, prop_val, DEFAULT_THIRD_STREAM_WIDTH);
+  get_qmmf_property(PROP_THIRD_STREAM_WIDTH, prop_val, DEFAULT_THIRD_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_THIRD_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_THIRD_STREAM_HEIGHT, prop_val,
                DEFAULT_THIRD_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_THIRD_STREAM_FPS, prop_val, DEFAULT_THIRD_STREAM_FPS);
+  get_qmmf_property(PROP_THIRD_STREAM_FPS, prop_val, DEFAULT_THIRD_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  qmmf_property_get(PROP_THIRD_STREAM_SOURCE_ID, prop_val, "0");
+  get_qmmf_property(PROP_THIRD_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  qmmf_property_get(PROP_THIRD_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_THIRD_STREAM_FORMAT, prop_val,
                DEFAULT_THIRD_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -253,20 +369,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kThirdStreamID, stream);
 
   // Read Fourth Video Stream Params
-  qmmf_property_get(PROP_FOURTH_STREAM_WIDTH, prop_val, DEFAULT_FOURTH_STREAM_WIDTH);
+  get_qmmf_property(PROP_FOURTH_STREAM_WIDTH, prop_val, DEFAULT_FOURTH_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_FOURTH_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_FOURTH_STREAM_HEIGHT, prop_val,
                DEFAULT_FOURTH_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_FOURTH_STREAM_FPS, prop_val, DEFAULT_FOURTH_STREAM_FPS);
+  get_qmmf_property(PROP_FOURTH_STREAM_FPS, prop_val, DEFAULT_FOURTH_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  qmmf_property_get(PROP_FOURTH_STREAM_SOURCE_ID, prop_val, "0");
+  get_qmmf_property(PROP_FOURTH_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  qmmf_property_get(PROP_FOURTH_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_FOURTH_STREAM_FORMAT, prop_val,
                DEFAULT_FOURTH_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -274,20 +390,20 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFourthStreamID, stream);
 
   // Read Fifth Video Stream Params
-  qmmf_property_get(PROP_FIFTH_STREAM_WIDTH, prop_val, DEFAULT_FIFTH_STREAM_WIDTH);
+  get_qmmf_property(PROP_FIFTH_STREAM_WIDTH, prop_val, DEFAULT_FIFTH_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_FIFTH_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_FIFTH_STREAM_HEIGHT, prop_val,
                DEFAULT_FIFTH_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_FIFTH_STREAM_FPS, prop_val, DEFAULT_FIFTH_STREAM_FPS);
+  get_qmmf_property(PROP_FIFTH_STREAM_FPS, prop_val, DEFAULT_FIFTH_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  qmmf_property_get(PROP_FIFTH_STREAM_SOURCE_ID, prop_val, "0");
+  get_qmmf_property(PROP_FIFTH_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  qmmf_property_get(PROP_FIFTH_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_FIFTH_STREAM_FORMAT, prop_val,
                DEFAULT_FIFTH_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
@@ -295,46 +411,46 @@ void GtestCommon::SetUp() {
   stream_info_map_.emplace(kFifthStreamID, stream);
 
   // Read HFR Video Stream Params
-  qmmf_property_get(PROP_HFR_STREAM_WIDTH, prop_val, DEFAULT_HFR_STREAM_WIDTH);
+  get_qmmf_property(PROP_HFR_STREAM_WIDTH, prop_val, DEFAULT_HFR_STREAM_WIDTH);
   stream.width = atoi(prop_val);
 
-  qmmf_property_get(PROP_HFR_STREAM_HEIGHT, prop_val, DEFAULT_HFR_STREAM_HEIGHT);
+  get_qmmf_property(PROP_HFR_STREAM_HEIGHT, prop_val, DEFAULT_HFR_STREAM_HEIGHT);
   stream.height = atoi(prop_val);
 
-  qmmf_property_get(PROP_HFR_STREAM_FPS, prop_val, DEFAULT_HFR_STREAM_FPS);
+  get_qmmf_property(PROP_HFR_STREAM_FPS, prop_val, DEFAULT_HFR_STREAM_FPS);
   stream.fps = atof(prop_val);
 
-  qmmf_property_get(PROP_HFR_STREAM_SOURCE_ID, prop_val, "0");
+  get_qmmf_property(PROP_HFR_STREAM_SOURCE_ID, prop_val, "0");
   stream.source_stream_id = atoi(prop_val);
 
-  qmmf_property_get(PROP_HFR_STREAM_FORMAT, prop_val, DEFAULT_HFR_STREAM_FORMAT);
+  get_qmmf_property(PROP_HFR_STREAM_FORMAT, prop_val, DEFAULT_HFR_STREAM_FORMAT);
   SetVideoStreamFormat(prop_val, stream.format);
 
   // Insert HFR stream into Map. Taking stream ID as 16.
   stream_info_map_.emplace(kHFRStreamID, stream);
 
-  qmmf_property_get(PROP_SNAPSHOT_MODE, prop_val,
+  get_qmmf_property(PROP_SNAPSHOT_MODE, prop_val,
                DEFAULT_PROP_SNAPSHOT_MODE);
   SetSnapshotMode(prop_val);
 
   // Read JPEG Snapshot Stream
-  qmmf_property_get(PROP_SNAPSHOT_STREAM_WIDTH, prop_val,
+  get_qmmf_property(PROP_SNAPSHOT_STREAM_WIDTH, prop_val,
                DEFAULT_SNAPSHOT_STREAM_WIDTH);
   snap_width_ = atoi(prop_val);
 
-  qmmf_property_get(PROP_SNAPSHOT_STREAM_HEIGHT, prop_val,
+  get_qmmf_property(PROP_SNAPSHOT_STREAM_HEIGHT, prop_val,
                DEFAULT_SNAPSHOT_STREAM_HEIGHT);
   snap_height_ = atoi(prop_val);
 
-  qmmf_property_get(PROP_SNAPSHOT_STREAM_FORMAT, prop_val,
+  get_qmmf_property(PROP_SNAPSHOT_STREAM_FORMAT, prop_val,
                DEFAULT_SNAPSHOT_STREAM_FORMAT);
   SetSnapShotStreamFormat(prop_val);
 
-  qmmf_property_get(PROP_NUM_SNAPSHOT, prop_val,
+  get_qmmf_property(PROP_NUM_SNAPSHOT, prop_val,
                DEFAULT_SNAPSHOT_COUNT);
   snap_count_ = atoi(prop_val);
 
-  qmmf_property_get(PROP_SNAPSHOT_TYPE, prop_val,
+  get_qmmf_property(PROP_SNAPSHOT_TYPE, prop_val,
                DEFAULT_PROP_SNAPSHOT_TYPE);
   SetSnapshotType(prop_val);
 
@@ -509,6 +625,7 @@ int32_t GtestCommon::DeInit() {
 }
 
 void GtestCommon::InitSupportedVHDRModes() {
+#ifndef CAMERA_HAL1_SUPPORT
   camera_metadata_entry_t entry;
   if (static_info_.exists(QCAMERA3_AVAILABLE_VIDEO_HDR_MODES)) {
     entry = static_info_.find(QCAMERA3_AVAILABLE_VIDEO_HDR_MODES);
@@ -516,18 +633,19 @@ void GtestCommon::InitSupportedVHDRModes() {
       supported_hdr_modes_.push_back(entry.data.i32[i]);
     }
   }
+#endif
 }
 
 bool GtestCommon::IsVHDRSupported() {
   bool is_supported = false;
-
+#ifndef CAMERA_HAL1_SUPPORT
   for (const auto& mode : supported_hdr_modes_) {
     if (QCAMERA3_VIDEO_HDR_MODE_ON == mode) {
       is_supported = true;
       break;
     }
   }
-
+#endif
   return is_supported;
 }
 
@@ -1011,7 +1129,11 @@ bool GtestCommon::ValidateResFromStreamConfigs(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1030,7 +1152,11 @@ bool GtestCommon::ValidateResFromStreamConfigs(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1072,9 +1198,15 @@ bool GtestCommon::GetMinResFromStreamConfigs(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
+          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+            entry.data.i32[i+3]) {
+#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
+#endif
         if (width > static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height > static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1089,9 +1221,15 @@ bool GtestCommon::GetMinResFromStreamConfigs(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
+          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+            entry.data.i32[i+3]) {
+#else
       if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
+#endif
         if (width > static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height > static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1162,7 +1300,11 @@ bool GtestCommon::ValidateResFromJpegSizes(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_BLOB == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1181,7 +1323,11 @@ bool GtestCommon::ValidateResFromJpegSizes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_BLOB == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1224,7 +1370,11 @@ bool GtestCommon::ValidateResFromRawSizes(const CameraMetadata& meta,
     auto entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_RAW10 == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1243,7 +1393,11 @@ bool GtestCommon::ValidateResFromRawSizes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     auto entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0 ; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_RAW10 == entry.data.i32[i]) {
+#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i]) {
+#endif
         if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
           if (width == static_cast<uint32_t>(entry.data.i32[i+1])
@@ -1304,9 +1458,15 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
     entry = meta.find(
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
     for (uint32_t i = 0; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_RAW10 == entry.data.i32[i] &&
+          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+            entry.data.i32[i+3]) {
+#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
+#endif
         if (width < static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height < static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1322,9 +1482,15 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
   if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
     entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
     for (uint32_t i = 0; i < entry.count; i += 4) {
+#ifdef __LIBGBM__
+      if (GBM_FORMAT_RAW10 == entry.data.i32[i] &&
+          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+            entry.data.i32[i+3]) {
+#else
       if (HAL_PIXEL_FORMAT_RAW10 == entry.data.i32[i] &&
           ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
             entry.data.i32[i+3]) {
+#endif
         if (width < static_cast<uint32_t>(entry.data.i32[i + 1]) &&
             height < static_cast<uint32_t>(entry.data.i32[i + 2])) {
           width = static_cast<uint32_t>(entry.data.i32[i + 1]);
@@ -1340,8 +1506,12 @@ bool GtestCommon::GetMaxSupportedCameraRes(const CameraMetadata& meta,
     return false;
   }
 #else
+#ifdef __LIBGBM__
+  if (GBM_FORMAT_RAW10 == format || GBM_FORMAT_RAW16 == format) {
+#else
   if (HAL_PIXEL_FORMAT_RAW8  == format || HAL_PIXEL_FORMAT_RAW10 == format ||
       HAL_PIXEL_FORMAT_RAW12 == format || HAL_PIXEL_FORMAT_RAW16 == format) {
+#endif
     if (!meta.exists(ANDROID_SCALER_AVAILABLE_RAW_SIZES)) {
       QMMF_ERROR("%s: Metadata ANDROID_SCALER_AVAILABLE_RAW_SIZES"
                   " not available", __func__);

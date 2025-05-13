@@ -19,9 +19,6 @@ target_include_directories(cam-server
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(cam-server
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(cam-server
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS cam-server DESTINATION bin OPTIONAL)
@@ -33,6 +30,24 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl 
 target_link_libraries(cam-server qmmf_propertyvault)
 endif()
 
-if (QMMF_SERVER_ENABLED)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
+if (CAM_SERVER_ENABLED)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs605")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qrb5165" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-xdg.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qrb5165")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qrbx210")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs6490" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "kalama")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "pineapple")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+elseif (TARGET_BOARD_PLATFORM STREQUAL "qcm2290-mtp")
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+else()
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-base.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
 endif()

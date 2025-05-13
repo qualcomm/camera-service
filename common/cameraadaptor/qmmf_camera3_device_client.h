@@ -26,39 +26,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- *
- * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted (subject to the limitations in the
- * disclaimer below) provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *
- *     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -164,9 +134,6 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t TearDown(int streamId);
   int32_t SetCameraSessionParam(const CameraMetadata &meta);
 
-  static int32_t LoadHWModule(const char *moduleId,
-                              const struct hw_module_t **pHmi);
-
  private:
   std::vector<int32_t> current_request_ids_;
   typedef enum State_t {
@@ -188,11 +155,15 @@ class Camera3DeviceClient : public camera3_callback_ops,
                                bool streaming, int64_t *lastFrameNumber = NULL);
 
   void HandleCaptureResult(const camera3_capture_result *result);
+
 #if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0307)
-  void ReturnStreamBuffers(uint32_t num_buffers, const camera3_stream_buffer_t* const* buffers);
   camera3_buffer_request_status_t RequestStreamBuffers(uint32_t num_buffer_reqs,
-          const camera3_buffer_request_t *buffer_reqs, uint32_t *num_returned_buf_reqs,
+          const camera3_buffer_request_t *buffer_reqs,
+          uint32_t *num_returned_buf_reqs,
           camera3_stream_buffer_ret_t *returned_buf_reqs);
+
+  void ReturnStreamBuffers(uint32_t num_buffers,
+          const camera3_stream_buffer_t* const* buffers);
 #endif
   void UpdateCameraStatus(bool status);
   void Notify(const camera3_notify_msg *msg);
@@ -331,9 +302,6 @@ class Camera3DeviceClient : public camera3_callback_ops,
   Camera3PrepareHandler prepare_handler_;
   Camera3InputStream input_stream_;
   uint32_t batch_size_;
-  static std::mutex vendor_tag_mutex_;
-  static std::shared_ptr<VendorTagDescriptor> vendor_tag_desc_;
-  static uint32_t client_count_;
   std::atomic<bool> is_camera_device_available_;
 
   CamOperationMode cam_opmode_;

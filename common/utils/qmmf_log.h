@@ -27,16 +27,21 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+/* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #pragma once
 
+#include <string>
+#include <sstream>
+#include <dlfcn.h>
+
 #ifdef HAVE_ANDROID_UTILS
 #include <utils/Log.h>
 #include <cutils/properties.h>
+#include <cutils/trace.h>
 #else
 #include <log.h>
 #include "properties.h"
@@ -66,10 +71,28 @@ static inline void unused(...) {};
 
 extern uint32_t qmmf_log_level;
 
+#ifndef HAVE_BINDER
+int qmmf_property_get(const char *key, char *value, const char *default_value);
+int qmmf_property_set(const char *key, const char *value);
+#endif // !HAVE_BINDER
+
 #ifdef HAVE_ANDROID_UTILS
+#define QMMF_GET_LOG_LEVEL()                               \
+  ({                                                       \
+    char prop[PROPERTY_VALUE_MAX];                         \
+    property_get("persist.qmmf.sdk.log.level", prop, "0"); \
+    qmmf_log_level = atoi(prop);                           \
+  })
+
 #define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
 #define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 #else
+#define QMMF_GET_LOG_LEVEL()                               \
+  ({                                                       \
+    char prop[PROP_VALUE_MAX];                         \
+    qmmf_property_get("persist.qmmf.sdk.log.level", prop, "0"); \
+    qmmf_log_level = atoi(prop);                           \
+  })
 #define QMMF_INFO(fmt, args...)  syslog (LOG_INFO, "[INFO]: %s : " fmt, LOG_TAG, ##args)
 #define QMMF_WARN(fmt, args...)  syslog (LOG_WARNING, "[WARN]: %s : " fmt, LOG_TAG, ##args)
 #define QMMF_ERROR(fmt, args...) syslog (LOG_ERROR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
@@ -88,7 +111,6 @@ extern uint32_t qmmf_log_level;
   })
 #endif // HAVE_ANDROID_UTILS
 
-
 #ifdef LOG_LEVEL_KPI
 
 #define DEFAULT_KPI_FLAG   0
@@ -98,6 +120,18 @@ extern uint32_t qmmf_log_level;
 
 extern volatile uint32_t kpi_debug_level;
 extern int ftrace_fd;
+
+#ifdef HAVE_BINDER
+#define QMMF_KPI_GET_MASK() ({\
+char prop[PROPERTY_VALUE_MAX];\
+property_get("persist.qmmf.kpi.debug", prop, std::to_string(BASE_KPI_FLAG).c_str()); \
+kpi_debug_level = atoi (prop);})
+#else
+#define QMMF_KPI_GET_MASK() ({\
+char prop[PROP_VALUE_MAX];\
+qmmf_property_get("persist.qmmf.kpi.debug", prop,\
+  std::to_string(DEFAULT_KPI_FLAG).c_str()); \
+kpi_debug_level = atoi (prop);})
 
 static inline int get_ftrace_fd(void) {
   if (ftrace_fd <0) {
@@ -138,7 +172,51 @@ static inline void ftrace_async_end(const char* name, int32_t cookie) {
   len = snprintf(buffer, FTRACE_BUFFER_SIZE, "E|%s|%d\n", name, cookie);
   ftrace_write(buffer, len);
 }
+#endif // HAVE_BINDER
 
+#ifdef HAVE_BINDER
+class BaseKpiObject {
+public:
+    BaseKpiObject(const char* str) {
+        if (kpi_debug_level >= BASE_KPI_FLAG) {
+            atrace_begin(ATRACE_TAG_ALWAYS, str);
+        }
+    }
+
+    ~BaseKpiObject() {
+        if (kpi_debug_level >= BASE_KPI_FLAG) {
+            atrace_end(ATRACE_TAG_ALWAYS);
+        }
+    }
+};
+
+#define QMMF_KPI_ASYNC_BEGIN(name, cookie) ({\
+if (kpi_debug_level >= BASE_KPI_FLAG) { \
+    atrace_async_begin(ATRACE_TAG_ALWAYS, name, cookie); \
+}\
+})
+
+#define QMMF_KPI_ASYNC_END(name, cookie) ({\
+if (kpi_debug_level >= BASE_KPI_FLAG) { \
+    atrace_async_end(ATRACE_TAG_ALWAYS, name, cookie); \
+}\
+})
+
+class DetailKpiObject {
+public:
+    DetailKpiObject(const char* str) {
+        if (kpi_debug_level >= DETAIL_KPI_FLAG) {
+            atrace_begin(ATRACE_TAG_ALWAYS, str);
+        }
+    }
+    ~DetailKpiObject() {
+        if (kpi_debug_level >= DETAIL_KPI_FLAG) {
+            atrace_end(ATRACE_TAG_ALWAYS);
+        }
+    }
+};
+
+#else
 class BaseKpiObject {
 public:
     BaseKpiObject(const char* str) {
@@ -153,10 +231,6 @@ public:
         }
     }
 };
-
-#define QMMF_KPI_BASE() ({\
-BaseKpiObject a(__func__);\
-})
 
 #define QMMF_KPI_ASYNC_BEGIN(name, cookie) ({\
 if (kpi_debug_level >= BASE_KPI_FLAG) { \
@@ -183,10 +257,17 @@ public:
         }
     }
 };
+#endif // HAVE_BINDER
+
+
+#define QMMF_KPI_BASE() ({\
+BaseKpiObject a(__func__);\
+})
 
 #define QMMF_KPI_DETAIL() ({\
 DetailKpiObject a(__func__);\
 })
+
 #else
 #define QMMF_KPI_GET_MASK()                do {} while (0)
 #define QMMF_KPI_BASE()                    do {} while (0)

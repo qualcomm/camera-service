@@ -26,8 +26,8 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -41,7 +41,11 @@
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_remote_cb.h"
 
+#ifdef HAVE_BINDER
+#define FRAME_DUMP_PATH        "/data/misc/qmmf"
+#else
 #define FRAME_DUMP_PATH        "/var/tmp/qmmf"
+#endif // HAVE_BINDER
 
 #define FPS_TIME_INTERVAL 3000000
 

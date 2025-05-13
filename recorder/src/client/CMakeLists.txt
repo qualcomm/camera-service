@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(qmmf_recorder_client VERSION 1.0)
+project(qmmf_recorder_client)
 
 if (NOT RECORDER_CLIENT_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
@@ -13,6 +13,7 @@ else()
     ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_recorder_extra_param_tags.h
     ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_buffer.h
     ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_offline_jpeg_params.h
+    ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_offline_camera_params.h
     DESTINATION include/qmmf-sdk)
 endif()
 
@@ -34,9 +35,6 @@ target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY})
 
 target_include_directories(qmmf_recorder_client
- PRIVATE $<BUILD_INTERFACE:${KERNEL_INCDIR}/usr/include>)
-
-target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 set_target_properties(qmmf_recorder_client PROPERTIES
@@ -51,12 +49,13 @@ target_link_libraries(qmmf_recorder_client log binder utils cutils ion)
 else()
 target_link_libraries(qmmf_recorder_client ${PROTOBUF_LIBRARIES} qmmf_propertyvault)
 endif()
-if(NOT CAMERA_CLIENT_DISABLED)
-target_link_libraries(qmmf_recorder_client camera_client)
-endif()
 
 if(USE_LIBGBM)
 target_link_libraries(qmmf_recorder_client ${CMAKE_DL_LIBS})
+endif()
+
+if(USE_LIBGBM)
+target_link_libraries(qmmf_recorder_client gbm)
 endif()
 
 if(NOT HAVE_BINDER_H)

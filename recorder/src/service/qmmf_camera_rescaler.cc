@@ -26,39 +26,9 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
-* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-*
-* Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted (subject to the limitations in the
-* disclaimer below) provided that the following conditions are met:
-*
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*
-*     * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-* GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-* HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "RecorderRescaler"
@@ -74,11 +44,15 @@
 #include "recorder/src/service/qmmf_camera_rescaler.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
 
+#ifndef HAVE_BINDER
 #include "common/propertyvault/qmmf_propertyvault.h"
+#endif
 #include "common/resizer-neon/qmmf_resizer_neon.h"
 #include "common/resizer-c2d/qmmf_resizer_c2d.h"
+#ifndef CAMERA_HAL1_SUPPORT
 #ifdef ENABLE_RESCALER_FASTCV
 #include "common/resizer-fastCV/qmmf_resizer_fastCV.h"
+#endif
 #endif
 
 namespace qmmf {
@@ -96,6 +70,15 @@ CameraRescalerBase::CameraRescalerBase()
   QMMF_INFO("%s: Enter", __func__);
   char prop[PROP_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
+#ifdef HAVE_BINDER
+#ifdef ENABLE_RESCALER_NEON
+  property_get("persist.qmmf.rescaler.type", prop, "Neon");
+#elif ENABLE_RESCALER_C2D
+  property_get("persist.qmmf.rescaler.type", prop, "C2D");
+#elif ENABLE_RESCALER_FASTCV
+  property_get("persist.qmmf.rescaler.type", prop, "FastCV");
+#endif
+#else
 #ifdef ENABLE_RESCALER_NEON
   qmmf_property_get("persist.qmmf.rescaler.type", prop, "Neon");
 #elif ENABLE_RESCALER_C2D
@@ -103,7 +86,9 @@ CameraRescalerBase::CameraRescalerBase()
 #elif ENABLE_RESCALER_FASTCV
   qmmf_property_get("persist.qmmf.rescaler.type", prop, "FastCV");
 #endif
+#endif
   std::string name = prop;
+#ifndef CAMERA_HAL1_SUPPORT
   if (name == "Neon") {
 #ifdef ENABLE_RESCALER_NEON
       rescaler_ = new NEONResizer();
@@ -117,13 +102,28 @@ CameraRescalerBase::CameraRescalerBase()
     rescaler_ = new C2DResizer();
 #endif
   }
+#else
+  if (name == "Neon") {
+    rescaler_ = new NEONResizer();
+  } else {
+    rescaler_ = new C2DResizer();
+  }
+#endif
 
   memset(prop, 0, sizeof(prop));
+#ifdef HAVE_BINDER
+  property_get("persist.qipcam.rescaler.perf", prop, "0");
+#else
   qmmf_property_get("persist.qipcam.rescaler.perf", prop, "0");
+#endif
   uint32_t value = (uint32_t) atoi(prop);
   print_process_time_ = (value == 1) ? true : false;
 
+#ifdef HAVE_BINDER
+  property_get(PRESERVE_ASPECT_RATIO, prop, "1");
+#else
   qmmf_property_get(PRESERVE_ASPECT_RATIO, prop, "1");
+#endif
   value = (uint32_t) atoi(prop);
   rescaler_->aspect_ratio_preserve_ = (value == 1) ? true : false;
 
@@ -756,7 +756,11 @@ status_t CameraRescalerMemPool::AllocHWMemBuffer(IBufferHandle &buf) {
   uint32_t stride = 0;
 
   MemAllocError ret = alloc_device_interface_->AllocBuffer(buf,
+#ifdef HAVE_BINDER
+    static_cast<int>(width), static_cast<int>(height), format, usage, &stride);
+#else
     static_cast<int>(width), static_cast<int>(height), format, 0, usage, &stride);
+#endif
   if (MemAllocError::kAllocOk != ret) {
     QMMF_ERROR("%s: Failed to allocate alloc buffer", __func__);
     return -ENOMEM;

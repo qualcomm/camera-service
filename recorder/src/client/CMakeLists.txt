@@ -22,6 +22,12 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_client.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_extra_param.cc
 )
 
+find_package(PkgConfig)
+
+pkg_check_modules(GBM gbm)
+
+target_compile_definitions(qmmf_recorder_client PRIVATE GBM_VER="${GBM_VERSION_MAJOR}")
+
 target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY})
 

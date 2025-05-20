@@ -129,7 +129,7 @@ class RecorderServiceProxy: public IRecorderService {
   get_camera_metadata_compact_size_fnp* get_camera_metadata_compact_size_;
 
   RecorderServiceProxy() {
-    libcamera_metadata_handle_ = dlopen("libcamera_metadata.so", RTLD_LAZY);
+    libcamera_metadata_handle_ = dlopen("libcamera_metadata.so.0", RTLD_LAZY);
     char* err = dlerror();
 
     if ((NULL != libcamera_metadata_handle_) && (NULL == err)) {
@@ -933,7 +933,8 @@ RecorderClient::RecorderClient()
   }
   assert(gbm_fd_ >= 0);
 
-  libgbm_handle_ = dlopen("libgbm.so", RTLD_LAZY);
+  std::string libname = "libgbm.so." + std::string(GBM_VER);
+  libgbm_handle_ = dlopen(libname.c_str(), RTLD_LAZY);
   char* err = dlerror();
 
   assert(libgbm_handle_ != NULL);

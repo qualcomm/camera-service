@@ -32,9 +32,10 @@ int qmmf_property_set(const char *key, const char *value) {
 void qmmf_libpropertyvaultOpen()
 {
     void* libpropertyvault_handle = NULL;
+    std::string libname = "libpropertyvault.so." + std::string(PROPERTY_VAULT_VER);
+
     if (NULL == libpropertyvault_handle) {
-        libpropertyvault_handle =
-            dlopen ("libpropertyvault.so.0", RTLD_LAZY);
+        libpropertyvault_handle = dlopen (libname.c_str(), RTLD_LAZY);
         char* err = dlerror();
 
         if ((NULL != libpropertyvault_handle) && (NULL == err)) {

@@ -106,7 +106,7 @@ void CameraMetadata_libCameraMetadataOpen()
 {
     if (NULL == CameraMetadata::libcamera_metadata_handle) {
         CameraMetadata::libcamera_metadata_handle =
-            dlopen("libcamera_metadata.so", RTLD_LAZY);
+            dlopen("libcamera_metadata.so.0", RTLD_LAZY);
         char* err = dlerror();
 
         if ((NULL != CameraMetadata::libcamera_metadata_handle) && (NULL == err)) {

@@ -73,7 +73,7 @@ void VendorTagDescriptor_libCameraMetadataOpen()
 {
     if (NULL == VendorTagDescriptor::libcamera_metadata_handle) {
         VendorTagDescriptor::libcamera_metadata_handle =
-            dlopen("libcamera_metadata.so", RTLD_LAZY);
+            dlopen("libcamera_metadata.so.0", RTLD_LAZY);
         char* err = dlerror();
 
         if ((NULL != VendorTagDescriptor::libcamera_metadata_handle) && (NULL == err)) {

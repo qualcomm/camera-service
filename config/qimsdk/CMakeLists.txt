@@ -30,7 +30,7 @@ set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DVHDR_MODES_ENABLE")
 
 set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DEIS_MODES_ENABLE")
 
-set(JPEG_LIB /usr/lib/camera/components/com.qti.offline.jpeg.so)
+set(JPEG_LIB /usr/lib/camera/components/com.qti.offline.jpeg.so.0)
 
 set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DJPEG_POSTPROC_LIB=\"\\\"${JPEG_LIB}\\\"\"")
 

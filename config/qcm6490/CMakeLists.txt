@@ -26,7 +26,7 @@ set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DDISABLE_RESCALER_COLORSPACE")
 
 set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DCAMERA_HAL_API_VERSION=0x0306")
 
-set(JPEG_LIB /usr/lib/camera/components/com.qti.offline.jpeg.so)
+set(JPEG_LIB /usr/lib/camera/components/com.qti.offline.jpeg.so.0)
 
 set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DJPEG_POSTPROC_LIB=\"\\\"${JPEG_LIB}\\\"\"")
 

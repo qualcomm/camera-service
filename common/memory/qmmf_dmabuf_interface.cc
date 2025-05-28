@@ -68,6 +68,14 @@ MemAllocFlags DMABufUsage::ToCommon(int32_t local) const {
   return common;
 }
 
+DMABuffer::~DMABuffer() {
+  if (fd_ >= 0) {
+    close(fd_);
+  }
+
+  delete generic_handle_;
+}
+
 buffer_handle_t &DMABuffer::GetNativeHandle() { return generic_handle_; }
 
 void DMABuffer::SetNativeHandle(int fd, uint32_t size,
@@ -80,6 +88,7 @@ void DMABuffer::SetNativeHandle(int fd, uint32_t size,
   priv_hnd->height = scanline;
   priv_hnd->width = stride;
   generic_handle_ = static_cast<buffer_handle_t>(priv_hnd);
+  fd_ = fd;
 }
 
 int DMABuffer::GetFD() {
@@ -185,6 +194,11 @@ MemAllocError DMABufDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   b->SetNativeHandle(alloc_data.fd, size, width,
        height, format, local_usage,
        p_stride, p_scanline);
+
+  QMMF_DEBUG ("%s: Allocated fd: %d format: 0x%x unaligned dim: %dx%d"
+      " stride: %d scanline: %d size: %d", __func__,
+      alloc_data.fd, override_format, width, height,
+      b->GetStride(), b->GetScanline(), size);
 
   return MemAllocError::kAllocOk;
 }

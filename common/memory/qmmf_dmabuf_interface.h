@@ -24,7 +24,7 @@ class DMABuffer : public IBufferInterface {
  public:
   DMABuffer() : generic_handle_(nullptr),
                 fd_(-1) {};
-  ~DMABuffer(){};
+  ~DMABuffer();
   buffer_handle_t& GetNativeHandle();
   void SetNativeHandle(int fd, uint32_t size,
                        uint32_t width, uint32_t height,

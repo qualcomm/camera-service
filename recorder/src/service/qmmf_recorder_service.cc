@@ -2108,23 +2108,26 @@ status_t RecorderServiceCallbackProxy::Init (uint32_t client_id) {
 }
 
 void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync& message) {
-  QMMF_DEBUG("%s Enter ", __func__);
-  uint8_t offset = 4;
+  QMMF_DEBUG("%s Enter", __func__);
+
+  uint8_t offset = 4;  // Reserve 4 bytes for message size
   auto msg_size = message.ByteSizeLong();
   auto buf_size = msg_size + offset;
-  void *buffer = malloc(buf_size);
-  std::vector<int32_t> fds;
-  struct cmsghdr *cmsg = NULL;
-  struct msghdr msg = {0};
-  struct iovec io;
-  int32_t fd_nums = -1;
 
+  std::vector<int32_t> fds;
+  struct msghdr msg = {0};
+  struct iovec io = {0};
+  struct cmsghdr *cmsg = nullptr;
+
+  // Allocate buffer
+  std::unique_ptr<uint8_t[]> buffer(new (std::nothrow) uint8_t[buf_size]);
   if (!buffer) {
-    QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
+    QMMF_ERROR("%s: Memory allocation failed!", __func__);
     return;
   }
 
-  switch(message.cmd()) {
+  // Collect file descriptors based on message type
+  switch (message.cmd()) {
     case RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_SNAPSHOT_DATA: {
       NotifySnapshotDataMsg data = message.snapshot_data();
       if (data.buffer().ion_fd() != -1)
@@ -2145,35 +2148,45 @@ void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync
     }
   }
 
-  *(static_cast<uint32_t *>(buffer)) = msg_size;
-  message.SerializeToArray(buffer+offset, msg_size);
+  // Write message size prefix
+  *reinterpret_cast<uint32_t*>(buffer.get()) = msg_size;
 
-  io.iov_base = buffer;
+  // Serialize message
+  if (!message.SerializeToArray(buffer.get() + offset, msg_size)) {
+    QMMF_ERROR("%s: Failed to serialize message", __func__);
+    return;
+  }
+
+  // Prepare iovec
+  io.iov_base = buffer.get();
   io.iov_len = buf_size;
   msg.msg_iov = &io;
   msg.msg_iovlen = 1;
 
-  fd_nums = fds.size();
-  char cmsgbuf[CMSG_SPACE(fds.size() * sizeof(int32_t))] = {0};
-
+  // Prepare control message for file descriptors
+  std::vector<char> cmsgbuf;
   if (!fds.empty()) {
-    msg.msg_control = cmsgbuf;
-    msg.msg_controllen = sizeof(cmsgbuf);
+    cmsgbuf.resize(CMSG_SPACE(fds.size() * sizeof(int32_t)));
+    msg.msg_control = cmsgbuf.data();
+    msg.msg_controllen = cmsgbuf.size();
+
     cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(fds.size() * sizeof(int32_t));
-    memmove(CMSG_DATA(cmsg), fds.data(), fds.size() * sizeof(int32_t));
+    std::memcpy(CMSG_DATA(cmsg), fds.data(), fds.size() * sizeof(int32_t));
   }
 
-  ssize_t bytesSent = sendmsg(callback_socket_, (struct msghdr *) &msg, 0);
-  QMMF_VERBOSE("%s bytesSent: %u, size: %u", __func__, bytesSent, buf_size);
-  if (bytesSent == -1) {
-    QMMF_ERROR("%s: Closing callback socket: %d", __func__, callback_socket_);
-    close (callback_socket_);
+  // Send message
+  ssize_t bytes_sent = sendmsg(callback_socket_, &msg, 0);
+  if (bytes_sent == -1) {
+    QMMF_ERROR("%s: sendmsg failed: %s", __func__, strerror(errno));
+    close(callback_socket_);
+  } else {
+    QMMF_DEBUG("%s: Sent %zd bytes (expected %u)", __func__, bytes_sent, buf_size);
   }
-  free (buffer);
-  QMMF_DEBUG("%s Exit ", __func__);
+
+  QMMF_DEBUG("%s Exit", __func__);
 }
 
 void RecorderServiceCallbackProxy::NotifyRecorderEvent(EventType event, void *payload, size_t size) {
@@ -2349,6 +2362,12 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(
   auto ncr = async_msg.mutable_camera_result();
   ncr->set_camera_id(camera_id);
   const camera_metadata_t *meta_buffer = result.getAndLock();
+
+  if (!meta_buffer) {
+    const_cast<CameraMetadata &>(result).unlock(meta_buffer);
+    return;
+  }
+
   uint32_t size = get_camera_metadata_compact_size(meta_buffer);
   if (size <= 0) {
     const_cast<CameraMetadata &>(result).unlock(meta_buffer);
@@ -2357,11 +2376,14 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(
 
   std::string data;
   data.resize(size);
-  copy_camera_metadata(&data.at(0), data.size(), meta_buffer);
-
-  ncr->set_result_meta(data);
-  const_cast<CameraMetadata &>(result).unlock(meta_buffer);
-  SendCallbackData(async_msg);
+  auto copy_ptr = copy_camera_metadata(&data.at(0), data.size(), meta_buffer);
+  if (copy_ptr) {
+    ncr->set_result_meta(data);
+    const_cast<CameraMetadata &>(result).unlock(meta_buffer);
+    SendCallbackData(async_msg);
+  } else {
+    const_cast<CameraMetadata &>(result).unlock(meta_buffer);
+  }
 
   QMMF_VERBOSE("%s: Exit", __func__);
 }

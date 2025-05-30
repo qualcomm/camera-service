@@ -3197,7 +3197,7 @@ status_t RecorderServiceCallbackStub::Init(uint32_t client_id) {
   return 0;
 }
 
-void RecorderServiceCallbackStub::ThreadLoop () {
+void RecorderServiceCallbackStub::ThreadLoop() {
   QMMF_INFO("%s: waiting for connection on %d", __func__, cb_socket_);
 
   client_socket_ = accept(cb_socket_, nullptr, nullptr);
@@ -3209,16 +3209,21 @@ void RecorderServiceCallbackStub::ThreadLoop () {
   }
 
   QMMF_INFO("%s: connection accepted new fd %d", __func__, client_socket_);
+
+  std::vector<uint8_t> recv_buffer;
+
   while (run_thread_) {
-    struct cmsghdr *cmsg = NULL;
     struct msghdr msg = {0};
-    struct iovec io = {.iov_base = socket_recv_buf_, .iov_len = kMaxSocketBufSize};
+    struct iovec io;
+    char cmsgbuf[CMSG_SPACE(1024)] = {0};
+    io.iov_base = socket_recv_buf_;
+    io.iov_len = kMaxSocketBufSize;
     msg.msg_iov = &io;
     msg.msg_iovlen = 1;
-    char cmsgbuf[CMSG_SPACE(1024)] = {0};
     msg.msg_control = cmsgbuf;
     msg.msg_controllen = sizeof(cmsgbuf);
     fds_.clear();
+    memset(socket_recv_buf_, 0, kMaxSocketBufSize);
 
     ssize_t bytes_read = recvmsg(client_socket_, &msg, 0);
     QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
@@ -3232,10 +3237,11 @@ void RecorderServiceCallbackStub::ThreadLoop () {
       break;
     }
 
+    // Extract file descriptors
     for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr;
          cmsg = CMSG_NXTHDR(&msg, cmsg)) {
       if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
-        int32_t *fds = (int32_t *) CMSG_DATA(cmsg);
+        int32_t *fds = reinterpret_cast<int32_t *>(CMSG_DATA(cmsg));
         int fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int32_t);
         for (int i = 0; i < fd_count; ++i) {
           fds_.push_back(fds[i]);
@@ -3243,28 +3249,45 @@ void RecorderServiceCallbackStub::ThreadLoop () {
       }
     }
 
-    ssize_t buf_size = bytes_read;
-    auto buf_ptr = socket_recv_buf_;
-    while (buf_size > 0) {
-      QMMF_VERBOSE("%s: buf_size: %d", __func__, buf_size);
-      uint32_t msg_size = *(reinterpret_cast<uint32_t *>(buf_ptr));
-      // Moving past the size
-      buf_ptr += 4;
+    // Append received data to buffer
+    recv_buffer.insert(recv_buffer.end(), socket_recv_buf_, socket_recv_buf_ + bytes_read);
+
+    // Process complete messages
+    while (recv_buffer.size() >= 4) {
+      uint32_t msg_size = *reinterpret_cast<uint32_t *>(recv_buffer.data());
+
       QMMF_VERBOSE("%s: msg_size: %d", __func__, msg_size);
-      RecorderClientCallbacksAsync msg;
-      msg.ParseFromArray(buf_ptr, msg_size);
-      auto ret = ProcessCallbackMsg(msg);
-      QMMF_VERBOSE("%s: Processed cmd: %d", __func__, msg.cmd());
-      if (ret != 0) {
-        QMMF_ERROR("%s: ProcessCallbackMsg failed %s", __func__, strerror(errno));
+      if ((msg_size == 0) || (msg_size > kMaxSocketBufSize)) {
+        QMMF_ERROR("%s: Invalid msg_size: %u", __func__, msg_size);
+        recv_buffer.clear();
         break;
-      } else {
-        buf_ptr += msg_size;
-        buf_size -= (msg_size + 4);
       }
+
+      if (recv_buffer.size() < msg_size + 4) {
+        // Wait for more data
+        break;
+      }
+
+      RecorderClientCallbacksAsync msg;
+      if (!msg.ParseFromArray(recv_buffer.data() + 4, msg_size)) {
+        QMMF_ERROR("%s: Failed to parse message", __func__);
+        recv_buffer.clear();
+        break;
+      }
+
+      int ret = ProcessCallbackMsg(msg);
+      if (ret != 0) {
+        QMMF_ERROR("%s: ProcessCallbackMsg failed", __func__);
+        recv_buffer.clear();
+        break;
+      }
+
+      QMMF_VERBOSE("%s: Processed cmd: %d", __func__, msg.cmd());
+      // Remove processed message
+      recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + msg_size + 4);
     }
-    memset(socket_recv_buf_, 0, bytes_read);
   }
+
   QMMF_INFO("%s: Exit %d", __func__, cb_socket_);
 }
 
@@ -3380,11 +3403,21 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       CameraMetadata meta;
       const std::string &result_data = data.result_meta();
 
+      if (result_data.empty()) {
+        return 0;
+      }
+
       uint8_t *raw_buf = new uint8_t[result_data.size()];
       camera_metadata_t *meta_buffer =
           ::qmmf::CameraMetadata::copy_camera_metadata(
               raw_buf, result_data.size(),
               reinterpret_cast<const camera_metadata_t *>(result_data.data()));
+
+      if (meta_buffer == nullptr) {
+        delete[] raw_buf;
+        return 0;
+      }
+
       meta.clear();
       meta.acquire(meta_buffer);
       NotifyCameraResult(cam_id, meta);

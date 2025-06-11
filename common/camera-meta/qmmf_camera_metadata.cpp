@@ -95,7 +95,7 @@ update_camera_metadata_entry_fnp*
     CameraMetadata::update_camera_metadata_entry = NULL;
 validate_camera_metadata_structure_fnp*
     CameraMetadata::validate_camera_metadata_structure = NULL;
-unsigned int** CameraMetadata::camera_metadata_section_bounds = NULL;
+unsigned int (*CameraMetadata::camera_metadata_section_bounds)[2] = NULL;
 const char** CameraMetadata::camera_metadata_section_names = NULL;
 const char** CameraMetadata::camera_metadata_type_names = NULL;
 
@@ -211,7 +211,7 @@ void CameraMetadata_libCameraMetadataOpen()
                 dlsym(CameraMetadata::libcamera_metadata_handle,
                 "validate_camera_metadata_structure"));
             CameraMetadata::camera_metadata_section_bounds =
-                reinterpret_cast<unsigned int**>(
+                reinterpret_cast<unsigned int (*)[2]>(
                 dlsym(CameraMetadata::libcamera_metadata_handle,
                 "camera_metadata_section_bounds"));
             CameraMetadata::camera_metadata_section_names =

@@ -26,6 +26,8 @@ find_package(PkgConfig)
 
 pkg_check_modules(GBM gbm)
 
+string(REGEX MATCH "^[0-9]+" GBM_VERSION_MAJOR ${GBM_VERSION})
+
 target_compile_definitions(qmmf_recorder_client PRIVATE GBM_VER="${GBM_VERSION_MAJOR}")
 
 target_include_directories(qmmf_recorder_client

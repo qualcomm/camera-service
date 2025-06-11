@@ -10,6 +10,8 @@ find_package(PkgConfig)
 
 pkg_check_modules(PROPERTY_VAULT property-vault)
 
+string(REGEX MATCH "^[0-9]+" PROPERTY_VAULT_VERSION_MAJOR ${PROPERTY_VAULT_VERSION})
+
 target_compile_definitions(
   qmmf_propertyvault PRIVATE
   PROPERTY_VAULT_VER="${PROPERTY_VAULT_VERSION_MAJOR}"

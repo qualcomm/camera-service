@@ -314,7 +314,7 @@ class CameraMetadata {
     static update_camera_metadata_entry_fnp* update_camera_metadata_entry;
     static validate_camera_metadata_structure_fnp* validate_camera_metadata_structure;
 
-    static unsigned int** camera_metadata_section_bounds;
+    static unsigned int (*camera_metadata_section_bounds)[2];
     static const char** camera_metadata_section_names;
     static const char** camera_metadata_type_names;
 

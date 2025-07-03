@@ -7,12 +7,14 @@
 
 #pragma once
 
+#include <qmmf-sdk/qmmf_recorder_params.h>
+
 namespace qmmf {
 
 struct OfflineJpegBufferParams {
-  uint32_t    width;
-  uint32_t    height;
-  uint32_t    format;
+  uint32_t                    width;
+  uint32_t                    height;
+  qmmf::recorder::VideoFormat format;
 };
 
 struct OfflineJpegCreateParams {

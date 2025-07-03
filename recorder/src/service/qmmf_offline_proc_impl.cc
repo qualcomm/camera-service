@@ -186,6 +186,8 @@ int32_t OfflineProcess::GetBufferFd(const uint32_t& client_id,
 
 status_t OfflineProcess::Create(const uint32_t client_id,
                                     const OfflineCameraCreateParams& params) {
+  BufferFormat buffer_format;
+
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
 
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
@@ -208,11 +210,15 @@ status_t OfflineProcess::Create(const uint32_t client_id,
 
   create_params.config.inBuffer.width = params.in_buffer.width;
   create_params.config.inBuffer.height = params.in_buffer.height;
-  create_params.config.inBuffer.format = params.in_buffer.format;
+  buffer_format = Common::FromVideoToQmmfFormat(params.in_buffer.format);
+  create_params.config.inBuffer.format =
+      Common::FromQmmfToHalFormat(buffer_format);
 
   create_params.config.outBuffer.width = params.out_buffer.width;
   create_params.config.outBuffer.height = params.out_buffer.height;
-  create_params.config.outBuffer.format = params.out_buffer.format;
+  buffer_format = Common::FromVideoToQmmfFormat(params.out_buffer.format);
+  create_params.config.outBuffer.format =
+      Common::FromQmmfToHalFormat(buffer_format);
 
   create_params.config.clientCb = OfflineCb;
   create_params.cb_data = new OfflineCbData;

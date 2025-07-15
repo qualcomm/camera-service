@@ -3219,6 +3219,13 @@ status_t CameraPort::Init() {
             IMemAllocUsage::kPrivateAllocTP10 |
               IMemAllocUsage::kPrivateAllocUbwc;
         break;
+      case BufferFormat::kRAW8:
+      case BufferFormat::kRAW10:
+      case BufferFormat::kRAW12:
+      case BufferFormat::kRAW16:
+        // RAW stream does not contain preview or video stream flags.
+        cam_stream_params_.allocFlags.flags = IMemAllocUsage::kSwReadOften;
+        break;
       default:
 #ifdef HAVE_BINDER
         cam_stream_params_.allocFlags.flags |=

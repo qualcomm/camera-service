@@ -60,6 +60,7 @@ class OfflineProcess {
 
   int32_t GetBufferId(const uint32_t& client_id, const int32_t& buffer_fd);
   int32_t GetBufferFd(const uint32_t& client_id, const int32_t& buffer_id);
+  uint32_t GetUsageFromFormat(BufferFormat format);
 
   void ReleaseRequestData(PostProcSessionParams* params);
 

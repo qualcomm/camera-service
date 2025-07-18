@@ -184,6 +184,29 @@ int32_t OfflineProcess::GetBufferFd(const uint32_t& client_id,
   return client_fd_map_[client_id][buffer_id];
 }
 
+uint32_t OfflineProcess::GetUsageFromFormat (BufferFormat format)
+{
+  uint32_t usage_flags;
+
+  switch (format) {
+    case BufferFormat::kNV12UBWC:
+      usage_flags = AllocUsageFactory::GetAllocUsage().ToLocal
+          (IMemAllocUsage::kPrivateAllocUbwc);
+      break;
+    case BufferFormat::kP010:
+      usage_flags = AllocUsageFactory::GetAllocUsage().ToLocal
+          (IMemAllocUsage::kPrivateAllocP010);
+      break;
+    default:
+      usage_flags = 0;
+      break;
+  }
+
+  QMMF_INFO("%s: usage_flags is 0x%x", __func__, usage_flags);
+
+  return usage_flags;
+}
+
 status_t OfflineProcess::Create(const uint32_t client_id,
                                     const OfflineCameraCreateParams& params) {
   BufferFormat buffer_format;
@@ -213,12 +236,20 @@ status_t OfflineProcess::Create(const uint32_t client_id,
   buffer_format = Common::FromVideoToQmmfFormat(params.in_buffer.format);
   create_params.config.inBuffer.format =
       Common::FromQmmfToHalFormat(buffer_format);
+#ifdef FEATURE_OFFLINE_IPE_ENABLE
+  create_params.config.inBuffer.usage_flags =
+      GetUsageFromFormat(buffer_format);
+#endif
 
   create_params.config.outBuffer.width = params.out_buffer.width;
   create_params.config.outBuffer.height = params.out_buffer.height;
   buffer_format = Common::FromVideoToQmmfFormat(params.out_buffer.format);
   create_params.config.outBuffer.format =
       Common::FromQmmfToHalFormat(buffer_format);
+#ifdef FEATURE_OFFLINE_IPE_ENABLE
+  create_params.config.outBuffer.usage_flags =
+      GetUsageFromFormat(buffer_format);
+#endif
 
   create_params.config.clientCb = OfflineCb;
   create_params.cb_data = new OfflineCbData;

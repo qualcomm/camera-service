@@ -1272,19 +1272,16 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
   }
 
   auto size = resp_msg.ByteSizeLong();
-  void *buffer = malloc(size);
-
-  if (!buffer) {
-    QMMF_DEBUG("%s: Memory Allocation failed!", __func__);
-    return;
+  auto offset = 4;  // Reserve 4 bytes for message size
+  auto buf_size = size + offset;
+  std::vector<uint8_t> buffer(buf_size,0);
+  if (buffer.size() >= 4) {
+    std::memcpy(buffer.data(),&size , sizeof(uint32_t));
   }
+  resp_msg.SerializeToArray(buffer.data()+offset, size);
 
-  resp_msg.SerializeToArray(buffer, size);
-
-  if (SendResponse(client_socket, buffer, size) > 0)
-    QMMF_INFO("%s: sent cmd:%u bytes:%lu", __func__,  resp_msg.command(), size);
-
-  free (buffer);
+  if (SendResponse(client_socket, buffer.data(), buf_size) > 0)
+    QMMF_INFO("%s: sent cmd:%u bytes:%lu", __func__,  resp_msg.command(), buf_size);
 }
 
 void RecorderService::ParseRequest(int client_socket,

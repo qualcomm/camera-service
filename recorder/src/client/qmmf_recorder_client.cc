@@ -859,24 +859,45 @@ class RecorderServiceProxy: public IRecorderService {
         __func__, cmd.command(), buf_size, bytes_sent);
     return 0;
   }
-
   status_t RecvResponse(RecorderClientRespMsg &resp) {
     char buffer[kMaxSocketBufSize] = {0};
-
-    ssize_t bytes_read = recv(socket_, buffer, sizeof(buffer), 0);
-    if (bytes_read == -1) {
-      return -errno;
-    } else  if (bytes_read == 0) {
+    uint32_t msg_sz = 0;
+    ssize_t bytes_read = recv(socket_, &msg_sz, sizeof(msg_sz), 0);
+    if (bytes_read < 0) {
+      QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));
       return -1;
     }
 
-    resp.ParseFromArray(buffer, bytes_read);
+    if (bytes_read == 0) {
+      QMMF_ERROR("Connection closed");
+      return -1;
+    }
+
+    if (bytes_read != sizeof(msg_sz)) {
+      QMMF_ERROR("Error in reading message size");
+      return -1;
+    }
+
+    if (msg_sz > kMaxSocketBufSize) {
+      QMMF_ERROR("Message size too large: %u", msg_sz);
+      return -1;
+    }
+
+    ssize_t bytes_handled = recv(socket_, buffer, msg_sz, MSG_WAITALL);
+    if (bytes_handled != msg_sz) {
+      return -1;
+    }
+
+    if (!resp.ParseFromArray(buffer, msg_sz)) {
+      QMMF_ERROR(" %s Failed to parse message",__func__);
+      return -1;
+    }
+
     QMMF_DEBUG("%s: Received from server: %u bytes:%ld",
-        __func__, resp.command(), bytes_read);
+      __func__, resp.command(), bytes_handled);
 
     return 0;
   }
-
   std::shared_ptr<IRecorderServiceCallback> service_cb_handler_;
   int socket_;
   std::mutex socket_lock_;

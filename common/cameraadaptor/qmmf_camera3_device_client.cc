@@ -1477,6 +1477,12 @@ void Camera3DeviceClient::Notify(const camera3_notify_msg *msg) {
       NotifyError(msg->message.error);
       break;
     }
+#ifdef ENABLE_SYSTEM_MESSAGE_EVENT
+    case CAMERA3_MSG_SYSTEM: {
+      NotifySystemEvent(msg->message.systemeventmsg);
+      break;
+    }
+#endif
     default:
       SET_ERR("Unknown notify message from HAL: %d", msg->type);
   }
@@ -1592,6 +1598,14 @@ void Camera3DeviceClient::NotifyShutter(const camera3_shutter_msg_t &msg) {
             msg.frame_number);
   }
 }
+
+#ifdef ENABLE_SYSTEM_MESSAGE_EVENT
+void Camera3DeviceClient::NotifySystemEvent(const camera3_system_msg_t &msg) {
+  // Set flag in request handler to disable wait loop in Clear()
+  request_handler_.SetSystemEventOccurred(true);
+  client_cb_.systemCb(msg.errorCode);
+}
+#endif
 
 #if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0307)
 camera3_buffer_request_status_t Camera3DeviceClient::RequestStreamBuffers(

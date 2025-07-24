@@ -120,7 +120,8 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
                                    const float framerate,
                                    const CameraExtraParam& extra_param,
                                    const ResultCb &cb,
-                                   const ErrorCb &errcb) {
+                                   const ErrorCb &errcb,
+                                   const SystemCb &syscb) {
 
   QMMF_INFO("%s: Camera Id(%u) to open!", __func__, camera_id);
   QMMF_KPI_DETAIL();
@@ -153,7 +154,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
   start_cam_param_[camera_id] = extra_param;
   start_cam_param_lock_.unlock();
 
-  auto ret = camera->OpenCamera(camera_id, framerate, extra_param, cb, errcb);
+  auto ret = camera->OpenCamera(camera_id, framerate, extra_param, cb, errcb, syscb);
   if (ret != 0) {
     QMMF_ERROR("%s: OpenCamera(%d) Failed!", __func__, camera_id);
     active_cameras_lock_.lock();

@@ -57,7 +57,8 @@ Camera3RequestHandler::Camera3RequestHandler(Camera3Monitor &monitor)
       batch_size_(1),
       run_worker_(false),
       cam_opmode_(0),
-      request_mdata_(CameraMetadata(128,128)) {
+      request_mdata_(CameraMetadata(128,128)),
+      system_event_occurred_(false) {
   pthread_mutex_init(&lock_, NULL);
   cond_init(&requests_signal_);
   cond_init(&current_request_signal_);
@@ -221,11 +222,14 @@ int32_t Camera3RequestHandler::Clear(int64_t *lastFrameNumber) {
   streaming_last_frame_number_ = NO_IN_FLIGHT_REPEATING_FRAMES;
 
   int32_t ret = 0;
-  while (current_request_.resultExtras.requestId != -1) {
-    // If there is a in-flight request, wait until it is submitted to HAL.
-    ret = cond_wait_relative(&current_request_signal_, &lock_, CLEAR_TIMEOUT);
-    if (-ETIMEDOUT == ret) {
-      break;
+  // Skip waiting for current request if system event occurred
+  if (!system_event_occurred_) {
+    while (current_request_.resultExtras.requestId != -1) {
+      // If there is a in-flight request, wait until it is submitted to HAL.
+      ret = cond_wait_relative(&current_request_signal_, &lock_, CLEAR_TIMEOUT);
+      if (-ETIMEDOUT == ret) {
+        break;
+      }
     }
   }
 
@@ -935,6 +939,10 @@ bool Camera3RequestHandler::RequestStreamSubmitPostProcess(
   }
 
   return ret;
+}
+
+void Camera3RequestHandler::SetSystemEventOccurred(bool occurred) {
+  system_event_occurred_ = occurred;
 }
 
 bool Camera3RequestHandler::RequestStreamGetProcess(

@@ -219,6 +219,9 @@ class RecorderImpl {
   /// Camera Error callback handler
   void CameraErrorCb(uint32_t camera_id, uint32_t errcode);
 
+  /// Camera System callback handler
+  void CameraSystemCb(uint32_t camera_id, uint32_t errcode);
+
   // Get suitable trackid for linked stream
   uint32_t FindSuitableIdForLinkedTrack(const VideoTrackParam& params);
 

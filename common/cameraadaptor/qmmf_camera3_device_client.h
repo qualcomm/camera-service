@@ -169,6 +169,9 @@ class Camera3DeviceClient : public camera3_callback_ops,
   void Notify(const camera3_notify_msg *msg);
   void NotifyError(const camera3_error_msg_t &msg);
   void NotifyShutter(const camera3_shutter_msg_t &msg);
+#ifdef ENABLE_SYSTEM_MESSAGE_EVENT
+  void NotifySystemEvent(const camera3_system_msg_t &msg);
+#endif
   void RemovePendingRequestLocked(uint32_t frameNumber);
   void ReturnOutputBuffers(const camera3_stream_buffer_t *outputBuffers,
                            size_t numBuffers, int64_t timestamp,

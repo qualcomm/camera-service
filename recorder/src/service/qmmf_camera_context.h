@@ -88,7 +88,8 @@ class CameraContext : public CameraInterface {
   status_t OpenCamera(const uint32_t camera_id, const float frame_rate,
                       const CameraExtraParam& extra_param,
                       const ResultCb &cb = nullptr,
-                      const ErrorCb &errcb = nullptr) override;
+                      const ErrorCb &errcb = nullptr,
+                      const SystemCb &syscb = nullptr) override;
 
   status_t CloseCamera(const uint32_t camera_id) override;
 
@@ -251,6 +252,8 @@ class CameraContext : public CameraInterface {
 
   void CameraResultCb(const CaptureResult &result);
 
+  void CameraSystemCb(uint32_t errcode);
+
   uint32_t GetROICountTag () { return multi_roi_count_tag_; }
 
   uint32_t GetROIInfoTag () { return multi_roi_info_tag_; }
@@ -317,7 +320,7 @@ class CameraContext : public CameraInterface {
 
   ResultCb                 result_cb_;
   ErrorCb                  error_cb_;
-
+  SystemCb                 system_cb_;
   std::vector<int32_t>     supported_fps_;
   uint32_t                 zsl_port_id_;
   uint32_t                 reproc_port_id_;

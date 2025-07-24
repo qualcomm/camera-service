@@ -96,6 +96,7 @@ CameraContext::CameraContext()
       capture_cnt_(0),
       result_cb_(nullptr),
       error_cb_(nullptr),
+      system_cb_(nullptr),
       zsl_port_id_(0x100),
       hfr_supported_(false),
       batch_stream_id_(-1),
@@ -130,6 +131,8 @@ CameraContext::CameraContext()
 
   camera_callbacks_.resultCb = [&] (const CaptureResult &result)
       { CameraResultCb(result); };
+
+  camera_callbacks_.systemCb = [&] (uint32_t errcode) { CameraSystemCb(errcode); };
 
   camera_device_ = std::make_shared<Camera3DeviceClient>(camera_callbacks_);
   if (!camera_device_) {
@@ -247,7 +250,8 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
                                    const float frame_rate,
                                    const CameraExtraParam& extra_param,
                                    const ResultCb &cb,
-                                   const ErrorCb &errcb) {
+                                   const ErrorCb &errcb,
+                                   const SystemCb &syscb) {
 
   uint32_t ret = 0;
   bool match_camera_id = false;
@@ -593,6 +597,7 @@ status_t CameraContext::OpenCamera(const uint32_t camera_id,
 
   result_cb_ = cb;
   error_cb_ = errcb;
+  system_cb_ = syscb;
 
   return ret;
 }
@@ -2912,6 +2917,13 @@ void CameraContext::CameraPreparedCb(int32_t stream_id) {
   std::lock_guard<std::mutex> lk(prepare_lock_);
   stream_prepared_[stream_id] = true;
   prepare_done_.Signal();
+}
+
+void CameraContext::CameraSystemCb(uint32_t errcode) {
+  QMMF_INFO("%s: Camera sent an event with camera_id %d!!", __func__,camera_id_);
+  if (nullptr != system_cb_) {
+    system_cb_(camera_id_, errcode);
+  }
 }
 
 template <typename T>

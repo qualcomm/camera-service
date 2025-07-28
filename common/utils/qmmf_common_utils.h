@@ -52,11 +52,14 @@
 
 #include <sys/mman.h>
 #include <sys/time.h>
+
+#ifdef QMMF_SERVER_ENABLED
 #ifndef CAMERA_HAL1_SUPPORT
 #include <hardware/camera3.h>
-#endif
+#endif //CAMERA_HAL1_SUPPORT
 
 #include <hardware/camera_common.h>
+#endif //QMMF_SERVER_ENABLED
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
@@ -80,6 +83,7 @@ typedef int32_t status_t;
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
 
+#ifdef QMMF_SERVER_ENABLED
 class CameraModule {
 private:
 
@@ -159,6 +163,7 @@ public:
     }
   }
 };
+#endif //QMMF_SERVER_ENABLED
 
 struct StreamBuffer {
   BufferMeta info;
@@ -200,6 +205,7 @@ struct ReprocEntry {
   int64_t         timestamp;
 };
 
+#ifdef QMMF_SERVER_ENABLED
 inline void get_qmmf_property(const char *key, char *value, const char *default_value) {
 #ifdef HAVE_BINDER
     property_get(key, value, default_value);
@@ -266,6 +272,7 @@ class Property {
     set_qmmf_property(property.c_str(), s.str().c_str());
   }
 };
+#endif //QMMF_SERVER_ENABLED
 
 class Common {
  public:

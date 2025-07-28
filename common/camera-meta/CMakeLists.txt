@@ -25,7 +25,7 @@ set_target_properties(qmmf_camera_metadata PROPERTIES
 
 install(TARGETS qmmf_camera_metadata DESTINATION lib OPTIONAL)
 
-target_link_libraries(qmmf_camera_metadata pthread ${CMAKE_DL_LIBS} camera_metadata)
+target_link_libraries(qmmf_camera_metadata pthread ${CMAKE_DL_LIBS})
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_metadata log binder utils cutils)
 else()

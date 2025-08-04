@@ -24,7 +24,6 @@
 #include <binder/Parcel.h>
 #include <utils/String8.h>
 #endif
-#include <system/camera_metadata.h>
 
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include <common/utils/qmmf_log.h>

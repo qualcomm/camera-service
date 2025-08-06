@@ -207,8 +207,6 @@ class RecorderServiceCallbackProxy: public IRecorderServiceCallback {
   uint32_t      client_id_;
   int32_t       callback_socket_;
 
-  std::set<uint32_t> snapshot_buffers_;
-  std::mutex  snapshot_buffers_lock_;
   // map <track_id , set <buffer_id> >
   std::map<uint32_t,  std::set<uint32_t> > track_buffers_map_;
   // to protect track_buffers_map_

@@ -192,7 +192,7 @@ MemAllocError DMABufDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
   *stride = static_cast<uint32_t>(p_stride);
 
   b->SetNativeHandle(alloc_data.fd, size, width,
-       height, format, local_usage,
+       height, override_format, local_usage,
        p_stride, p_scanline);
 
   QMMF_DEBUG ("%s: Allocated fd: %d format: 0x%x unaligned dim: %dx%d"

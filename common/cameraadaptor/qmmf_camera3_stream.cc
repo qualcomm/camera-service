@@ -640,7 +640,7 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
       info.planes[1].stride = stride;
       info.planes[1].scanline = scanline / 2;
       info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * scanline / 2), 4096) +
-          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_Y_META_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width) *
+          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_UV_META_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width) *
           MMM_COLOR_FMT_UV_META_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height)), 4096);
       info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
       break;

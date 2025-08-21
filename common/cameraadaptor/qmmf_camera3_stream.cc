@@ -548,12 +548,32 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
 
   QMMF_DEBUG("%s: format(0x%x)", __func__, handle->GetFormat());
 
-  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH)
-    info.n_frames = 2;
-  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH)
-    info.n_frames = 4;
-  if (handle->GetFormat() == HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH)
-    info.n_frames = 8;
+  switch (handle->GetFormat()) {
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_2_BATCH:
+      info.n_frames = 2;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_4_BATCH:
+      info.n_frames = 4;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_8_BATCH:
+      info.n_frames = 8;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
+    case HAL_PIXEL_FORMAT_NV12_FLEX:
+    case HAL_PIXEL_FORMAT_P010_FLEX:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX:
+      info.n_frames = 16;
+      break;
+  }
 
   switch (handle->GetFormat()) {
     case HAL_PIXEL_FORMAT_BLOB:
@@ -571,6 +591,25 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
     case HAL_PIXEL_FORMAT_YCbCr_420_888:
     case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
       info.format = BufferFormat::kNV12;
+      info.n_planes = 2;
+      info.planes[0].width = width;
+      info.planes[0].height = height;
+      info.planes[0].stride = stride;
+      info.planes[0].scanline = scanline;
+      info.planes[0].size = stride * scanline;
+      info.planes[0].offset = 0;
+      info.planes[1].width = width;
+      info.planes[1].height = height / 2;
+      info.planes[1].stride = stride;
+      info.planes[1].scanline = scanline / 2;
+      info.planes[1].size = stride * (scanline / 2);
+      info.planes[1].offset = stride * scanline;
+      break;
+    case HAL_PIXEL_FORMAT_NV12_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_FLEX:
+      info.format = BufferFormat::kNV12FLEX;
       info.n_planes = 2;
       info.planes[0].width = width;
       info.planes[0].height = height;
@@ -608,6 +647,7 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_2_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_4_BATCH:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
       info.format = BufferFormat::kNV12UBWCFLEX;
       info.n_planes = 2;
       info.planes[0].width = width;
@@ -643,8 +683,50 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
       info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * scanline / 2), 4096);
       info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
       break;
+    case HAL_PIXEL_FORMAT_P010_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_P010_FLEX:
+      info.format = BufferFormat::kP010FLEX;
+      info.n_planes = 2;
+      info.planes[0].width = width;
+      info.planes[0].height = height;
+      info.planes[0].stride = stride;
+      info.planes[0].scanline = scanline;
+      info.planes[0].size = MMM_COLOR_FMT_ALIGN((stride * scanline), 4096);
+      info.planes[0].offset = 0;
+      info.planes[1].width = width;
+      info.planes[1].height = height / 2;
+      info.planes[1].stride = stride;
+      info.planes[1].scanline = scanline / 2;
+      info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * scanline / 2), 4096);
+      info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       info.format = BufferFormat::kTP10UBWC;
+      info.n_planes = 2;
+      info.planes[0].width = width;
+      info.planes[0].height = height;
+      info.planes[0].stride = stride;
+      info.planes[0].scanline = scanline;
+      info.planes[0].size = MMM_COLOR_FMT_ALIGN((stride * scanline), 4096) +
+          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_Y_META_STRIDE(MMM_COLOR_FMT_NV12_BPP10_UBWC, width) *
+          MMM_COLOR_FMT_Y_META_SCANLINES(MMM_COLOR_FMT_NV12_BPP10_UBWC, height)), 4096);
+      info.planes[0].offset = 0;
+      info.planes[1].width = width;
+      info.planes[1].height = height / 2;
+      info.planes[1].stride = stride;
+      info.planes[1].scanline = scanline / 2;
+      info.planes[1].size = MMM_COLOR_FMT_ALIGN((stride * scanline / 2), 4096) +
+          MMM_COLOR_FMT_ALIGN((MMM_COLOR_FMT_UV_META_STRIDE(MMM_COLOR_FMT_NV12_BPP10_UBWC, width) *
+          MMM_COLOR_FMT_UV_META_SCANLINES(MMM_COLOR_FMT_NV12_BPP10_UBWC, height)), 4096);
+      info.planes[1].offset = info.planes[0].offset + info.planes[0].size;
+      break;
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_2_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_4_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX_8_BATCH:
+    case HAL_PIXEL_FORMAT_TP10_UBWC_FLEX:
+      info.format = BufferFormat::kTP10UBWCFLEX;
       info.n_planes = 2;
       info.planes[0].width = width;
       info.planes[0].height = height;

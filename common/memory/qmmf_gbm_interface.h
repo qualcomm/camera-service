@@ -84,10 +84,17 @@ class GBMBuffer : public IBufferInterface {
   static const std::unordered_map<uint32_t, uint32_t> to_gbm_;
 };
 
+struct GBMFormatTranslateEntry {
+  int32_t usage_flags;
+  int32_t input_format;
+  int32_t output_format;
+};
+
 class GBMDevice : public IAllocDevice {
 public:
 
   static std::mutex gbm_device_mutex_;
+  static GBMFormatTranslateEntry gbm_format_translate_table_[];
   static GBMDevice* CreateGBMDevice();
   static void DestroyGBMDevice();
 

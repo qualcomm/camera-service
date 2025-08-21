@@ -48,6 +48,7 @@ namespace qmmf {
 enum class BufferFormat : uint32_t {
   kRGB,
   kNV12,
+  kNV12FLEX,
   kNV12UBWC,
   kNV12UBWCFLEX,
   kNV12HEIF,
@@ -56,7 +57,9 @@ enum class BufferFormat : uint32_t {
   kYUY2,
   kUYVY,
   kP010,
+  kP010FLEX,
   kTP10UBWC,
+  kTP10UBWCFLEX,
   kBLOB,
   kRAW8,
   kRAW10,

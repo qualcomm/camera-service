@@ -403,14 +403,9 @@ struct ZSLEntry {
 // same.
 class CameraPort {
  public:
-#ifdef HAVE_BINDER
   CameraPort(const StreamParam& param, const VideoExtraParam& extraparam,
              const CameraParameters camera_parameters, CameraPortType port_type,
              CameraContext *context);
-#else
-  CameraPort(const StreamParam& param, const CameraParameters camera_parameters,
-             CameraPortType port_type, CameraContext *context);
-#endif
 
   virtual ~CameraPort();
 

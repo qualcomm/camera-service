@@ -1079,13 +1079,9 @@ status_t CameraContext::CreateStream(const StreamParam& param,
       camera_parameters_.batch_size, camera_parameters_.super_frames);
 
   std::shared_ptr<CameraPort> port =
-#ifdef HAVE_BINDER
       std::make_shared<CameraPort>(param, extra_param, camera_parameters_,
                                    CameraPortType::kVideo, this);
-#else
-      std::make_shared<CameraPort>(param, camera_parameters_,
-                                   CameraPortType::kVideo, this);
-#endif // HAVE_BINDER
+
   assert(port.get() != nullptr);
 
   auto ret = port->Init();
@@ -3074,9 +3070,7 @@ AECData CameraContext::GetAECData() {
 }
 
 CameraPort::CameraPort(const StreamParam& param,
-#ifdef HAVE_BINDER
                        const VideoExtraParam& extraparam,
-#endif
                        const CameraParameters camera_parameters,
                        CameraPortType port_type, CameraContext* context)
     : port_type_(port_type),
@@ -3098,7 +3092,6 @@ CameraPort::CameraPort(const StreamParam& param,
 
   buffer_producer_impl_ = std::make_shared<BufferProducerImpl<CameraPort>>(this);
 
-#ifdef HAVE_BINDER
   // Retrieve properties from VideoExtraParam
   if (extraparam.Exists(QMMF_STREAM_CAMERA_ID)) {
     StreamCameraId stream_cam_id;
@@ -3137,7 +3130,6 @@ CameraPort::CameraPort(const StreamParam& param,
     }
   }
 #endif  // CAMX_ANDROID_API
-#endif // HAVE_BINDER
 
   QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
@@ -3693,11 +3685,7 @@ ZslPort::ZslPort(const StreamParam& param,
                  const CameraParameters camera_port_parameters,
                  CameraPortType port_type, CameraContext *context,
                  uint32_t zsl_queue_depth)
-#ifdef HAVE_BINDER
     : CameraPort(param, {}, camera_port_parameters, port_type, context),
-#else
-    : CameraPort(param, camera_port_parameters, port_type, context),
-#endif // HAVE_BINDER
       zsl_queue_depth_(zsl_queue_depth) {
   QMMF_INFO("%s: Enter", __func__);
   zsl_input_buffer_.timestamp = -1;

@@ -3257,8 +3257,33 @@ status_t CameraPort::Init() {
   }
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
-  if (params_.colorimetry == VideoColorimetry::kBT2100HLG) {
-    cam_stream_params_.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10;
+  switch (params_.colorimetry) {
+    case VideoColorimetry::kBT601:
+      cam_stream_params_.hdrmode = 0;
+      cam_stream_params_.data_space = HAL_DATASPACE_UNKNOWN;
+      break;
+    case VideoColorimetry::kBT2100HLGFULL:
+      cam_stream_params_.hdrmode =
+          ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10;
+      break;
+    case VideoColorimetry::kBT2100PQFULL:
+      cam_stream_params_.hdrmode =
+          ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HDR10;
+      break;
+    case VideoColorimetry::kBT601FULL:
+      cam_stream_params_.hdrmode =
+          ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
+      cam_stream_params_.data_space = HAL_DATASPACE_BT601_525;
+      break;
+    case VideoColorimetry::kBT709FULL:
+      cam_stream_params_.hdrmode =
+          ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
+      cam_stream_params_.data_space = HAL_DATASPACE_BT709;
+      break;
+    default:
+      QMMF_ERROR("%s: Invalid color space, colorimetry = %d",
+          __func__, params_.colorimetry);
+      break;
   }
 #endif
 

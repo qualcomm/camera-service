@@ -149,6 +149,12 @@ class Camera3Stream : public camera3_stream {
   camera3_stream_buffer dummy_buffer_;
 
   ::std::string stream_camera_id;
+
+  // Deliver VideoColorimetry
+  android_dataspace data_space_;
+#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
+  int32_t hdrmode_;
+#endif
 };
 
 }  // namespace cameraadaptor ends here

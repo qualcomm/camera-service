@@ -114,7 +114,7 @@ uint32_t GrallocBuffer::GetHeight() {
 MemAllocError GrallocDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
                                          int32_t height, int32_t format,
                                          MemAllocFlags usage,
-                                         uint32_t *stride) {
+                                         uint32_t *stride, uint32_t colorimetry) {
   assert(width && height);
   int32_t local_usage = GrallocUsage().ToLocal(usage);
   // Filter out any usage bits that should not be passed

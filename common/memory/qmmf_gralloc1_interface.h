@@ -74,7 +74,8 @@ class Gralloc1Device : public IAllocDevice {
 
   MemAllocError AllocBuffer(IBufferHandle& handle, int32_t width,
                             int32_t height, int32_t format,
-                            MemAllocFlags usage, uint32_t* stride) override;
+                            MemAllocFlags usage, uint32_t* stride,
+                            uint32_t colorimetry) override;
 
   MemAllocError ImportBuffer(IBufferHandle& handle,
                              void* buffer_handle, int fd) override;

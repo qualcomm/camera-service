@@ -140,7 +140,7 @@ struct CameraStreamParameters {
   android_dataspace data_space;
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
   uint64_t usecase;
-  int hdrmode;
+  int32_t hdrmode;
 #endif
   camera3_stream_rotation_t rotation;
   MemAllocFlags allocFlags;

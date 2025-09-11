@@ -417,7 +417,7 @@ class IAllocDevice {
 #else
                                     int override_format, MemAllocFlags usage,
 #endif
-                                    uint32_t* stride) = 0;
+                                    uint32_t* stride, uint32_t colorimetry) = 0;
 
   virtual MemAllocError ImportBuffer(IBufferHandle& handle,
                                      void* buffer_handle, int fd) = 0;

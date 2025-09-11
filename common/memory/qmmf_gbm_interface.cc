@@ -41,6 +41,7 @@
 #include "common/propertyvault/qmmf_propertyvault.h"
 #endif // HAVE_BINDER
 #include "qmmf_gbm_interface.h"
+#include <qmmf-sdk/qmmf_recorder_params.h>
 
 #ifndef LOG_TAG
 #define LOG_TAG "GBM Allocator"
@@ -577,7 +578,7 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
 #else
   int32_t height, int32_t format, int32_t override_format,
 #endif // HAVE_BINDER
-  MemAllocFlags usage, uint32_t *stride)
+  MemAllocFlags usage, uint32_t *stride, uint32_t colorimetry)
 {
   handle = new GBMBuffer;
   GBMBuffer* gbm_hnd = static_cast<GBMBuffer*>(handle);
@@ -626,16 +627,6 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     return MemAllocError::kAllocFail;
   }
 
-  char prop[PROPERTY_VALUE_MAX];
-#ifdef HAVE_BINDER
-  property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
-#else
-  qmmf_property_get("persist.qmmf.mem.color.space", prop, "ITU_R_601");
-#endif // HAVE_BINDER
-  std::string colorspace(prop);
-
-  QMMF_INFO("%s: Using color space: %s", __func__, colorspace.c_str());
-
   int32_t value = 0;
 #ifdef HAVE_ANDROID_UTILS
   ColorMetaData colormeta = {};
@@ -650,59 +641,112 @@ MemAllocError GBMDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
     return MemAllocError::kAllocFail;
   }
 
+  qmmf::recorder::VideoColorimetry color =
+      static_cast<qmmf::recorder::VideoColorimetry>(colorimetry);
+
 #ifdef HAVE_ANDROID_UTILS
-  if (colorspace == "ITU_R_601") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
-    colormeta.colorPrimaries = ColorPrimaries_BT601_6_625;
-    colormeta.range = Range_Full;
-    colormeta.transfer = Transfer_SMPTE_170M;
-    colormeta.matrixCoefficients = MatrixCoEff_BT601_6_625;
-  } else if (colorspace == "ITU_R_601_FR") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_601_FR;
-    colormeta.colorPrimaries = ColorPrimaries_BT601_6_525;
-    colormeta.range = Range_Full;
-    colormeta.transfer = Transfer_SMPTE_170M;
-    colormeta.matrixCoefficients = MatrixCoEff_BT601_6_525;
-  } else if (colorspace == "ITU_R_709") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
-    colormeta.colorPrimaries = ColorPrimaries_BT709_5;
-    colormeta.range = Range_Full;
-    colormeta.transfer = Transfer_sRGB;
-    colormeta.matrixCoefficients = MatrixCoEff_BT709_5;
-  } else {
-    QMMF_ERROR("%s: Unsupported color space, using ITU_R_709", __func__);
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
-    colormeta.colorPrimaries = ColorPrimaries_BT709_5;
-    colormeta.range = Range_Full;
-    colormeta.transfer = Transfer_sRGB;
-    colormeta.matrixCoefficients = MatrixCoEff_BT709_5;
+  // Set value according to color space
+  switch (color) {
+    case qmmf::recorder::VideoColorimetry::kBT601:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
+      colormeta.colorPrimaries = ColorPrimaries_BT601_6_625;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = MatrixCoEff_BT601_6_625;
+      QMMF_INFO("%s: Using color space kBT601", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT2100HLGFULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_2020;
+      colormeta.colorPrimaries = ColorPrimaries_BT2020;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_HLG;
+      colormeta.matrixCoefficients = MatrixCoEff_BT2020;
+      QMMF_INFO("%s: Using color space kBT2100HLGFULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT2100PQFULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_2020;
+      colormeta.colorPrimaries = ColorPrimaries_BT2020;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_SMPTE_ST2084;
+      colormeta.matrixCoefficients = MatrixCoEff_BT2020;
+      QMMF_INFO("%s: Using color space kBT2100PQFULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT601FULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601_FR;
+      colormeta.colorPrimaries = ColorPrimaries_BT601_6_525;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = MatrixCoEff_BT601_6_525;
+      QMMF_INFO("%s: Using color space kBT601FULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT709FULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
+      colormeta.colorPrimaries = ColorPrimaries_BT709_5;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_sRGB;
+      colormeta.matrixCoefficients = MatrixCoEff_BT709_5;
+      QMMF_INFO("%s: Using color space kBT709FULL", __func__);
+      break;
+    default:
+      QMMF_ERROR("%s: Unsupported color space, using kBT601", __func__);
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
+      colormeta.colorPrimaries = ColorPrimaries_BT601_6_625;
+      colormeta.range = Range_Full;
+      colormeta.transfer = Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = MatrixCoEff_BT601_6_625;
+      break;
   }
 #else
-  if (colorspace == "ITU_R_601") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
-    colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_625;
-    colormeta.range = GBM_Range_Full;
-    colormeta.transfer = GBM_Transfer_SMPTE_170M;
-    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_625;
-  } else if (colorspace == "ITU_R_601_FR") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_601_FR;
-    colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_525;
-    colormeta.range = GBM_Range_Full;
-    colormeta.transfer = GBM_Transfer_SMPTE_170M;
-    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_525;
-  } else if (colorspace == "ITU_R_709") {
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
-    colormeta.colorPrimaries = GBM_ColorPrimaries_BT709_5;
-    colormeta.range = GBM_Range_Full;
-    colormeta.transfer = GBM_Transfer_sRGB;
-    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT709_5;
-  } else {
-    QMMF_ERROR("%s: Unsupported color space, using ITU_R_709", __func__);
-    value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
-    colormeta.colorPrimaries = GBM_ColorPrimaries_BT709_5;
-    colormeta.range = GBM_Range_Full;
-    colormeta.transfer = GBM_Transfer_sRGB;
-    colormeta.matrixCoefficients = GBM_MatrixCoEff_BT709_5;
+  // Set value according to color space
+  switch (color) {
+    case qmmf::recorder::VideoColorimetry::kBT601:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_625;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_625;
+      QMMF_INFO("%s: Using color space kBT601", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT2100HLGFULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_2020;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT2020;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_HLG;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT2020;
+      QMMF_INFO("%s: Using color space kBT2100HLGFULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT2100PQFULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_2020;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT2020;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_SMPTE_ST2084;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT2020;
+      QMMF_INFO("%s: Using color space kBT2100PQFULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT601FULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601_FR;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_525;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_525;
+      QMMF_INFO("%s: Using color space kBT601FULL", __func__);
+      break;
+    case qmmf::recorder::VideoColorimetry::kBT709FULL:
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_709;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT709_5;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_sRGB;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT709_5;
+      QMMF_INFO("%s: Using color space kBT709FULL", __func__);
+      break;
+    default:
+      QMMF_ERROR("%s: Unsupported color space, using kBT601", __func__);
+      value = GBM_METADATA_COLOR_SPACE_ITU_R_601;
+      colormeta.colorPrimaries = GBM_ColorPrimaries_BT601_6_625;
+      colormeta.range = GBM_Range_Full;
+      colormeta.transfer = GBM_Transfer_SMPTE_170M;
+      colormeta.matrixCoefficients = GBM_MatrixCoEff_BT601_6_625;
+      break;
   }
 #endif // HAVE_ANDROID_UTILS
   ret = gbm_perform(GBM_PERFORM_SET_METADATA, bo,

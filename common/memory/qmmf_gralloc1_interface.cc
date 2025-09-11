@@ -114,7 +114,7 @@ uint32_t Gralloc1Buffer::GetHeight() {
 MemAllocError Gralloc1Device::AllocBuffer(IBufferHandle& handle,
                                           int32_t width, int32_t height,
                                           int32_t format, MemAllocFlags usage,
-                                          uint32_t *stride) {
+                                          uint32_t *stride, uint32_t colorimetry) {
   Gralloc1Buffer *b = new Gralloc1Buffer;
   handle = b;
   assert(nullptr != gralloc1_device_);

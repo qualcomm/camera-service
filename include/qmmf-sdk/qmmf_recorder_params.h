@@ -146,8 +146,11 @@ enum class VideoFlags : uint64_t {
 };
 
 enum class VideoColorimetry : uint32_t {
-  kBT601,        /// "bt601"
-  kBT2100HLG,    /// "bt2100-hlg"
+  kBT601,            /// "bt601" Default value.
+  kBT601FULL,        /// "bt601-full"
+  kBT709FULL,        /// "bt709-full"
+  kBT2100HLGFULL,    /// "bt2100-hlg-full"
+  kBT2100PQFULL,     /// "bt2100-pq-full"
 };
 
 inline VideoFlags operator | (VideoFlags lhs, VideoFlags rhs) {

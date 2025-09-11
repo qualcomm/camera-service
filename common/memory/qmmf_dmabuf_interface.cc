@@ -124,7 +124,8 @@ uint32_t DMABuffer::GetScanline() {
 MemAllocError DMABufDevice::AllocBuffer(IBufferHandle& handle, int32_t width,
                                          int32_t height, int32_t format,
                                          int32_t override_format,
-                                         MemAllocFlags usage, uint32_t *stride) {
+                                         MemAllocFlags usage, uint32_t *stride,
+                                         uint32_t colorimetry) {
   assert(width && height);
   int32_t local_usage = DMABufUsage().ToLocal(usage);
   int p_stride = width;

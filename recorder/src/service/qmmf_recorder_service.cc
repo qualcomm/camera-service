@@ -604,30 +604,46 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         android::Parcel::ReadableBlob proc_params_blob;
         data.readBlob(proc_params_blob_size, &proc_params_blob);
         OfflineCameraCreateParams params;
-        assert(proc_params_blob_size == sizeof(params)-sizeof(CameraMetadata));
+        assert(proc_params_blob_size == sizeof(params) -
+            sizeof(CameraMetadata) * 2);
         memcpy(&params, proc_params_blob.data(), proc_params_blob_size);
 
-        camera_metadata_t *m = nullptr;
-        ret = params.session_meta.readFromParcel(data, &m);
+        camera_metadata_t *m0 = nullptr;
+        camera_metadata_t *m1 = nullptr;
+        ret = params.session_meta[0].readFromParcel(data, &m0);
         if (0 != ret) {
           QMMF_ERROR("%s: Metadata parcel read failed: %d meta: %p\n",
-              __func__, ret, m);
+              __func__, ret, m0);
           reply->writeInt32(ret);
           return ret;
         }
-        params.session_meta.clear();
-        if (m) {
-          params.session_meta.append(m);
+        ret = params.session_meta[1].readFromParcel(data, &m1);
+        if (0 != ret) {
+          QMMF_ERROR("%s: Metadata parcel read failed: %d meta: %p\n",
+              __func__, ret, m1);
+          reply->writeInt32(ret);
+          return ret;
+        }
+        params.session_meta[0].clear();
+        params.session_meta[1].clear();
+        if (m0) {
+          params.session_meta[0].append(m0);
+        }
+        if (m1) {
+          params.session_meta[1].append(m1);
         }
         ret = CreateOfflineProcess(client_id, params);
 
         // Clear the metadata buffer and free all storage used by it
-        params.session_meta.clear();
+        params.session_meta[0].clear();
+        params.session_meta[1].clear();
         //We need to release this memory as meta.append() makes copy of this memory
-        if (m) {
-          free(m);
+        if (m0) {
+          free(m0);
         }
-
+        if (m1) {
+          free(m1);
+        }
         reply->writeInt32(ret);
         return 0;
       }
@@ -637,15 +653,21 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         data.readUint32(&client_id);
 
         uint32_t present;
-        BnBuffer in_buf = {};
+        BnBuffer in_buf0 = {};
+        BnBuffer in_buf1 = {};
         BnBuffer out_buf = {};
-        in_buf.ion_fd = out_buf.ion_fd = -1;
+        in_buf0.ion_fd = in_buf1.ion_fd = out_buf.ion_fd = -1;
         // Input buffer
         data.readUint32(&present);
         if (!present) {
-          in_buf.ion_fd = dup(data.readFileDescriptor());
+          in_buf0.ion_fd = dup(data.readFileDescriptor());
         }
-        data.readUint32(&in_buf.buffer_id);
+        data.readUint32(&in_buf0.buffer_id);
+        data.readUint32(&present);
+        if (!present) {
+          in_buf1.ion_fd = dup(data.readFileDescriptor());
+        }
+        data.readUint32(&in_buf1.buffer_id);
 
         // Output buffer
         data.readUint32(&present);
@@ -668,7 +690,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
           meta.append(m);
         }
 
-        ret = ProcOfflineProcess(client_id, in_buf, out_buf, meta);
+        ret = ProcOfflineProcess(client_id, in_buf0, in_buf1, out_buf, meta);
 
         // Clear the metadata buffer and free all storage used by it
         meta.clear();
@@ -1950,7 +1972,8 @@ status_t RecorderService::CreateOfflineProcess(
 }
 
 status_t RecorderService::ProcOfflineProcess(const uint32_t client_id,
-                                             const BnBuffer& in_buf,
+                                             const BnBuffer& in_buf0,
+                                             const BnBuffer& in_buf1,
                                              const BnBuffer& out_buf,
                                              const CameraMetadata& meta) {
 
@@ -1961,7 +1984,7 @@ status_t RecorderService::ProcOfflineProcess(const uint32_t client_id,
     return -ENODEV;
   }
 
-  auto ret = recorder_->ProcOfflineProcess(client_id, in_buf, out_buf, meta);
+  auto ret = recorder_->ProcOfflineProcess(client_id, in_buf0, in_buf1, out_buf, meta);
   if (ret != 0) {
     QMMF_ERROR("%s: Submitting request failed", __func__);
     return ret;

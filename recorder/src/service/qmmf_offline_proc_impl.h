@@ -42,7 +42,8 @@ class OfflineProcess {
   status_t Create(const uint32_t client_id,
                   const OfflineCameraCreateParams& params);
   status_t Process(const uint32_t client_id,
-                   const BnBuffer& in_buf,
+                   const BnBuffer& in_buf0,
+                   const BnBuffer& in_buf1,
                    const BnBuffer& out_buf,
                    const CameraMetadata& meta);
   status_t Destroy(const uint32_t client_id);
@@ -71,6 +72,7 @@ class OfflineProcess {
   PFN_CameraPostProc_Create               pCameraPostProcCreate;
   PFN_CameraPostProc_Process              pCameraPostProcProcess;
   PFN_CameraPostProc_Destroy              pCameraPostProcDestroy;
+  PFN_CameraPostProc_ReleaseResources     pCameraPostProcRelease;
 
   // <client id, FdMap>
   std::map<uint32_t, FdMap>               client_fd_map_;

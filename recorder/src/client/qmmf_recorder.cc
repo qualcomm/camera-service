@@ -381,7 +381,8 @@ status_t Recorder::EncodeOfflineJPEG(const OfflineJpegProcessParams& params) {
   CameraMetadata meta(1, 128);
   meta.update(ANDROID_JPEG_QUALITY, (uint8_t *)(&params.metadata.quality), 1);
   proc_params.meta = meta;
-  proc_params.in_buf_fd = params.in_buf_fd;
+  proc_params.in_buf_fd[0] = params.in_buf_fd;
+  proc_params.in_buf_fd[1] = -1;
   proc_params.out_buf_fd = params.out_buf_fd;
 
   auto ret = recorder_client_->ProcOfflineProcess(proc_params);

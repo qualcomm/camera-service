@@ -31,7 +31,8 @@ OfflineProcess::OfflineProcess() :
                     offline_proc_lib_(nullptr),
                     pCameraPostProcCreate(nullptr),
                     pCameraPostProcProcess(nullptr),
-                    pCameraPostProcDestroy(nullptr) {
+                    pCameraPostProcDestroy(nullptr),
+                    pCameraPostProcRelease(nullptr) {
   QMMF_INFO("%s: Enter ", __func__);
   QMMF_INFO("%s: Exit ", __func__);
 }
@@ -66,14 +67,18 @@ status_t OfflineProcess::Init(
                               dlsym(offline_proc_lib_, "CameraPostProc_Process");
   pCameraPostProcDestroy  = (PFN_CameraPostProc_Destroy)
                               dlsym(offline_proc_lib_, "CameraPostProc_Destroy");
+  pCameraPostProcRelease  = (PFN_CameraPostProc_ReleaseResources)
+                              dlsym(offline_proc_lib_, "CameraPostProc_ReleaseResources");
 
   if ((nullptr == pCameraPostProcCreate)       ||
       (nullptr == pCameraPostProcDestroy)      ||
-      (nullptr == pCameraPostProcProcess)) {
-    QMMF_ERROR("%s: dlsym failed, %p, %p, %p", __func__,
+      (nullptr == pCameraPostProcProcess)      ||
+      (nullptr == pCameraPostProcRelease)) {
+    QMMF_ERROR("%s: dlsym failed, %p, %p, %p, %p", __func__,
             pCameraPostProcCreate,
             pCameraPostProcProcess,
-            pCameraPostProcDestroy);
+            pCameraPostProcDestroy,
+            pCameraPostProcRelease);
     return BAD_VALUE;
   }
 
@@ -87,6 +92,7 @@ status_t OfflineProcess::DeInit() {
   pCameraPostProcCreate = nullptr;
   pCameraPostProcProcess = nullptr;
   pCameraPostProcDestroy = nullptr;
+  pCameraPostProcRelease = nullptr;
 
   if (offline_proc_lib_) {
     dlclose(offline_proc_lib_);
@@ -260,15 +266,25 @@ status_t OfflineProcess::Create(const uint32_t client_id,
       reinterpret_cast<void*>(create_params.cb_data);
 
 #ifdef FEATURE_OFFLINE_IPE_ENABLE
-  create_params.config.cameraId = params.camera_id;
-  create_params.config.pMedatadaDirPath = params.request_metadata_path;
-  create_params.config.metadataSteps = params.metadata_step;
-  CameraMetadata session_meta(params.session_meta);
-  create_params.config.pMetadata = session_meta.getbuffer();
+  create_params.config.cameraId = params.camera_id[0];
+  create_params.config.pMedatadaDirPath = params.request_metadata_path[0];
+  create_params.config.metadataSteps = params.metadata_step[0];
+  CameraMetadata session_meta0 (params.session_meta[0]);
+  create_params.config.pMetadata = session_meta0.getbuffer();
   offlineipe_enable = true;
 #endif
 
-  if ((create_params.config.processMode == YUVToYUV)
+#ifdef FEATURE_OFFLINE_BAYER_REPROC_ENABLE
+  create_params.config.cameraIdAux = params.camera_id[1];
+  create_params.config.pMedatadaDirPathAux = params.request_metadata_path[1];
+  create_params.config.metadataStepsAux = params.metadata_step[1];
+  CameraMetadata session_meta1 (params.session_meta[1]);
+  create_params.config.pMetadataAux = session_meta1.getbuffer();
+#endif
+
+  if (((create_params.config.processMode == YUVToYUV) ||
+      (create_params.config.processMode == RAWToYUV) ||
+       (create_params.config.processMode == RAWToJPEGSBS))
     && (!offlineipe_enable)) {
     QMMF_INFO("%s offline IPE module not support.", __func__);
     return BAD_VALUE;
@@ -297,7 +313,8 @@ status_t OfflineProcess::Create(const uint32_t client_id,
 }
 
 status_t OfflineProcess::Process(const uint32_t client_id,
-                                     const BnBuffer& in_buf,
+                                     const BnBuffer& in_buf0,
+                                     const BnBuffer& in_buf1,
                                      const BnBuffer& out_buf,
                                      const CameraMetadata& meta) {
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
@@ -308,27 +325,45 @@ status_t OfflineProcess::Process(const uint32_t client_id,
     return BAD_VALUE;
   }
 
-  native_handle_t *input_nh;
+  native_handle_t *input_nh0;
+  native_handle_t *input_nh1;
   native_handle_t *output_nh;
 
   //native_handle_create(int numFds, int numInts)
   //TODO: check if the below creation could be optimized
-  input_nh = native_handle_create(2, 8);
+  input_nh0 = native_handle_create(2, 8);
+  input_nh1 = native_handle_create(2, 8);
   output_nh = native_handle_create(2, 8);
 
   //check if buf fd is present
   {
     std::lock_guard<std::mutex> l(client_fd_lock_);
-    if (-1 != in_buf.ion_fd) {
-      if (0 == client_fd_map_[client_id].count(in_buf.buffer_id)) {
-        client_fd_map_[client_id].emplace(in_buf.buffer_id, in_buf.ion_fd);
+    if (-1 != in_buf0.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf0.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf0.buffer_id, in_buf0.ion_fd);
       } else {
         QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
                   __func__,
-                  client_fd_map_[client_id].at(in_buf.buffer_id),
-                  in_buf.ion_fd,
-                  in_buf.buffer_id);
-        native_handle_delete(input_nh);
+                  client_fd_map_[client_id].at(in_buf0.buffer_id),
+                  in_buf0.ion_fd,
+                  in_buf0.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return BAD_VALUE;
+      }
+    }
+    if (-1 != in_buf1.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf1.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf1.buffer_id, in_buf1.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(in_buf1.buffer_id),
+                  in_buf1.ion_fd,
+                  in_buf1.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
         native_handle_delete(output_nh);
         return BAD_VALUE;
       }
@@ -342,17 +377,23 @@ status_t OfflineProcess::Process(const uint32_t client_id,
                   client_fd_map_[client_id].at(out_buf.buffer_id),
                   out_buf.ion_fd,
                   out_buf.buffer_id);
-        native_handle_delete(input_nh);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
         native_handle_delete(output_nh);
         return BAD_VALUE;
       }
     }
   }
 
-  PostProcHandleParams in_handle_params, out_handle_params;
+  PostProcHandleParams in_handle_params0, in_handle_params1, out_handle_params;
 
-  input_nh->data[0] = GetBufferFd(client_id, in_buf.buffer_id);
-  in_handle_params.phHandle = input_nh;
+  input_nh0->data[0] = GetBufferFd(client_id, in_buf0.buffer_id);
+  in_handle_params0.phHandle = input_nh0;
+
+  if (in_buf1.buffer_id != -1) {
+    input_nh1->data[0] = GetBufferFd(client_id, in_buf1.buffer_id);
+    in_handle_params1.phHandle = input_nh1;
+  }
 
   output_nh->data[0] = GetBufferFd(client_id, out_buf.buffer_id);
   out_handle_params.phHandle = output_nh;
@@ -360,7 +401,8 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   PostProcSessionParams* pproc_params = new PostProcSessionParams;
   if (!pproc_params) {
     QMMF_ERROR("%s: PosptProc param allocation failed", __func__);
-    native_handle_delete(input_nh);
+    native_handle_delete(input_nh0);
+    native_handle_delete(input_nh1);
     native_handle_delete(output_nh);
     delete pproc_params;
     return NO_MEMORY;
@@ -381,12 +423,18 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   }
   QMMF_INFO("pproc instance: %p", pproc_instance);
 
-  in_handle_params.format =
+  in_handle_params0.format =
       client_pproc_map_.at(client_id).config.inBuffer.format;
-  in_handle_params.width =
+  in_handle_params0.width =
       client_pproc_map_.at(client_id).config.inBuffer.width;
-  in_handle_params.height =
+  in_handle_params0.height =
       client_pproc_map_.at(client_id).config.inBuffer.height;
+
+  if (in_buf1.buffer_id != -1) {
+    in_handle_params1.format = in_handle_params0.format;
+    in_handle_params1.width = in_handle_params0.width;
+    in_handle_params1.height = in_handle_params0.height;
+  }
 
   out_handle_params.format =
       client_pproc_map_.at(client_id).config.outBuffer.format;
@@ -395,7 +443,9 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   out_handle_params.height =
       client_pproc_map_.at(client_id).config.outBuffer.height;
 
-  pproc_params->inHandle.push_back(in_handle_params);
+  pproc_params->inHandle.push_back(in_handle_params0);
+  if (in_buf1.buffer_id != -1)
+    pproc_params->inHandle.push_back(in_handle_params1);
   pproc_params->outHandle.push_back(out_handle_params);
 
   requests_lock_.lock();
@@ -483,6 +533,7 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
   client_pproc_map_.erase(client_id);
 
   pCameraPostProcDestroy(pproc_instance);
+  pCameraPostProcRelease(pproc_instance);
   pproc_instance = nullptr;
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
@@ -493,6 +544,9 @@ void OfflineProcess::ReleaseRequestData(PostProcSessionParams* params) {
   if (params) {
     native_handle_delete(
         const_cast<native_handle_t*>(params->inHandle[0].phHandle));
+    if (params->inHandle.size() > 1)
+      native_handle_delete(
+          const_cast<native_handle_t*>(params->inHandle[1].phHandle));
     native_handle_delete(
         const_cast<native_handle_t*>(params->outHandle[0].phHandle));
     delete params;

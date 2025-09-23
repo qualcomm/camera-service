@@ -823,7 +823,8 @@ class RecorderServiceProxy: public IRecorderService {
   }
 
   status_t ProcOfflineProcess(const uint32_t client_id,
-                              const BnBuffer& in_buf,
+                              const BnBuffer& in_buf0,
+                              const BnBuffer& in_buf1,
                               const BnBuffer& out_buf,
                               const CameraMetadata& meta) {
     // To be implemented
@@ -1734,15 +1735,24 @@ status_t RecorderClient::ProcOfflineProcess(
   }
   assert(client_id_ > 0);
 
-  BnBuffer in_buf = {};
+  BnBuffer in_buf0 = {};
+  BnBuffer in_buf1 = {};
   BnBuffer out_buf = {};
-  in_buf.ion_fd = out_buf.ion_fd = -1;
+  in_buf0.ion_fd = in_buf1.ion_fd = out_buf.ion_fd = -1;
 
-  if (!IsJpegBufPresent(params.in_buf_fd)) {
-    in_buf.ion_fd = params.in_buf_fd;
-    offline_proc_buffers_.push_back(params.in_buf_fd);
+  if (!IsJpegBufPresent(params.in_buf_fd[0])) {
+    in_buf0.ion_fd = params.in_buf_fd[0];
+    offline_proc_buffers_.push_back(params.in_buf_fd[0]);
   }
-  in_buf.buffer_id = params.in_buf_fd;
+  in_buf0.buffer_id = params.in_buf_fd[0];
+
+  if (params.in_buf_fd[1] != -1) {
+    if (!IsJpegBufPresent(params.in_buf_fd[1])) {
+      in_buf1.ion_fd = params.in_buf_fd[1];
+      offline_proc_buffers_.push_back(params.in_buf_fd[1]);
+    }
+  }
+  in_buf1.buffer_id = params.in_buf_fd[1];
 
   if (!IsJpegBufPresent(params.out_buf_fd)) {
     out_buf.ion_fd = params.out_buf_fd;
@@ -1751,7 +1761,8 @@ status_t RecorderClient::ProcOfflineProcess(
   out_buf.buffer_id = params.out_buf_fd;
 
   auto ret = recorder_service_->ProcOfflineProcess(client_id_,
-                                                  in_buf,
+                                                  in_buf0,
+                                                  in_buf1,
                                                   out_buf,
                                                   params.meta);
   if (0 != ret) {
@@ -2728,13 +2739,14 @@ class BpRecorderService: public BpInterface<IRecorderService> {
     data.writeInterfaceToken(IRecorderService::getInterfaceDescriptor());
     data.writeUint32(client_id);
 
-    uint32_t param_size = sizeof (params) - sizeof(CameraMetadata);
+    uint32_t param_size = sizeof (params) - sizeof(CameraMetadata) * 2;
     data.writeUint32(param_size);
     android::Parcel::WritableBlob blob;
     data.writeBlob(param_size, false, &blob);
     memcpy(blob.data(), &params, param_size);
 
-    params.session_meta.writeToParcel(&data);
+    params.session_meta[0].writeToParcel(&data);
+    params.session_meta[1].writeToParcel(&data);
 
     remote()->transact(uint32_t(QMMF_RECORDER_SERVICE_CMDS::
         RECORDER_CONFIGURE_OFFLINE_PROC), data, &reply);
@@ -2742,7 +2754,8 @@ class BpRecorderService: public BpInterface<IRecorderService> {
   }
 
   status_t ProcOfflineProcess(const uint32_t client_id,
-                             const BnBuffer& in_buf,
+                             const BnBuffer& in_buf0,
+                             const BnBuffer& in_buf1,
                              const BnBuffer& out_buf,
                              const CameraMetadata& meta) {
     Parcel data, reply;
@@ -2750,12 +2763,19 @@ class BpRecorderService: public BpInterface<IRecorderService> {
     data.writeUint32(client_id);
 
     // Input buffer
-    bool present = (-1 == in_buf.ion_fd) ? true : false;
+    bool present = (-1 == in_buf0.ion_fd) ? true : false;
     data.writeInt32(present);
     if (!present) {
-      data.writeFileDescriptor(in_buf.ion_fd);
+      data.writeFileDescriptor(in_buf0.ion_fd);
     }
-    data.writeInt32(in_buf.buffer_id);
+    data.writeInt32(in_buf0.buffer_id);
+
+    present = (-1 == in_buf1.ion_fd) ? true : false;
+    data.writeInt32(present);
+    if (!present) {
+      data.writeFileDescriptor(in_buf1.ion_fd);
+    }
+    data.writeInt32(in_buf1.buffer_id);
 
     // Output buffer
     present = (-1 == out_buf.ion_fd) ? true : false;

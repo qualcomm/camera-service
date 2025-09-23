@@ -150,8 +150,10 @@ class Camera3Stream : public camera3_stream {
 
   ::std::string stream_camera_id;
 
-  // Deliver VideoColorimetry
+  // Deliver video colorimetry
   android_dataspace data_space_;
+  // Deliver image colorimetry
+  int32_t color_space_;
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
   int32_t hdrmode_;
 #endif

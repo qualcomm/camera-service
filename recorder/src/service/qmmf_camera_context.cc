@@ -2424,7 +2424,9 @@ status_t CameraContext::CreateDeviceStream(CameraStreamParameters& params,
   // EndConfigure in this situation.
   if (streaming_request_id_ < 0) {
     if (hfr_supported_) {
-      if (kConstrainedModeThreshold <= frame_rate) {
+      if ((kConstrainedModeThreshold <= frame_rate) ||
+          (camera_parameters_.super_frames > 1)) {
+        // Normal HFR and BatchMode HFR pass the same operation mode
         camera_parameters_.is_constrained_high_speed = true;
       } else {
         for (auto const& it : active_ports_) {
@@ -2455,7 +2457,9 @@ status_t CameraContext::CreateDeviceStream(CameraStreamParameters& params,
     }
     QMMF_DEBUG("%s: Max fps (%u)!!", __func__, max_frame_rate);
 
-    if (max_frame_rate > 30 && max_frame_rate < kConstrainedModeThreshold) {
+    if ((camera_parameters_.super_frames == 1) && (max_frame_rate > 30 &&
+        max_frame_rate < kConstrainedModeThreshold)) {
+      // For normal HFR (30fps, kConstrainedModeThreshold)
       camera_parameters_.fps_sensormode_index = GetSensorModeIndex(params.width,
           params.height, max_frame_rate);
       QMMF_DEBUG("%s: Sensor mode index (%u) for fps=%u!!", __func__,

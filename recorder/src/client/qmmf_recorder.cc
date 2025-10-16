@@ -357,6 +357,7 @@ status_t Recorder::CreateOfflineJPEG(
   assert(recorder_client_ != NULL);
   OfflineCameraCreateParams offline_params;
   offline_params.process_mode = params.process_mode;
+  offline_params.camera_id[0] = params.camera_id;
   offline_params.in_buffer.width = params.in_buffer.width;
   offline_params.in_buffer.height = params.in_buffer.height;
   offline_params.in_buffer.format = params.in_buffer.format;

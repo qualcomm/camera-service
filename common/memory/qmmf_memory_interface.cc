@@ -67,6 +67,7 @@ const int IMemAllocUsage::kFlex2Batch           = (1 << 18);
 const int IMemAllocUsage::kFlex4Batch           = (1 << 19);
 const int IMemAllocUsage::kFlex8Batch           = (1 << 20);
 const int IMemAllocUsage::kFlexBatch            = (1 << 21);
+const int IMemAllocUsage::kPrivateSnapshot      = (1 << 22);
 
 IAllocDevice *AllocDeviceFactory::CreateAllocDevice() {
 #ifdef TARGET_USES_GRALLOC1

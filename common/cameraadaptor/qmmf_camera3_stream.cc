@@ -1108,9 +1108,12 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     } else if (hdrmode_ == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HDR10) {
       colorimetry = Colorimetry::kBT2100PQFULL;
     } else if (hdrmode_ ==  ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD) {
-      if (data_space_ == HAL_DATASPACE_BT601_525 ||
-          ((data_space_ == HAL_DATASPACE_UNKNOWN ||
-          data_space_ == HAL_DATASPACE_HEIF) && color_space_ == 0)) {
+      if (data_space_ == HAL_DATASPACE_BT601_525
+#if defined(ENABLE_IMAGE_NV12)
+        || ((data_space_ == HAL_DATASPACE_UNKNOWN ||
+          data_space_ == HAL_DATASPACE_HEIF) && color_space_ == 0)
+#endif
+        ) {
         colorimetry = Colorimetry::kBT601FULL;
       } else if (data_space_ == HAL_DATASPACE_BT709 || color_space_ == 4) {
         colorimetry = Colorimetry::kBT709FULL;

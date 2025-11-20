@@ -379,9 +379,12 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
   SystemCb syscb = [&] (uint32_t camera_id, uint32_t errcode) {
       CameraSystemCb(camera_id, errcode); };
 
+  DeviceStatusCb devstatuscb = [&] (uint32_t camera_id, bool is_present) {
+      CameraDeviceStatusCb(camera_id, is_present); };
+
   auto ret = camera_source_->StartCamera(camera_id, framerate, extra_param,
                                          enable_result_cb ? cb : nullptr,
-                                         errcb, syscb);
+                                         errcb, syscb, devstatuscb);
   if (ret != 0) {
     QMMF_ERROR("%s: StartCamera Failed!!", __func__);
     return -EINVAL;
@@ -1510,6 +1513,22 @@ void RecorderImpl::CameraSystemCb(uint32_t camera_id, uint32_t errcode) {
     assert(IsClientValid(client_id));
     remote_cb_handle_(client_id)->NotifyRecorderEvent(
         event, &camera_id, sizeof(uint32_t));
+  }
+}
+
+void RecorderImpl::CameraDeviceStatusCb(uint32_t camera_id, bool is_present) {
+  assert(remote_cb_handle_ != nullptr);
+
+  EventType event = EventType::kCameraDeviceStatusChanged;
+
+  // Create a struct to pass both camera_id and is_present
+  CameraDeviceStatusData status_data = {camera_id, is_present};
+  std::lock_guard<std::mutex> lock(client_track_lock_);
+
+  for (auto const& client_tracks : client_track_map_) {
+    auto const& client_id = client_tracks.first;
+    remote_cb_handle_(client_id)->NotifyRecorderEvent(
+        event, &status_data, sizeof(status_data));
   }
 }
 

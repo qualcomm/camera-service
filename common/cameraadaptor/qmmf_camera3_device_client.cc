@@ -2408,9 +2408,15 @@ void Camera3DeviceClient::deviceStatusChange(
   if (new_status == CAMERA_DEVICE_STATUS_NOT_PRESENT) {
     ctx->UpdateCameraStatus(false);
     QMMF_WARN ("%s: Camera with id (%d) is not present", __func__, camera_id);
+    if (nullptr != ctx->client_cb_.deviceStatusCb) {
+      ctx->client_cb_.deviceStatusCb(camera_id, false);
+    }
   } else if (new_status == CAMERA_DEVICE_STATUS_PRESENT) {
     ctx->UpdateCameraStatus(true);
     QMMF_DEBUG ("%s: Camera with id (%d) is present", __func__, camera_id);
+    if (nullptr != ctx->client_cb_.deviceStatusCb) {
+      ctx->client_cb_.deviceStatusCb(camera_id, true);
+    }
   }
 }
 

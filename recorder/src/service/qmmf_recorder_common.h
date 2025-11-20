@@ -84,6 +84,7 @@ typedef std::function< const std::shared_ptr<RemoteCallBack>& (uint32_t client_i
 typedef std::function<void(uint32_t camera_id, int32_t errcode)> ErrorCb;
 
 typedef std::function<void(uint32_t camera_id, int32_t errcode)> SystemCb;
+typedef std::function<void(uint32_t camera_id, bool is_present)> DeviceStatusCb;
 
 }; //namespace recorder.
 

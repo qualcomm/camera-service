@@ -82,7 +82,7 @@ struct AECData {
 // to camera device stream.
 class CameraContext : public CameraInterface {
  public:
-  CameraContext();
+  CameraContext(const DeviceStatusCb &devstatuscb = nullptr);
 
   ~CameraContext();
 
@@ -261,6 +261,7 @@ class CameraContext : public CameraInterface {
   void CameraResultCb(const CaptureResult &result);
 
   void CameraSystemCb(uint32_t errcode);
+  void CameraDeviceStatusCb(int camera_id, bool is_present);
 
   uint32_t GetROICountTag () { return multi_roi_count_tag_; }
 
@@ -360,6 +361,8 @@ class CameraContext : public CameraInterface {
   ResultCb                 result_cb_;
   ErrorCb                  error_cb_;
   SystemCb                 system_cb_;
+  DeviceStatusCb           device_status_cb_;
+
   std::vector<int32_t>     supported_fps_;
   uint32_t                 zsl_port_id_;
   uint32_t                 reproc_port_id_;

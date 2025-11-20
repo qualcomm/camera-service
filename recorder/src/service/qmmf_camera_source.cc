@@ -121,7 +121,8 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
                                    const CameraExtraParam& extra_param,
                                    const ResultCb &cb,
                                    const ErrorCb &errcb,
-                                   const SystemCb &syscb) {
+                                   const SystemCb &syscb,
+                                   const DeviceStatusCb &devicestatus) {
 
   QMMF_INFO("%s: Camera Id(%u) to open!", __func__, camera_id);
   QMMF_KPI_DETAIL();
@@ -131,7 +132,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
     camera = preloaded_cameras_.front();
     preloaded_cameras_.pop_front();
   } else {
-    camera = std::make_shared<CameraContext>();
+    camera = std::make_shared<CameraContext>(devicestatus);
   }
 
   if (!camera) {

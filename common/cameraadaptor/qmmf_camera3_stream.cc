@@ -91,10 +91,6 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
   camera3_stream::format = outputConfiguration.format;
   camera3_stream::data_space = outputConfiguration.data_space;
   data_space_ = outputConfiguration.data_space;
-#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 33)
-  camera3_stream::color_space = outputConfiguration.color_space;
-  color_space_ = outputConfiguration.color_space;
-#endif
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
   camera3_stream::stream_use_case = outputConfiguration.usecase;
   camera3_stream::dynamic_range_profile = outputConfiguration.hdrmode;
@@ -1098,22 +1094,20 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
           IMemAllocUsage::kHwCameraWrite);
     }
 
-    Colorimetry colorimetry = Colorimetry::kBT601;
+    VideoColorimetry colorimetry = VideoColorimetry::kBT601;
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
     if (hdrmode_ == 0) {
-      colorimetry = Colorimetry::kBT601;
+      colorimetry = VideoColorimetry::kBT601;
     } else if (hdrmode_ == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10) {
-      colorimetry = Colorimetry::kBT2100HLGFULL;
+      colorimetry = VideoColorimetry::kBT2100HLGFULL;
     } else if (hdrmode_ == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HDR10) {
-      colorimetry = Colorimetry::kBT2100PQFULL;
+      colorimetry = VideoColorimetry::kBT2100PQFULL;
     } else if (hdrmode_ ==  ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD) {
-      if (data_space_ == HAL_DATASPACE_BT601_525 ||
-          ((data_space_ == HAL_DATASPACE_UNKNOWN ||
-          data_space_ == HAL_DATASPACE_HEIF) && color_space_ == 0)) {
-        colorimetry = Colorimetry::kBT601FULL;
-      } else if (data_space_ == HAL_DATASPACE_BT709 || color_space_ == 4) {
-        colorimetry = Colorimetry::kBT709FULL;
+      if (data_space_ == HAL_DATASPACE_BT601_525) {
+        colorimetry = VideoColorimetry::kBT601FULL;
+      } else if (data_space_ == HAL_DATASPACE_BT709) {
+        colorimetry = VideoColorimetry::kBT709FULL;
       } else {
         QMMF_ERROR("%s: Data space is not found in MAP_STANDARD.\n", __func__);
         return -ENOSYS;
@@ -1123,7 +1117,7 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     }
 #endif
 
-    QMMF_INFO("%s: Select Colorimetry = %d", __func__, colorimetry);
+    QMMF_INFO("%s: Select VideoColorimetry = %d", __func__, colorimetry);
 
     MemAllocError ret = mem_alloc_interface_->AllocBuffer(
         handle,

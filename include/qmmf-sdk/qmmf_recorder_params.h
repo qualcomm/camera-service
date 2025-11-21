@@ -145,7 +145,7 @@ enum class VideoFlags : uint64_t {
   kReproc   = 1 << 3, /// Indicate a reprocess input stream
 };
 
-enum class Colorimetry : uint32_t {
+enum class VideoColorimetry : uint32_t {
   kBT601,            /// "bt601" Default value.
   kBT601FULL,        /// "bt601-full"
   kBT709FULL,        /// "bt709-full"
@@ -242,7 +242,7 @@ struct VideoTrackParam {
   /// Video Track format
   VideoFormat format;
   /// Video Track colorimetry
-  Colorimetry colorimetry;
+  VideoColorimetry colorimetry;
   /// Video Track rotation angle
   Rotation    rotation;
   /// Additional buffers allocated for the track
@@ -252,7 +252,7 @@ struct VideoTrackParam {
 
   VideoTrackParam(uint32_t cam_id = 0, uint32_t w = 3840, uint32_t h = 2160,
                   float fps = 30, VideoFormat fmt = VideoFormat::kNV12,
-                  Colorimetry color = Colorimetry::kBT601,
+                  VideoColorimetry color = VideoColorimetry::kBT601,
                   Rotation rotate = Rotation::kNone, uint32_t extrabufs = 0,
                   VideoFlags flgs = VideoFlags::kNone)
       : camera_id(cam_id), width(w), height(h), framerate(fps), format(fmt),
@@ -269,7 +269,7 @@ struct VideoTrackParam {
            << static_cast<::std::underlying_type<VideoFormat>::type>(format)
            << "] ";
     stream << "colorimetry["
-           << static_cast<::std::underlying_type<Colorimetry>::type>(colorimetry)
+           << static_cast<::std::underlying_type<VideoColorimetry>::type>(colorimetry)
            << "] ";
     stream << "rotation["
            << static_cast<::std::underlying_type<Rotation>::type>(rotation)
@@ -305,12 +305,9 @@ struct ImageParam {
   uint32_t    quality;
   /// Image Track rotation angle
   Rotation    rotation;
-  /// Image Track colorimetry
-  Colorimetry colorimetry;
 
   ImageParam(): mode(ImageMode::kSnapshot), width(0), height(0),
-      format(ImageFormat::kJPEG), quality(95), rotation(Rotation::kNone),
-      colorimetry(Colorimetry::kBT601) {}
+      format(ImageFormat::kJPEG), quality(95), rotation(Rotation::kNone) {}
 
   ::std::string ToString() const {
     ::std::stringstream stream;
@@ -325,9 +322,6 @@ struct ImageParam {
     stream << "quality[" << quality << "] ";
     stream << "rotation["
            << static_cast<::std::underlying_type<Rotation>::type>(rotation)
-           << "] ";
-    stream << "colorimetry["
-           << static_cast<::std::underlying_type<Colorimetry>::type>(colorimetry)
            << "] ";
 
     return stream.str();

@@ -60,14 +60,19 @@ namespace recorder {
 typedef int32_t status_t;
 
 enum class EventType : uint32_t {
-  kUnknown       = 0, // Indicates a unknown event has occured.
-  kServerDied    = 1, // Indicates un-recoverable service crash.
-  kCameraError   = 2, // Indicates un-recoverable camera error.
-  kCameraOpened  = 3, // Indicates camera that has been opened.
-  kCameraClosing = 4, // Indicates camera that is about to be closed.
-  kCameraClosed  = 5, // Indicates camera that has been closed.
-  kFrameError    = 6, // Indicates a frame has been droped.
-  kMetadataError = 7, // Indicates metadata for a frame has been droped.
+  kUnknown           = 0,  // Indicates a unknown event has occured.
+  kServerDied        = 1,  // Indicates un-recoverable service crash.
+  kCameraError       = 2,  // Indicates un-recoverable camera error.
+  kCameraOpened      = 3,  // Indicates camera that has been opened.
+  kCameraClosing     = 4,  // Indicates camera that is about to be closed.
+  kCameraClosed      = 5,  // Indicates camera that has been closed.
+  kFrameError        = 6,  // Indicates a frame has been droped.
+  kMetadataError     = 7,  // Indicates metadata for a frame has been droped.
+  kSOFFreeze         = 8,  // Indicates SOF freeze event has occured.
+  kRecoveryFailure   = 9,  // Indicates Recovery failure event has occured
+  kFatal             = 10, // Indicates ISP Fatal event error has occured
+  kRecoverySuccess   = 11, // Indicates recovery has been successful.
+  kInternal_Recovery = 12, // Indicates non fatal error has occured.
 };
 
 enum class VideoFormat : uint32_t {

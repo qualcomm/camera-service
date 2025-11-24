@@ -83,7 +83,8 @@ class CameraInterface {
                               const float framerate,
                               const CameraExtraParam& extra_param,
                               const ResultCb &cb = nullptr,
-                              const ErrorCb &errcb = nullptr) = 0;
+                              const ErrorCb &errcb = nullptr,
+                              const SystemCb &syscb = nullptr) = 0;
 
   /// Close the camera
   virtual status_t CloseCamera(const uint32_t camera_id) = 0;

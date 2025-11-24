@@ -198,6 +198,14 @@ enum CameraErrorCode {
   ERROR_CAMERA_BUFFER = 4,        // Error during buffer processing
 };
 
+enum SystemEventMessage {
+  MSG_SYSTEM_SOFFREEZE          = 1,
+  MSG_SYSTEM_RECOVERYFAILURE    = 2,
+  MSG_SYSTEM_FATAL              = 3,
+  MSG_SYSTEM_RECOVERYSUCCESS    = 4,
+  MSG_SYSTEM_INTERNAL_RECOVERY  = 5,
+};
+
 // Notifies about all sorts of errors that can happen during camera operation
 typedef std::function<
     void(CameraErrorCode errorCode, const CaptureResultExtras &resultExtras)>
@@ -211,6 +219,8 @@ typedef std::function<void(const CaptureResultExtras &resultExtras,
 typedef std::function<void(int streamId)> PreparedCallback;
 // Notifies about a new capture result
 typedef std::function<void(const CaptureResult &result)> ResultCallback;
+// Notifies about all sorts of system messages that can happen during camera operation
+typedef std::function<void(uint32_t errorCode)> SystemCallback;
 
 // Please note that these callbacks shouldn't get blocked for long durations.
 // Also very important is to not to try and call "Camera3DeviceClient" API
@@ -222,6 +232,7 @@ typedef struct {
   ShutterCallback shutterCb;
   PreparedCallback peparedCb;
   ResultCallback resultCb;
+  SystemCallback systemCb;
 } CameraClientCallbacks;
 
 //Please note that this callbacks need to return as fast as possible

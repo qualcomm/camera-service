@@ -376,9 +376,12 @@ status_t RecorderImpl::StartCamera(const uint32_t client_id,
   ErrorCb errcb = [&] (uint32_t camera_id, uint32_t errcode) {
       CameraErrorCb(camera_id, errcode); };
 
+  SystemCb syscb = [&] (uint32_t camera_id, uint32_t errcode) {
+      CameraSystemCb(camera_id, errcode); };
+
   auto ret = camera_source_->StartCamera(camera_id, framerate, extra_param,
                                          enable_result_cb ? cb : nullptr,
-                                         errcb);
+                                         errcb, syscb);
   if (ret != 0) {
     QMMF_ERROR("%s: StartCamera Failed!!", __func__);
     return -EINVAL;
@@ -1379,6 +1382,40 @@ void RecorderImpl::CameraErrorCb(uint32_t camera_id, uint32_t errcode) {
       break;
     case REMAP_ALL_BUFFERS:
       event = static_cast<EventType>(REMAP_ALL_BUFFERS);
+      break;
+    default:
+      event = EventType::kUnknown;
+      break;
+  }
+
+  for (auto const& client_id : client_ids) {
+    assert(IsClientValid(client_id));
+    remote_cb_handle_(client_id)->NotifyRecorderEvent(
+        event, &camera_id, sizeof(uint32_t));
+  }
+}
+
+void RecorderImpl::CameraSystemCb(uint32_t camera_id, uint32_t errcode) {
+  assert(remote_cb_handle_ != nullptr);
+  EventType event = EventType::kUnknown;
+
+  auto client_ids = GetCameraClients(camera_id);
+
+  switch (errcode) {
+    case MSG_SYSTEM_SOFFREEZE:
+      event = EventType::kSOFFreeze;
+      break;
+    case MSG_SYSTEM_RECOVERYFAILURE:
+      event = EventType::kRecoveryFailure;
+      break;
+    case MSG_SYSTEM_FATAL:
+      event = EventType::kFatal;
+      break;
+    case MSG_SYSTEM_RECOVERYSUCCESS:
+      event = EventType::kRecoverySuccess;
+      break;
+    case MSG_SYSTEM_INTERNAL_RECOVERY:
+      event = EventType::kInternal_Recovery;
       break;
     default:
       event = EventType::kUnknown;

@@ -270,6 +270,7 @@ status_t CameraSource::ConfigImageCapture(const uint32_t camera_id,
   sparam.format  = Common::FromImageToQmmfFormat(param.format);
   sparam.quality = param.quality;
   sparam.rotation = param.rotation;
+  sparam.colorimetry = param.colorimetry;
 
   auto ret = camera->ConfigImageCapture(image_id, sparam, xtraparam);
   if (ret != 0) {

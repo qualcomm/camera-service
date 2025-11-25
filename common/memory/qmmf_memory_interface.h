@@ -403,6 +403,7 @@ class IAllocDevice {
   * @usage - usage flags of the buffer
   * @stride - returned: result stride for the allocated buffer according format
   *           width and usage
+  * @colorimetry - color space of the buffer
   *
   * Allocates buffer with given dimensions, format and usage
   *

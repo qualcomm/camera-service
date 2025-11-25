@@ -138,6 +138,9 @@ struct CameraStreamParameters {
   uint32_t height;
   int32_t format;
   android_dataspace data_space;
+#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 33)
+  int32_t color_space;
+#endif
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
   uint64_t usecase;
   int32_t hdrmode;
@@ -149,6 +152,9 @@ struct CameraStreamParameters {
   ::std::string stream_camera_id;
   CameraStreamParameters() :
       width(0), height(0), format(-1), data_space(HAL_DATASPACE_UNKNOWN),
+#if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 33)
+      color_space(0),
+#endif
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
       usecase(0), hdrmode(0),
 #endif

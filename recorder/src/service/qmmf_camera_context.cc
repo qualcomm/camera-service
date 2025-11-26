@@ -794,20 +794,46 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
     }
 #endif // CAMX_ANDROID_API
 
+    switch (param.format) {
 #ifdef ENABLE_IMAGE_NV12
-    if (param.format == BufferFormat::kNV12) {
-      stream_param.allocFlags.flags |= IMemAllocUsage::kHwCameraWrite;
-      // Not for HEIF, set HAL_DATASPACE_HEIF because of camera limitation.
-      stream_param.data_space = static_cast<android_dataspace_t>
-                                (HAL_DATASPACE_HEIF);
-    } else if (param.format == BufferFormat::kNV12HEIF) {
-      stream_param.allocFlags.flags = (IMemAllocUsage::kHwRender |
-                                IMemAllocUsage::kPrivateAllocHEIF |
-                                IMemAllocUsage::kHwTexture);
-      stream_param.data_space = static_cast<android_dataspace_t>
-                                (HAL_DATASPACE_HEIF);
+      case BufferFormat::kNV12:
+        stream_param.allocFlags.flags |= IMemAllocUsage::kHwCameraWrite;
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+        break;
+      case BufferFormat::kNV12HEIF:
+        stream_param.allocFlags.flags = (IMemAllocUsage::kHwRender |
+                                         IMemAllocUsage::kPrivateAllocHEIF |
+                                         IMemAllocUsage::kHwTexture);
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+        break;
+      case BufferFormat::kNV12UBWC:
+        // TODO: update below flags once subsystem has supported
+        stream_param.allocFlags.flags |=
+            IMemAllocUsage::kPrivateAllocUbwc;
+        break;
+#endif // ENABLE_IMAGE_NV12
+      case BufferFormat::kP010:
+        // TODO: update below flags once subsystem has supported
+        stream_param.allocFlags.flags |= IMemAllocUsage::kPrivateAllocP010;
+        break;
+      case BufferFormat::kTP10UBWC:
+        stream_param.allocFlags.flags = (IMemAllocUsage::kPrivateAllocTP10 |
+                                         IMemAllocUsage::kPrivateAllocUbwc |
+                                         IMemAllocUsage::kHwComposer |
+                                         IMemAllocUsage::kHwCameraWrite |
+                                         IMemAllocUsage::kVideoEncoder |
+                                         IMemAllocUsage::kHwTexture |
+                                         IMemAllocUsage::kHwRender |
+                                         IMemAllocUsage::kPrivateAllocHEIF |
+                                         IMemAllocUsage::kPrivateSnapshot);
+        break;
+      default:
+        stream_param.allocFlags.flags |= (IMemAllocUsage::kSwReadOften |
+                                          IMemAllocUsage::kSwWriteOften);
+        break;
     }
-#endif
 
     ret = CreateSnapshotStream(image_id, stream_param, true);
     if (0 != ret) {

@@ -431,8 +431,17 @@ class Common {
       case ImageFormat::kNV12HEIF:
         return BufferFormat::kNV12HEIF;
         break;
+      case ImageFormat::kNV12UBWC:
+        return BufferFormat::kNV12UBWC;
+        break;
       case ImageFormat::kNV21:
         return BufferFormat::kNV21;
+        break;
+      case ImageFormat::kP010:
+        return BufferFormat::kP010;
+        break;
+      case ImageFormat::kTP10UBWC:
+        return BufferFormat::kTP10UBWC;
         break;
       case ImageFormat::kBayerRDI8BIT:
         return BufferFormat::kRAW8;

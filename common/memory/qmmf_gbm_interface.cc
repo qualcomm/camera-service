@@ -98,6 +98,7 @@ const std::unordered_map<int32_t, int32_t> GBMUsage::gralloc_usage_flag_map_ = {
   {IMemAllocUsage::kFlex2Batch,           0},
   {IMemAllocUsage::kFlex4Batch,           0},
   {IMemAllocUsage::kFlex8Batch,           0},
+  {IMemAllocUsage::kPrivateSnapshot,      GRALLOC_USAGE_PRIVATE_SNAPSHOT},
 };
 
 GBMDevice* GBMDevice::gbm_device_obj_ = nullptr;

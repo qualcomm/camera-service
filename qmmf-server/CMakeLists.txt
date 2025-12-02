@@ -6,7 +6,7 @@ if (NOT QMMF_SERVER_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHFR_THRESHOLD=30 -DAEC_WAIT_TIMEOUT=500000000")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAEC_WAIT_TIMEOUT=500000000")
 
 add_executable(cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)

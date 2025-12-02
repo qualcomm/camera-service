@@ -43,7 +43,7 @@
 #include <cutils/properties.h>
 #include <cutils/trace.h>
 #else
-#include <log.h>
+#include <syslog.h>
 #include "properties.h"
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -61,11 +61,6 @@
 } while (0)
 
 #define LOG_LEVEL_KPI
-
-// INFO, ERROR and WARN logs are enabled by default
-#define QMMF_INFO(fmt, args...)  ALOGI(fmt, ##args)
-#define QMMF_WARN(fmt, args...)  ALOGW(fmt, ##args)
-#define QMMF_ERROR(fmt, args...) ALOGE(fmt, ##args)
 
 static inline void unused(...) {};
 
@@ -95,7 +90,7 @@ int qmmf_property_set(const char *key, const char *value);
   })
 #define QMMF_INFO(fmt, args...)  syslog (LOG_INFO, "[INFO]: %s : " fmt, LOG_TAG, ##args)
 #define QMMF_WARN(fmt, args...)  syslog (LOG_WARNING, "[WARN]: %s : " fmt, LOG_TAG, ##args)
-#define QMMF_ERROR(fmt, args...) syslog (LOG_ERROR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
+#define QMMF_ERROR(fmt, args...) syslog (LOG_PERROR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
 
 #define QMMF_DEBUG(fmt, args...)                \
   ({                                            \
@@ -142,7 +137,8 @@ static inline int get_ftrace_fd(void) {
 
 static inline void ftrace_write(const char *log, size_t len) {
   auto fd = get_ftrace_fd();
-  write(fd, log, len);
+  auto res = write(fd, log, len);
+  (void)res;
 }
 
 static inline void ftrace_begin(const char* name) {

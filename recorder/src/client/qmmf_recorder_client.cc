@@ -848,7 +848,7 @@ class RecorderServiceProxy: public IRecorderService {
     }
 
     *(static_cast<uint32_t *>(buffer)) = msg_size;
-    cmd.SerializeToArray(buffer+offset, msg_size);
+    cmd.SerializeToArray(static_cast<uint8_t *>(buffer) + offset, msg_size);
 
     ssize_t bytes_sent = send(socket_, buffer, buf_size, 0);
     free (buffer);
@@ -1952,7 +1952,7 @@ status_t RecorderClient::MapBuffer(BufferInfo& info, const BufferMeta& meta) {
   sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
 
   if (ioctl(info.ion_fd, DMA_BUF_IOCTL_SYNC, &sync) != 0) {
-    ALOGE("%s: DMA SYNC START failed!", __func__);
+    QMMF_ERROR("%s: DMA SYNC START failed!", __func__);
   }
 #endif
   info.vaddr = vaddr;
@@ -1980,7 +1980,7 @@ void RecorderClient::UnmapBuffer(BufferInfo& info) {
   sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
 
   if (ioctl(info.ion_fd, DMA_BUF_IOCTL_SYNC, &sync) != 0) {
-    ALOGE("%s: DMA SYNC END failed!", __func__);
+    QMMF_ERROR("%s: DMA SYNC END failed!", __func__);
   }
 #endif
 
@@ -2263,11 +2263,11 @@ void RecorderClient::NotifyVideoTrackData(uint32_t track_id,
       BufferInfoMap& buffer_info_map = track_buffers_map_[track_id];
       buffer_info_map.emplace(bn_buffer.buffer_id, buffer_info);
 
-      QMMF_VERBOSE("%s track_buffers_map_.size = %d", __func__,
+      QMMF_VERBOSE("%s track_buffers_map_.size = %ld", __func__,
           track_buffers_map_.size());
 
       for (auto const& iter : track_buffers_map_) {
-        QMMF_VERBOSE("%s track_id(%d): BufInfoMap size = %d", __func__,
+        QMMF_VERBOSE("%s track_id(%u): BufInfoMap size = %ld", __func__,
             iter.first, iter.second.size());
 
         for (auto const& it : iter.second) {
@@ -3360,7 +3360,7 @@ void RecorderServiceCallbackStub::ThreadLoop() {
     memset(socket_recv_buf_, 0, kMaxSocketBufSize);
 
     ssize_t bytes_read = recvmsg(client_socket_, &msg, 0);
-    QMMF_VERBOSE("%s: recv %d bytes", __func__, bytes_read);
+    QMMF_VERBOSE("%s: recv %ld bytes", __func__, bytes_read);
 
     if (bytes_read < 0) {
       QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));

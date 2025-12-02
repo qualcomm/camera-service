@@ -935,7 +935,7 @@ int32_t Camera3DeviceClient::CreateStream(
     blobBufferSize = CalculateBlobSize(outputConfiguration.width,
                                        outputConfiguration.height);
     if (blobBufferSize <= 0) {
-      QMMF_ERROR("%s: Invalid jpeg buffer size %zd\n", __func__,
+      QMMF_ERROR("%s: Invalid jpeg buffer size %d\n", __func__,
                  blobBufferSize);
       res = -EINVAL;
       goto exit;
@@ -1089,7 +1089,7 @@ int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
     jpegBufferSize = maxJpegBufferSize;
   }
 
-  QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%d",
+  QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%ld",
       __func__, scaleFactor, jpegBufferSize);
 
   return jpegBufferSize;
@@ -1881,7 +1881,7 @@ int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
   }
 
   if (!is_camera_device_available_) {
-    QMMF_ERROR("%s: Camera device is not available: %s!\n", __func__);
+    QMMF_ERROR("%s: Camera device is not available !\n", __func__);
     return -ENODEV;
   }
 
@@ -2171,7 +2171,7 @@ int32_t Camera3DeviceClient::GenerateCaptureRequestLocked(
           return -ENOSYS;
       }
     } else {
-      QMMF_ERROR("%s: Request contains multiple input streams: %d\n", __func__,
+      QMMF_ERROR("%s: Request contains multiple input streams: %ld\n", __func__,
                  streams.count);
         return -ENOSYS;
     }

@@ -268,7 +268,7 @@ void FrameRateController::OnFrameAvailable(StreamBuffer& buffer) {
       while (RepeatFrame(buffer)) {
         if (debug_flags_ & FRC_DEBUG_FRAME_REPEAT) {
           QMMF_INFO("%s: %s: Repeat source frame: %u, camera: %u, stream: %d,"
-              " ts: %lld", __func__, name_.c_str(), buffer.frame_number,
+              " ts: %ld", __func__, name_.c_str(), buffer.frame_number,
               buffer.camera_id, buffer.stream_id, buffer.timestamp);
         }
         buffer_producer_->NotifyBuffer(buffer);
@@ -280,7 +280,7 @@ void FrameRateController::OnFrameAvailable(StreamBuffer& buffer) {
     } else if (SkipFrame(buffer)) {
       if (debug_flags_ & FRC_DEBUG_FRAME_SKIP) {
         QMMF_INFO("%s: %s: Skip source frame: %u, camera: %u, stream: %d,"
-            " ts: %lld", __func__, name_.c_str(), buffer.frame_number,
+            " ts: %ld", __func__, name_.c_str(), buffer.frame_number,
             buffer.camera_id, buffer.stream_id, buffer.timestamp);
       }
       buffer_consumer_->GetProducerHandle()->NotifyBufferReturned(buffer);

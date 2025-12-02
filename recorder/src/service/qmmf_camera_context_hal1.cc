@@ -1473,7 +1473,7 @@ status_t CameraContext::ParsePair(const char *str, uint32_t *first,
     uint32_t w = (uint32_t)strtol(str, &end, 10);
     // If a delimeter does not immediately follow, give up.
     if (*end != delim) {
-        ALOGE("Cannot find delimeter (%c) in str=%s", delim, str);
+        QMMF_ERROR("Cannot find delimeter (%c) in str=%s", delim, str);
         return BAD_VALUE;
     }
 

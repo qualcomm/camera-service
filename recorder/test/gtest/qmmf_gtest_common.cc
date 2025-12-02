@@ -92,8 +92,8 @@ void FrameTrace::BufferAvailableCb(BufferDescriptor buffer) {
     total_frames_ += dropped_frames;
     total_dropped_frames_ += dropped_frames;
 
-    TEST_WARN("%s: Track %u | Expected timestamp Δ = %llu us | "
-        "Current timestamp Δ = %llu us | DROPPED FRAMES = %d | TOTAL DROPPED "
+    TEST_WARN("%s: Track %u | Expected timestamp Δ = %lu us | "
+        "Current timestamp Δ = %lu us | DROPPED FRAMES = %d | TOTAL DROPPED "
         "FRAMES = %u / %u", __func__, track_id_, expected_delta,
         current_delta, dropped_frames, total_dropped_frames_, total_frames_);
   }
@@ -729,7 +729,7 @@ void GtestCommon::VideoTrackYUVDataCb(uint32_t track_id,
     auto current_time_ms = time.tv_sec * 1000 + (time.tv_nsec / 1000000);
     auto buf_time_ms = buffers[0].timestamp / 1000000;
     auto latency = current_time_ms - buf_time_ms;
-    TEST_INFO("%s: SOF Latency: %llu ms\n", __func__,
+    TEST_INFO("%s: SOF Latency: %lu ms\n", __func__,
         latency);
   }
 
@@ -743,7 +743,7 @@ void GtestCommon::VideoTrackYUVDataCb(uint32_t track_id,
       file_path += ".yuv";
       FILE *file = fopen(file_path.c_str(), "w+");
       if (!file) {
-        ALOGE("%s: Unable to open file(%s)", __func__,
+        QMMF_ERROR("%s: Unable to open file(%s)", __func__,
             file_path.c_str());
         goto FAIL;
       }
@@ -910,7 +910,7 @@ void GtestCommon::SnapshotCb(uint32_t camera_id, uint32_t imgcount,
     file_path += ext_str;
     FILE *file = fopen(file_path.c_str(), "w+");
     if (!file) {
-      ALOGE("%s: Unable to open file(%s)", __func__,
+      QMMF_ERROR("%s: Unable to open file(%s)", __func__,
           file_path.c_str());
       goto FAIL;
     }
@@ -918,7 +918,7 @@ void GtestCommon::SnapshotCb(uint32_t camera_id, uint32_t imgcount,
     written_len = fwrite(buffer.data, sizeof(uint8_t), buffer.size, file);
     TEST_INFO("%s: written_len =%lu", __func__, written_len);
     if (buffer.size != written_len) {
-      ALOGE("%s: Bad Write error (%d):(%s)\n", __func__, errno,
+      QMMF_ERROR("%s: Bad Write error (%d):(%s)\n", __func__, errno,
             strerror(errno));
       goto FAIL;
     }
@@ -958,7 +958,7 @@ void GtestCommon::VideoTrackRGBDataCb(uint32_t track_id,
       file_path += ".rgb";
       FILE *file = fopen(file_path.c_str(), "w+");
       if (!file) {
-        ALOGE("%s: Unable to open file(%s)", __func__,
+        QMMF_ERROR("%s: Unable to open file(%s)", __func__,
             file_path.c_str());
         goto FAIL;
       }
@@ -1019,7 +1019,7 @@ void GtestCommon::ResultCallbackHandlerMatchCameraMeta(uint32_t camera_id,
     ASSERT_TRUE(ret == 0);
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);
-    TEST_INFO("%s size of the map=%d", __func__,
+    TEST_INFO("%s size of the map=%ld", __func__,
         buffer_metadata_map_.size());
   }
 }
@@ -1063,7 +1063,7 @@ void GtestCommon::VideoTrackDataCbMatchCameraMeta(
     std::get<1>(tuple).clear();
     buffer_metadata_map_.erase(meta_frame_number);
 
-    TEST_INFO("%s size of the map=%d", __func__,
+    TEST_INFO("%s size of the map=%ld", __func__,
         buffer_metadata_map_.size());
   }
   TEST_DBG("%s: Exit", __func__);
@@ -1081,7 +1081,7 @@ void GtestCommon::ParseFaceInfo(const CameraMetadata &res,
     if (rect_entry.count > 0) {
       crop_entry = res.find(ANDROID_SCALER_CROP_REGION);
       if (crop_entry.count < 4) {
-        TEST_ERROR("Unable to read crop region (count = %d)", crop_entry.count);
+        TEST_ERROR("Unable to read crop region (count = %ld)", crop_entry.count);
         ASSERT_TRUE(0);
       } else {
         active_w = crop_entry.data.i32[2];
@@ -1093,7 +1093,7 @@ void GtestCommon::ParseFaceInfo(const CameraMetadata &res,
         ASSERT_TRUE(0);
       }
 
-      TEST_INFO("%d face detected", rect_entry.count / 4);
+      TEST_INFO("%ld face detected", rect_entry.count / 4);
       for (uint32_t i = 0 ; i < rect_entry.count; i += 4) {
         rect.left = rect_entry.data.i32[i + 0] *
                        info.fd_stream_width / active_w;

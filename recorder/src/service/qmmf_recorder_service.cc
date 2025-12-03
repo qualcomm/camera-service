@@ -597,6 +597,29 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
         return 0;
       }
       break;
+      case RECORDER_GET_OFFLINE_PARAMS: {
+        uint32_t client_id, in_params_blob_size;
+        data.readUint32(&client_id);
+        data.readUint32(&in_params_blob_size);
+        android::Parcel::ReadableBlob in_params_blob;
+        data.readBlob(in_params_blob_size, &in_params_blob);
+        OfflineCameraInputParams in_params;
+        assert(in_params_blob_size == sizeof(in_params));
+        memcpy(&in_params, in_params_blob.data(), in_params_blob_size);
+
+        OfflineCameraOutputParams out_params;
+        ret = GetOfflineParams(client_id, in_params, out_params);
+        reply->writeInt32(ret);
+        if (NO_ERROR == ret) {
+          uint32_t out_params_blob_size = sizeof(out_params);
+          reply->writeUint32(out_params_blob_size);
+          android::Parcel::WritableBlob blob;
+          reply->writeBlob(out_params_blob_size, false, &blob);
+          memcpy(blob.data(), &out_params, out_params_blob_size);
+        }
+        return NO_ERROR;
+      }
+      break;
       case RECORDER_CONFIGURE_OFFLINE_PROC: {
         uint32_t client_id, proc_params_blob_size;
         data.readUint32(&client_id);
@@ -1963,6 +1986,22 @@ status_t RecorderService::GetCameraCharacteristics(const uint32_t client_id,
   }
   QMMF_DEBUG("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
+}
+
+status_t RecorderService::GetOfflineParams(const uint32_t client_id,
+                                           const OfflineCameraInputParams &in_params,
+                                           OfflineCameraOutputParams &out_params) {
+  QMMF_INFO("%s:Enter client_id(%d)", __func__, client_id);
+  if (!IsRecorderInitialized()) {
+    QMMF_ERROR("%s: Recorder not initialized!", __func__);
+    return NO_INIT;
+  }
+  auto ret = recorder_->GetOfflineParams(client_id, in_params, out_params);
+  if (ret != NO_ERROR) {
+    QMMF_ERROR("%s: Can't get OfflineCameraParams!", __func__);
+  }
+  QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
+  return ret;
 }
 
 status_t RecorderService::CreateOfflineProcess(

@@ -141,6 +141,16 @@ message ExtraParamMsg {
 }
 
 // Offline JPEG
+message OfflineJpegInputParamsMsg {
+  uint32 camera_id = 1;
+  uint32 width = 2;
+  uint32 height = 3;
+}
+
+message OfflineJpegOutputParamsMsg {
+  uint32 size = 1;
+}
+
 message OfflineJpegBufferParamsMsg {
   uint32 width = 1;
   uint32 height = 2;
@@ -348,6 +358,13 @@ message GetVendorTagDescriptorRespMsg {
   bytes descs = 2;
 }
 
+// GetOfflineJPEGParams
+message GetOfflineJPEGParamsReqMsg {
+  uint32 client_id = 1;
+  OfflineJpegInputParamsMsg in_params = 2;
+  OfflineCameraOutputParamsMsg out_params = 3;
+}
+
 // CreateOfflineJPEG
 message CreateOfflineJPEGReqMsg {
   uint32 client_id = 1;
@@ -397,6 +414,7 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_CALLBACK_SOCKET_READY = 25;
   RECORDER_GET_CAMERA_STATIC_INFO = 26;
   RECORDER_GET_SUPPORTED_INTERFACE_VER = 27;
+  RECORDER_GET_OFFLINE_PARAMS = 28;
 }
 
 message RecorderClientReqMsg {
@@ -427,6 +445,7 @@ message RecorderClientReqMsg {
     CallbackSocketReadyMsg callback_socket_ready = 24;
     DummyMsg dummy_msg = 25;
     GetCamStaticInfoReqMsg get_cam_static_info = 26;
+    GetOfflineJPEGParamsReqMsg get_offline_jpeg_params = 28;
   }
 }
 

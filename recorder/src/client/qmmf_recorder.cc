@@ -349,6 +349,29 @@ status_t Recorder::GetCameraCharacteristics(const uint32_t camera_id,
   return ret;
 }
 
+status_t Recorder::GetOfflineJpegParams(const OfflineJpegInputParams &in_params,
+                                        OfflineJpegOutputParams &out_params) {
+  QMMF_INFO("%s: Enter" ,__func__);
+  assert(recorder_client_ != NULL);
+  OfflineCameraInputParams offline_in_params;
+  OfflineCameraOutputParams offline_out_params;
+
+  offline_in_params.camera_id[0] = in_params.camera_id;
+  offline_in_params.width = in_params.width;
+  offline_in_params.height = in_params.height;
+
+  auto ret = recorder_client_->GetOfflineParams(offline_in_params,
+      offline_out_params);
+  if (NO_ERROR != ret) {
+    QMMF_ERROR("%s: GetOfflineJpegParams failed!", __func__);
+  }
+
+  out_params.size = offline_out_params.size;
+
+  QMMF_INFO("%s: Exit", __func__);
+  return ret;
+}
+
 status_t Recorder::CreateOfflineJPEG(
                     const OfflineJpegCreateParams& params,
                     const OfflineJpegCb &cb) {

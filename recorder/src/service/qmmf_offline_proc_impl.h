@@ -39,6 +39,9 @@ class OfflineProcess {
   ~OfflineProcess(){}
   status_t Init(const recorder::RemoteCallbackHandle& remote_cb_handle);
   status_t DeInit();
+  status_t GetParams(const uint32_t client_id,
+                     const OfflineCameraInputParams &in_params,
+                     OfflineCameraOutputParams &out_params);
   status_t Create(const uint32_t client_id,
                   const OfflineCameraCreateParams& params);
   status_t Process(const uint32_t client_id,
@@ -68,6 +71,7 @@ class OfflineProcess {
   bool                                    offlineipe_enable;
   camera_module_t*                        camera_module_;
   int32_t                                 nubmer_of_cameras_;
+  CameraMetadata                          device_info_;
   void*                                   offline_proc_lib_;
   PFN_CameraPostProc_Create               pCameraPostProcCreate;
   PFN_CameraPostProc_Process              pCameraPostProcProcess;

@@ -17,6 +17,16 @@ struct OfflineJpegBufferParams {
   qmmf::recorder::VideoFormat format;
 };
 
+struct OfflineJpegInputParams {
+  uint32_t camera_id;
+  uint32_t width;
+  uint32_t height;
+};
+
+struct OfflineJpegOutputParams {
+  uint32_t size;
+};
+
 struct OfflineJpegCreateParams {
   uint32_t                process_mode;
   uint32_t                camera_id;

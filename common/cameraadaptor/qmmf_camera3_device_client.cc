@@ -932,7 +932,7 @@ int32_t Camera3DeviceClient::CreateStream(
   assert(state_ != STATE_RUNNING);
 
   if (outputConfiguration.format == HAL_PIXEL_FORMAT_BLOB) {
-    blobBufferSize = CalculateBlobSize(outputConfiguration.width,
+    blobBufferSize = Common::CalculateBlobSize(device_info_, outputConfiguration.width,
                                        outputConfiguration.height);
     if (blobBufferSize <= 0) {
       QMMF_ERROR("%s: Invalid jpeg buffer size %d\n", __func__,
@@ -969,130 +969,6 @@ exit:
 
   pthread_mutex_unlock(&lock_);
   return res;
-}
-
-int32_t Camera3DeviceClient::CalculateBlobSize(int32_t width, int32_t height) {
-  int32_t maxJpegBufferSize, maxJpegSizeWidth, maxJpegSizeHeight, res, jpegDebugDataSize;
-  int32_t maxWidth, maxHeight;
-  int32_t maxUHRWidth, maxUHRHeight;
-  int32_t ret;
-  camera_metadata_entry entry;
-
-  maxWidth = maxHeight = maxUHRWidth = maxUHRHeight = res = jpegDebugDataSize = 0;
-
-  entry = device_info_.find(ANDROID_JPEG_MAX_SIZE);
-  if (entry.count == 0) {
-    QMMF_ERROR(
-        "%s: Camera %d: Can't find maximum JPEG size in static"
-        " metadata!\n",
-        __func__, id_);
-    return -EINVAL;
-  }
-  maxJpegBufferSize = entry.data.i32[0];
-  assert(JPEG_BUFFER_SIZE_MIN < maxJpegBufferSize);
-
-  QMMF_INFO("%s: default maxJpegBufferSize=%d", __func__, maxJpegBufferSize);
-
-
-#if defined(CAMERA_HAL_API_VERSION) && (CAMERA_HAL_API_VERSION >= 0x0307)
-  if (device_info_.exists(
-      ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION)) {
-    auto entry = device_info_.find(
-      ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION);
-    for (uint32_t i = 0; i < entry.count; i += 4) {
-      if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-        int32_t w = entry.data.i32[i + 1];
-        int32_t h = entry.data.i32[i + 2];
-
-        if (w * h > maxUHRWidth * maxUHRHeight) {
-          maxUHRWidth = w;
-          maxUHRHeight = h;
-        }
-      }
-    }
-  }
-
-  //Calculate debuging buffer size of jpeg.
-  uint32_t tag = 0;
-
-  std::shared_ptr<VendorTagDescriptor> vTags =
-      VendorTagDescriptor::getGlobalVendorTagDescriptor();
-
-  CameraMetadata::getTagFromName(
-      "org.quic.camera.jpegdebugdata.size",vTags.get(), &tag);
-
-  if (device_info_.exists(tag)) {
-    auto entry  = device_info_.find(tag);
-    jpegDebugDataSize = entry.data.i32[0];
-  }
-
-  QMMF_INFO("%s: jpegDebugDataSize=%d",
-      __func__, jpegDebugDataSize);
-#endif
-
-  if (device_info_.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
-    auto entry = device_info_.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
-    for (uint32_t i = 0; i < entry.count; i += 4) {
-      if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i] &&
-          ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
-            entry.data.i32[i+3]) {
-        int32_t w = entry.data.i32[i + 1];
-        int32_t h = entry.data.i32[i + 2];
-
-        if (w * h > maxWidth * maxHeight) {
-          maxWidth = w;
-          maxHeight = h;
-        }
-      }
-    }
-  } else {
-    QMMF_ERROR(
-        "%s: Camera %d: Can't find available stream configs", __func__, id_);
-    return -EINVAL;
-  }
-
-  QMMF_INFO("%s: maxUHRWidth=%d maxUHRHeight=%d maxWidth=%d maxHeight=%d",
-      __func__, maxUHRWidth, maxUHRHeight, maxWidth, maxHeight);
-
-  // if input width * height is larger than default max width * height,
-  // it means ultra hight resolution has been selected, to make scaleFactor
-  // calculation work correctly, we need to update buffersize, max width and
-  // max height accordingly
-  if ((maxUHRWidth != 0) && ((width * height) > (maxWidth * maxHeight))) {
-    maxJpegSizeWidth = maxUHRWidth;
-    maxJpegSizeHeight = maxUHRHeight;
-    maxJpegBufferSize =
-      ((maxUHRWidth * 1.0f * maxUHRHeight) / (maxWidth * maxHeight)) *
-        maxJpegBufferSize;
-  } else {
-    maxJpegSizeWidth = maxWidth;
-    maxJpegSizeHeight = maxHeight;
-  }
-
-  QMMF_INFO("%s: input width=%d height=%d"
-      " maxJpegBufferSize=%d maxJpegSizeWidth=%d maxJpegSizeHeight=%d",
-      __func__, width, height,
-      maxJpegBufferSize, maxJpegSizeWidth, maxJpegSizeHeight);
-
-  assert(JPEG_BUFFER_SIZE_MIN < maxJpegBufferSize);
-
-  // Calculate final jpeg buffer size for the given resolution.
-  float scaleFactor =
-      ((float)(width * height)) / (maxJpegSizeWidth * maxJpegSizeHeight);
-  ssize_t jpegBufferSize =
-      scaleFactor * (maxJpegBufferSize - JPEG_BUFFER_SIZE_MIN
-      - jpegDebugDataSize) + JPEG_BUFFER_SIZE_MIN + jpegDebugDataSize;
-
-  if (jpegBufferSize > maxJpegBufferSize) {
-    jpegBufferSize = maxJpegBufferSize;
-  }
-
-  QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%ld",
-      __func__, scaleFactor, jpegBufferSize);
-
-  return jpegBufferSize;
 }
 
 int32_t Camera3DeviceClient::CreateDefaultRequest(int templateId,
@@ -1860,32 +1736,11 @@ void Camera3DeviceClient::RemovePendingRequestLocked(uint32_t frameNumber) {
 }
 
 int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
-  if (NULL == info) {
-    return -EINVAL;
-  }
-
-  if (idx >= number_of_cameras_) {
-    return -EINVAL;
-  }
-
-  if (NULL == camera_module_) {
-    return -ENODEV;
-  }
-
-  camera_info cam_info;
-  int32_t res = camera_module_->get_camera_info(idx, &cam_info);
-  if (0 != res) {
-    QMMF_ERROR("%s: Error during camera static info query: %s!\n", __func__,
-               strerror(res));
-    return res;
-  }
-
-  if (!is_camera_device_available_) {
-    QMMF_ERROR("%s: Camera device is not available !\n", __func__);
-    return -ENODEV;
-  }
-
-  *info = cam_info.static_camera_characteristics;
+  int32_t res = 0;
+  res = CameraModule::GetCameraInfo(idx, info);
+  if (0 != res || !is_camera_device_available_)
+    QMMF_ERROR("%s: Error during camera static info query: %s",
+      __func__, strerror(-res));
 
   return res;
 }

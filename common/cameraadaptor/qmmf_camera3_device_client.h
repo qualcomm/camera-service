@@ -188,8 +188,6 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t InternalResumeLocked();
   int32_t WaitUntilStateThenRelock(bool active, int64_t timeout);
 
-  int32_t CalculateBlobSize(int32_t width, int32_t height);
-
   int32_t ConfigureStreams(
         const CameraParameters& camera_parameters = CameraParameters(),
         bool force_reconfiguration = false);
@@ -266,8 +264,6 @@ class Camera3DeviceClient : public camera3_callback_ops,
   bool reconfig_;
 
   CameraMetadata request_templates_[CAMERA3_TEMPLATE_COUNT];
-  static const int32_t JPEG_BUFFER_SIZE_MIN =
-      256 * 1024 + sizeof(camera3_jpeg_blob);
 
   camera_module_t *camera_module_;
   camera3_device_t *device_;

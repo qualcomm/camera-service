@@ -168,6 +168,7 @@ enum QMMF_RECORDER_SERVICE_CMDS {
   RECORDER_ENCODE_OFFLINE_PROC,
   RECORDER_DESTROY_OFFLINE_PROC,
   RECORDER_GET_STATIC_CAMERA_INFO,
+  RECORDER_GET_OFFLINE_PARAMS
 };
 
 class IRecorderService : public IInterface {
@@ -277,6 +278,10 @@ class IRecorderService {
                                             CameraMetadata &meta) = 0;
 
   virtual status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) = 0;
+
+  virtual status_t GetOfflineParams(const uint32_t client_id,
+                                    const OfflineCameraInputParams &in_params,
+                                    OfflineCameraOutputParams &out_params) = 0;
 
   virtual status_t CreateOfflineProcess(
                                 const uint32_t client_id,

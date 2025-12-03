@@ -213,6 +213,28 @@ uint32_t OfflineProcess::GetUsageFromFormat (BufferFormat format)
   return usage_flags;
 }
 
+status_t OfflineProcess::GetParams(const uint32_t client_id,
+                                   const OfflineCameraInputParams &in_params,
+                                   OfflineCameraOutputParams &out_params) {
+
+  int32_t ret = NO_ERROR;
+  QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
+  ret = CameraModule::GetCameraInfo(in_params.camera_id[0], &device_info_);
+  if (ret != NO_ERROR) {
+    QMMF_ERROR("%s: Failed to get camera static metadata", __func__);
+    return ret;
+  }
+  ret = Common::CalculateBlobSize(device_info_, in_params.width, in_params.height);
+  if (ret > 0) {
+    out_params.size = ret;
+    QMMF_DEBUG("%s calculate blob size is %d", __func__, ret);
+    ret = NO_ERROR;
+  }
+
+  QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
+  return ret;
+}
+
 status_t OfflineProcess::Create(const uint32_t client_id,
                                     const OfflineCameraCreateParams& params) {
   BufferFormat buffer_format;

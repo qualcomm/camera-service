@@ -29,6 +29,16 @@ struct OfflineCameraBufferParams {
   qmmf::recorder::VideoFormat format;
 };
 
+struct OfflineCameraInputParams {
+  uint32_t camera_id[2];
+  uint32_t width;
+  uint32_t height;
+};
+
+struct OfflineCameraOutputParams {
+  uint32_t size;
+};
+
 // Input parameters of offline camera create function
 // Currently, a maximum of two inputs are supported. The format of the inputs
 // must be the same, while other parameters can be different.

@@ -1234,6 +1234,32 @@ status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,
   return 0;
 }
 
+status_t RecorderImpl::GetOfflineParams(const uint32_t client_id,
+                                        const OfflineCameraInputParams &in_params,
+                                        OfflineCameraOutputParams &out_params) {
+  QMMF_DEBUG("%s Enter client_id(%u)", __func__, client_id);
+
+#ifdef ENABLE_OFFLINE_JPEG
+  assert(offline_process_ != nullptr);
+  if (!offline_process_->IsClientFound(client_id)) {
+    QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
+    return BAD_VALUE;
+  }
+  auto ret = offline_process_->GetParams(client_id, in_params, out_params);
+  if (ret != NO_ERROR) {
+    QMMF_ERROR("%s: get offline params failed!", __func__);
+    return ret;
+  }
+#else
+  QMMF_ERROR("Offline Process not supported on this platform");
+  return INVALID_OPERATION;
+#endif
+
+  QMMF_DEBUG("%s Exit client_id(%u)", __func__, client_id);
+  return NO_ERROR;
+}
+
+
 status_t RecorderImpl::CreateOfflineProcess(const uint32_t client_id,
                                       const OfflineCameraCreateParams& params) {
 

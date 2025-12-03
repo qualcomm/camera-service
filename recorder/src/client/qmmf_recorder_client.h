@@ -145,6 +145,9 @@ class RecorderClient {
 
   status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc);
 
+  status_t GetOfflineParams(const OfflineCameraInputParams &in_params,
+                            OfflineCameraOutputParams &out_params);
+
   status_t CreateOfflineProcess(const OfflineCameraCreateParams &params,
                                 const OfflineCameraCb &cb);
 

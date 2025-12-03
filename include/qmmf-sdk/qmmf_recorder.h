@@ -256,6 +256,15 @@ class Recorder {
   /// for each camera.
   status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta);
 
+  /// @brief Get Offline jpeg params
+  ///
+  /// Get some jpeg params according input jpeg params.
+  ///
+  /// @param in_params: input parameters, such as camera id, width, height.
+  /// @param out_params: returned parameters, such as jpeg size.
+  status_t GetOfflineJpegParams(const OfflineJpegInputParams &in_params,
+                                OfflineJpegOutputParams &out_params);
+
   /// @brief Create Offline JPEG
   ///
   /// When creation is ready, clients can submit requests

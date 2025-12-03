@@ -1727,6 +1727,25 @@ status_t RecorderClient::GetVendorTagDescriptor(std::shared_ptr<VendorTagDescrip
   return ret;
 }
 
+status_t RecorderClient::GetOfflineParams(const OfflineCameraInputParams &in_params,
+                                          OfflineCameraOutputParams &out_params) {
+  QMMF_DEBUG("%s Enter ", __func__);
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!CheckServiceStatus()) {
+    return NO_INIT;
+  }
+  assert(client_id_ > 0);
+
+  auto ret = recorder_service_->GetOfflineParams(client_id_,
+      in_params, out_params);
+  if (NO_ERROR != ret) {
+    QMMF_ERROR("%s GetOfflineParams failed!", __func__);
+  }
+
+  QMMF_DEBUG("%s Exit", __func__);
+  return ret;
+}
+
 status_t RecorderClient::CreateOfflineProcess(
                           const OfflineCameraCreateParams &params,
                           const OfflineCameraCb &cb) {
@@ -2773,6 +2792,36 @@ class BpRecorderService: public BpInterface<IRecorderService> {
     auto ret = reply.readInt32();
     if (0 == ret) {
       ret = desc->readFromParcel(&reply);
+    }
+    return ret;
+  }
+
+  status_t GetOfflineParams(const uint32_t client_id,
+                            const OfflineCameraInputParams &in_params,
+                            OfflineCameraOutputParams &out_params) {
+    Parcel data, reply;
+
+    data.writeInterfaceToken(IRecorderService::getInterfaceDescriptor());
+    data.writeUint32(client_id);
+
+    uint32_t in_params_size = sizeof (in_params);
+    data.writeUint32(in_params_size);
+    android::Parcel::WritableBlob blob;
+    data.writeBlob(in_params_size, false, &blob);
+    memcpy(blob.data(), &in_params, in_params_size);
+
+    remote()->transact(uint32_t(QMMF_RECORDER_SERVICE_CMDS::
+        RECORDER_GET_OFFLINE_PARAMS), data, &reply);
+
+    auto ret = reply.readInt32();
+    if (NO_ERROR == ret) {
+      uint32_t out_params_size;
+      reply.readUint32(&out_params_size);
+      assert(out_params_size == sizeof(out_params));
+
+      android::Parcel::ReadableBlob out_params_blob;
+      reply.readBlob(out_params_size, &out_params_blob);
+      memcpy(&out_params, out_params_blob.data(), out_params_size);
     }
     return ret;
   }

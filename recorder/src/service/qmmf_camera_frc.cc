@@ -43,8 +43,7 @@
 #ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
 #else
-#include "properties.h"
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 
 #include "common/utils/qmmf_log.h"

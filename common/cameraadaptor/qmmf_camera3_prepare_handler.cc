@@ -23,6 +23,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#define LOG_TAG "Camera3PrepareHandler"
+
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera3_prepare_handler.h"

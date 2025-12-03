@@ -38,7 +38,7 @@
 #include <fcntl.h>
 
 #ifdef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif // HAVE_BINDER
 #include "qmmf_gbm_interface.h"
 #include <qmmf-sdk/qmmf_recorder_params.h>

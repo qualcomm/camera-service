@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "UtilsThread"
+
 #include "qmmf_thread.h"
 
 #include <cerrno>

@@ -35,7 +35,7 @@
 #define LOG_TAG "RecorderImpl"
 
 #ifndef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 #include "recorder/src/service/qmmf_recorder_impl.h"
 

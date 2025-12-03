@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "RecorderExtraParam"
+
 #include <algorithm>
 
 #include "qmmf-sdk/qmmf_recorder_extra_param.h"

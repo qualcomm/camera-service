@@ -9,8 +9,8 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_condition.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_thread.cc
 )
 
-target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY})
-target_include_directories(qmmf_utils PRIVATE ${TOP_DIRECTORY}/common/memory)
+target_include_directories(qmmf_utils PUBLIC ${TOP_DIRECTORY})
+target_include_directories(qmmf_utils PUBLIC ${TOP_DIRECTORY}/common/memory)
 
 set_target_properties(qmmf_utils PROPERTIES
   VERSION ${PROJECT_VERSION}

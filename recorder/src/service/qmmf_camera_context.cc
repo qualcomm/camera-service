@@ -48,7 +48,7 @@
 #endif
 
 #ifndef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif // HAVE_BINDER
 #include "recorder/src/service/qmmf_camera_context.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
@@ -1155,7 +1155,7 @@ status_t CameraContext::CreateStream(const StreamParam& param,
     return -EINVAL;
   } else {
     std::lock_guard<std::mutex> lk(prepare_lock_);
-    char prop[PROP_VALUE_MAX];
+    char prop[QMMF_PROP_VAL_MAX];
 
     stream_id = port->GetCameraStreamId();
 #ifdef HAVE_BINDER

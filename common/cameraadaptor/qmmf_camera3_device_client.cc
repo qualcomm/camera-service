@@ -61,7 +61,7 @@
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera3_device_client.h"
 #ifndef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include "common/utils/qmmf_common_utils.h"

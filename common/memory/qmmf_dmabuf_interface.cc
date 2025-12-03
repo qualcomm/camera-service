@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#define LOG_TAG "DmabufInterface"
+
 #include "qmmf_dmabuf_interface.h"
 
 #include <dlfcn.h>

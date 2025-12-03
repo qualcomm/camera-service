@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "DualCameraAdaptorTest"
+
 #include <inttypes.h>
 #include "qmmf_dual_camera_adaptor_gtest.h"
 

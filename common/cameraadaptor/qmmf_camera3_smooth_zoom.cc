@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "Camera3SmoothZoom"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -38,8 +40,7 @@
 #ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
 #else
-#include "properties.h"
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 #include <qmmf_camera3_utils.h>
 #include <qmmf_camera3_device_client.h>

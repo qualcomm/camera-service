@@ -45,7 +45,7 @@
 #include "recorder/src/service/qmmf_recorder_utils.h"
 
 #ifndef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 #include "common/resizer-neon/qmmf_resizer_neon.h"
 #include "common/resizer-c2d/qmmf_resizer_c2d.h"
@@ -68,7 +68,7 @@ using ::std::chrono::duration_cast;
 CameraRescalerBase::CameraRescalerBase()
     :CameraRescalerThread() {
   QMMF_INFO("%s: Enter", __func__);
-  char prop[PROP_VALUE_MAX];
+  char prop[QMMF_PROP_VAL_MAX];
   memset(prop, 0, sizeof(prop));
 #ifdef HAVE_BINDER
 #ifdef ENABLE_RESCALER_NEON

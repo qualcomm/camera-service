@@ -63,7 +63,7 @@
 #endif
 
 #ifndef HAVE_BINDER
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include "recorder/src/client/qmmf_recorder_client.h"

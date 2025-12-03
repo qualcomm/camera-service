@@ -44,10 +44,11 @@
 #include <cutils/trace.h>
 #else
 #include <syslog.h>
-#include "properties.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstdint>
+#include "common/config/qmmf_config.h"
 #endif
 
 #undef assert
@@ -74,7 +75,7 @@ int qmmf_property_set(const char *key, const char *value);
 #ifdef HAVE_ANDROID_UTILS
 #define QMMF_GET_LOG_LEVEL()                               \
   ({                                                       \
-    char prop[PROPERTY_VALUE_MAX];                         \
+    char prop[QMMF_PROP_VAL_MAX];                         \
     property_get("persist.qmmf.sdk.log.level", prop, "0"); \
     qmmf_log_level = atoi(prop);                           \
   })
@@ -84,7 +85,7 @@ int qmmf_property_set(const char *key, const char *value);
 #else
 #define QMMF_GET_LOG_LEVEL()                               \
   ({                                                       \
-    char prop[PROP_VALUE_MAX];                         \
+    char prop[QMMF_PROP_VAL_MAX];                         \
     qmmf_property_get("persist.qmmf.sdk.log.level", prop, "0"); \
     qmmf_log_level = atoi(prop);                           \
   })
@@ -123,7 +124,7 @@ property_get("persist.qmmf.kpi.debug", prop, std::to_string(BASE_KPI_FLAG).c_str
 kpi_debug_level = atoi (prop);})
 #else
 #define QMMF_KPI_GET_MASK() ({\
-char prop[PROP_VALUE_MAX];\
+char prop[QMMF_PROP_VAL_MAX];\
 qmmf_property_get("persist.qmmf.kpi.debug", prop,\
   std::to_string(DEFAULT_KPI_FLAG).c_str()); \
 kpi_debug_level = atoi (prop);})

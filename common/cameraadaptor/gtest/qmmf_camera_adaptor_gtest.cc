@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "CameraAdaptorTest"
+
 #include <inttypes.h>
 #include <sys/time.h>
 #include <math.h>

@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_utils VERSION 1.0)
 
 if (NOT QMMF_UTILS_ENABLED)

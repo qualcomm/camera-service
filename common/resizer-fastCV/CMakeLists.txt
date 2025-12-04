@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_common_resizer_fastcv)
 
 if (NOT RESIZER_FASTCV_ENABLED)

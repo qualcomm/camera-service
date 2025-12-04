@@ -1,8 +1,6 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_camera_adaptor_gtest)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 if (NOT CAMERAADAPTOR_GTEST_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)

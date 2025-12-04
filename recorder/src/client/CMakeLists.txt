@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_recorder_client)
 
 if (NOT RECORDER_CLIENT_ENABLED)

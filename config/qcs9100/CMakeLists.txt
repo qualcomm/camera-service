@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(config-qcs9100)
 
 # Check whether GBM header is present.

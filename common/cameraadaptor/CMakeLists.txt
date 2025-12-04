@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_camera_adaptor VERSION 1.0)
 
 if (NOT CAMERAADAPTOR_ENABLED)

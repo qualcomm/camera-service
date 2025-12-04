@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(config-kalama)
 
 set(PLATFORM_CXX_FLAGS "${PLATFORM_CXX_FLAGS} -DTARGET_ION_ABI_VERSION=2")

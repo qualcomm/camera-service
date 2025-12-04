@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_common_resizer_neon)
 
 if (NOT RESIZER_NEON_ENABLED)

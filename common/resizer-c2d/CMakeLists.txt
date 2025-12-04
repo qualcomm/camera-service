@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(qmmf_common_resizer_c2d)
 
 add_library(qmmf_common_resizer_c2d SHARED ${exclude}

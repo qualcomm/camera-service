@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-
 project(cam-server)
 
 if (NOT QMMF_SERVER_ENABLED)

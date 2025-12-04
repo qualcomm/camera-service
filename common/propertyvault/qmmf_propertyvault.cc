@@ -3,7 +3,9 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
-#include "common/utils/qmmf_common_utils.h"
+#include <dlfcn.h>
+
+#include "common/utils/qmmf_log.h"
 
 using property_get_fnp = decltype(property_get);
 using property_set_fnp = decltype(property_set);

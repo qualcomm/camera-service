@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,58 +33,45 @@
 
 #pragma once
 
-
-#include "qmmf-sdk/qmmf_recorder_params.h"
-#include "common/utils/qmmf_common_utils_defs.h"
-#include "common/utils/qmmf_log.h"
-
-#include "recorder/src/client/qmmf_recorder_service_intf.h"
-#include "recorder/src/service/qmmf_remote_cb.h"
-
-#ifdef HAVE_BINDER
-#define FRAME_DUMP_PATH        "/data/misc/qmmf"
-#else
-#define FRAME_DUMP_PATH        "/var/tmp/qmmf"
-#endif // HAVE_BINDER
-
-#define FPS_TIME_INTERVAL 3000000
-
-#define REMAP_ALL_BUFFERS 0x55555555
-
-// Enable DUMP_BITSTREAM to enable encoded data at TrackEncoder layer.
-//#define DUMP_BITSTREAM
-
-// Prop to enable debugging FPS
-#define PROP_DEBUG_FPS        "persist.qmmf.rec.debug.fps"
+#include "qmmf_memory_interface_defs.h"
 
 namespace qmmf {
 
-namespace recorder {
+const int64_t kWaitDelay = 2000000000;  // 2 sec
+const uint32_t kMaxSocketBufSize = 300000;
 
-typedef std::function<void(std::vector<BnBuffer>& buffers,
-    std::vector<BufferMeta>& metas)> BnBufferCallback;
+struct StreamBuffer {
+  BufferMeta info;
+  int64_t  timestamp;
+  uint32_t frame_number;
+  uint32_t camera_id;
+  int32_t  stream_id;
+  uint64_t data_space;
+  IBufferHandle handle;
+  int32_t fd;
+  uint32_t size;
+  int32_t metafd;
+  void *data;
+  uint32_t flags;
+  bool second_thumb;
+  bool in_use_camera;
+  bool in_use_client;
 
-typedef std::function<void(uint32_t camera_id, uint32_t imgcount,
-    BnBuffer& buffer, BufferMeta& meta)>  SnapshotCb;
+  ::std::string ToString() const {
+    ::std::stringstream stream;
+    stream << "camera[" << camera_id << "] ";
+    stream << "stream[" << stream_id << "] ";
+    stream << "data[" << data << "] ";
+    stream << "fd[" << fd << "] ";
+    stream << "size[" << size << "] ";
+    stream << "timestamp[" << timestamp << "] ";
+    stream << "flags[" << ::std::setbase(16) << flags << ::std::setbase(10)
+           << "]";
+    stream << "second_thumb[" << second_thumb << "] ";
+    stream << "in_use_client[" << in_use_client << "] ";
+    stream << "in_use_camera[" << in_use_camera << "] ";
+    return stream.str();
+  }
+};
 
-typedef std::function<void(uint32_t image_id, uint32_t imgcount,
-    StreamBuffer& buffer)> StreamSnapshotCb;
-
-typedef std::function<void(uint32_t camera_id,
-    const CameraMetadata &result)> ResultCb;
-
-#ifdef HAVE_ANDROID_UTILS
-typedef std::function< const sp<RemoteCallBack>& (uint32_t client_id)>
-    RemoteCallbackHandle;
-#else
-typedef std::function< const std::shared_ptr<RemoteCallBack>& (uint32_t client_id)>
-    RemoteCallbackHandle;
-#endif // HAVE_ANDROID_UTILS
-
-typedef std::function<void(uint32_t camera_id, int32_t errcode)> ErrorCb;
-
-typedef std::function<void(uint32_t camera_id, int32_t errcode)> SystemCb;
-
-}; //namespace recorder.
-
-}; //namespace qmmf.
+};  // namespace qmmf.

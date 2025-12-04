@@ -845,19 +845,21 @@ status_t RecorderService::ReadRequest (int socket, void *buffer, size_t size) {
   ssize_t bytes_read = recv(socket, buffer, size, 0);
 
   if (bytes_read > 0) {
-    QMMF_VERBOSE("%s: read %ld bytes from client socket: %d",
-                 __func__, bytes_read, socket);
-    return bytes_read;
+    QMMF_VERBOSE("%s: read %zd bytes from client socket: %d",
+        __func__, bytes_read, socket);
+    return static_cast<status_t>(bytes_read);
   }
 
   if (bytes_read == -1) {
     QMMF_ERROR("%s: Receive failed: %s", __func__, strerror(errno));
     return -errno;
   } else if (bytes_read == 0) {
-    QMMF_ERROR("%s: connection closed: %d ", __func__, socket);
+    QMMF_ERROR("%s: connection closed: %d", __func__, socket);
     CheckClientDeath(client_sockets_[socket]);
     return 0;
   }
+
+  return -EINVAL;
 }
 
 status_t RecorderService::SendResponse (int socket, void *buffer, size_t size) {

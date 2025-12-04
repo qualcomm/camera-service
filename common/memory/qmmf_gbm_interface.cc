@@ -406,6 +406,13 @@ GBMDevice::GBMDevice() {
     QMMF_WARN("%s: Falling back to /dev/dma_heap/qcom,system \n", __func__);
     gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
   }
+
+  if (gbm_fd_ < 0) {
+    QMMF_WARN ("%s: Failed to open /dev/dma_heap/qcom,system, "
+      "Falling back to /dev/dma_heap/system", __func__);
+    gbm_fd_ = open ("/dev/dma_heap/system", O_RDONLY | O_CLOEXEC);
+  }
+
   if (gbm_fd_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/ion \n", __func__);
     gbm_fd_ = open("/dev/ion", O_RDONLY | O_CLOEXEC);

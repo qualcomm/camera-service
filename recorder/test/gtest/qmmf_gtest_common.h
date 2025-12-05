@@ -93,9 +93,9 @@
 #endif  // QCAMERA3_TAG_LOCAL_COPY
 
 //#define DEBUG
-#define TEST_INFO(fmt, args...)  ALOGD(fmt, ##args)
-#define TEST_ERROR(fmt, args...) ALOGE(fmt, ##args)
-#define TEST_WARN(fmt, args...) ALOGW(fmt, ##args)
+#define TEST_INFO(fmt, args...)  QMMF_INFO(fmt, ##args)
+#define TEST_ERROR(fmt, args...) QMMF_ERROR(fmt, ##args)
+#define TEST_WARN(fmt, args...) QMMF_WARN(fmt, ##args)
 #ifdef DEBUG
 #define TEST_DBG  TEST_INFO
 #else
@@ -821,4 +821,3 @@ class GtestCommon : public ::testing::Test {
     }
   } test_wait_;
 };
-

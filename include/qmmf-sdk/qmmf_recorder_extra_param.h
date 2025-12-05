@@ -45,12 +45,6 @@
 #include <vector>
 #include <map>
 
-#ifdef HAVE_ANDROID_UTILS
-#include <utils/Log.h>
-#else
-#include <log.h>
-#endif
-
 namespace qmmf {
 
 namespace recorder {
@@ -119,13 +113,11 @@ class ExtraParam {
 
     DataTagBase base_data = static_cast<DataTagBase>(data);
     if (!base_data.IsValidTag(tag)) {
-      ALOGE("%s: This data does not belong to tag %d!", __func__, tag);
       return -EINVAL;
     }
 
     auto ret = FillDataEntry(tag, entry, data);
     if (0 != ret) {
-      ALOGE("%s: Failed to fill data entry!", __func__);
       return ret;
     }
     return 0;
@@ -143,18 +135,15 @@ class ExtraParam {
 
     DataTagBase base_data = static_cast<DataTagBase>(data);
     if (!base_data.IsValidTag(tag)) {
-      ALOGE("%s: This data does not belong to tag %d!", __func__, tag);
       return -EINVAL;
     }
 
     if (data_map_.count(tag) == 0) {
-      ALOGE("%s: No entry for tag %d!", __func__, tag);
       return -ENOENT;
     }
 
     auto ret = FetchDataEntry(tag, entry, data);
     if (0 != ret) {
-      ALOGE("%s: Failed to get data entry!", __func__);
       return ret;
     }
     return 0;
@@ -227,7 +216,6 @@ class ExtraParam {
   int32_t FillDataEntry(uint32_t &tag, uint32_t &entry, const T &data) {
 
     if (locked_) {
-      ALOGE("%s: Can't add tag entry to a locked Container!", __func__);
       return -EPERM;
     }
 
@@ -246,8 +234,6 @@ class ExtraParam {
       if (it == data_map_.end()) {
         // Neither tag nor entry exist in the map, add them.
         if (0 != entry) {
-          ALOGE("%s: Invalid entry number! Entries must be subsequent!",
-              __func__);
           return -EINVAL;
         }
         std::vector<uintptr_t> v(1, entry_offset);
@@ -255,8 +241,6 @@ class ExtraParam {
       } else if (it != data_map_.end() && it->second.size() <= entry) {
         // Tag exist in the map, but the entry does not.
         if ((it->second.size() - entry) > 1) {
-          ALOGE("%s: Invalid entry number! Entries must be subsequent!",
-              __func__);
           return -EINVAL;
         }
         data_map_.at(tag).emplace_back(entry_offset);

@@ -845,7 +845,7 @@ status_t RecorderService::ReadRequest (int socket, void *buffer, size_t size) {
   ssize_t bytes_read = recv(socket, buffer, size, 0);
 
   if (bytes_read > 0) {
-    QMMF_VERBOSE("%s: read %d bytes from client socket: %d",
+    QMMF_VERBOSE("%s: read %ld bytes from client socket: %d",
                  __func__, bytes_read, socket);
     return bytes_read;
   }
@@ -1312,7 +1312,7 @@ void RecorderService::ParseRequest(int client_socket,
   size_t buf_size = size;
   auto buf_ptr = recv_buf;
   while (buf_size > 0) {
-    QMMF_VERBOSE("%s: buf_size: %d", __func__, buf_size);
+    QMMF_VERBOSE("%s: buf_size: %ld", __func__, buf_size);
     uint32_t msg_size = *(reinterpret_cast<uint32_t *>(buf_ptr));
     // Moving past the size
     buf_ptr += 4;
@@ -2131,7 +2131,7 @@ status_t RecorderServiceCallbackProxy::Init (uint32_t client_id) {
   }
 
   client_id_ = client_id;
-  QMMF_INFO("%s: Exit client_id(%d) (0x%p)", __func__, client_id_);
+  QMMF_INFO("%s: Exit client_id(%d) (0x%x)", __func__, client_id_, client_id_);
   return 0;
 }
 
@@ -2211,7 +2211,7 @@ void RecorderServiceCallbackProxy::SendCallbackData(RecorderClientCallbacksAsync
     QMMF_ERROR("%s: sendmsg failed: %s", __func__, strerror(errno));
     close(callback_socket_);
   } else {
-    QMMF_DEBUG("%s: Sent %zd bytes (expected %u)", __func__, bytes_sent, buf_size);
+    QMMF_DEBUG("%s: Sent %zd bytes (expected %lu)", __func__, bytes_sent, buf_size);
   }
 
   QMMF_DEBUG("%s Exit", __func__);

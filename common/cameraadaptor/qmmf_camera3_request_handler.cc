@@ -986,7 +986,7 @@ bool Camera3RequestHandler::RequestStreamGetProcess(
       }
 
       QMMF_VERBOSE("%s:Framesel:stream_num (%d) found_video_stream (%d)"
-          " cur_state (%d) next_state (%d) current frame (%d)",
+          " cur_state (%d) next_state (%d) current frame (%ld)",
           __func__, stream_num, found_video_stream,
           cur_state, next_state, frame_number);
       cur_state = cam_reqmode_params_.frame_selection.cur_state;

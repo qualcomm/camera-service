@@ -245,7 +245,7 @@ bool CameraRescalerBase::ThreadLoop() {
     time_point<high_resolution_clock> curr_time = high_resolution_clock::now();
     uint64_t time_diff = duration_cast<microseconds>
                              (curr_time - start_time).count();
-    QMMF_INFO("%s: stream_id(%d) Full ProcessingTime=%lld",
+    QMMF_INFO("%s: stream_id(%d) Full ProcessingTime=%ld",
         __func__, in_buffer.stream_id, time_diff);
   }
 

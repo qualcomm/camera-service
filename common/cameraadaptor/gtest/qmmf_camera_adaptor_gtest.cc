@@ -580,8 +580,8 @@ int32_t Camera3Gtest::StoreBuffer(std::string &path, uint64_t &idx,
                           buffer.info.planes[0].height,
                           (void **)&mapped_buffer);
     if ((MemAllocError::kAllocOk != mret) || (NULL == mapped_buffer)) {
-      printf("%s: Unable to map buffer: %p res: %d\n", __func__,
-             mapped_buffer, mret);
+      printf("%s: Unable to map buffer: %p res: %ld\n", __func__,
+             mapped_buffer, static_cast<int64_t>(mret));
       return -1;
     }
 
@@ -612,8 +612,8 @@ int32_t Camera3Gtest::StoreBuffer(std::string &path, uint64_t &idx,
                           buffer.info.planes[0].height,
                           (void **)&mapped_buffer);
     if ((MemAllocError::kAllocOk != mret) || (NULL == mapped_buffer)) {
-      printf("%s: Unable to map buffer: %p res: %d\n", __func__,
-             mapped_buffer, mret);
+      printf("%s: Unable to map buffer: %p res: %ld\n", __func__,
+             mapped_buffer, static_cast<int64_t>(mret));
       return -1;
     }
 
@@ -690,7 +690,7 @@ TEST_F(Camera3Gtest, Video1080pManualExposure) {
   uint8_t aeMode =  ANDROID_CONTROL_AE_MODE_OFF;
   videoRequest.metadata.update(ANDROID_CONTROL_AE_MODE, &aeMode, 1);
 
-  printf("Manual Exposure Time: %lld\n", exposureTime);
+  printf("Manual Exposure Time: %ld\n", exposureTime);
   videoRequest.metadata.update(ANDROID_SENSOR_EXPOSURE_TIME, &exposureTime, 1);
 
   ret = device_client_->SubmitRequest(videoRequest, true, &lastFrameNumber);
@@ -703,7 +703,7 @@ TEST_F(Camera3Gtest, Video1080pManualExposure) {
   dump_yuv_ = true;
 
   exposureTime = 30000000;
-  printf("Manual Exposure Time: %lld\n", exposureTime);
+  printf("Manual Exposure Time: %ld\n", exposureTime);
   videoRequest.metadata.update(ANDROID_SENSOR_EXPOSURE_TIME, &exposureTime, 1);
 
   ret = device_client_->SubmitRequest(videoRequest, true, &lastFrameNumber);

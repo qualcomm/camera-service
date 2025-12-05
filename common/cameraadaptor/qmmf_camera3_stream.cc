@@ -539,16 +539,16 @@ int32_t Camera3Stream::PopulateBufferMeta(BufferMeta &info,
                                       static_cast<void*>(&stride));
 
   if (MemAllocError::kAllocOk != ret) {
-    QMMF_ERROR("%s: Error in GetStrideAndHeightFromHandle() : %d\n", __func__,
-               ret);
+    QMMF_ERROR("%s: Error in GetStrideAndHeightFromHandle() : %ld\n", __func__,
+               static_cast<int64_t>(ret));
     return -EINVAL;
   }
   ret = mem_alloc_interface_->Perform(handle,
                             IAllocDevice::AllocDeviceAction::GetAlignedHeight,
                             static_cast<void*>(&scanline));
   if (MemAllocError::kAllocOk != ret) {
-    QMMF_ERROR("%s: Error in GetStrideAndHeightFromHandle() : %d\n", __func__,
-               ret);
+    QMMF_ERROR("%s: Error in GetStrideAndHeightFromHandle() : %ld\n", __func__,
+               static_cast<int64_t>(ret));
     return -EINVAL;
   }
 
@@ -929,7 +929,7 @@ void Camera3Stream::ReturnBufferToClient(const camera3_stream_buffer &buffer,
     callbacks_(b);
   } else {
     QMMF_WARN("%s: Got buffer(%p) from stream(%d), frame_number(%u) and "
-        " ts(%lld) with error status!", __func__, b.handle, b.stream_id,
+        " ts(%ld) with error status!", __func__, b.handle, b.stream_id,
         b.frame_number, b.timestamp);
     ReturnBuffer(b);
   }
@@ -1126,7 +1126,7 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     }
 #endif
 
-    QMMF_INFO("%s: Select Colorimetry = %d", __func__, colorimetry);
+    QMMF_INFO("%s: Select Colorimetry = %ld", __func__, static_cast<int64_t>(colorimetry));
 
     MemAllocError ret = mem_alloc_interface_->AllocBuffer(
         handle,
@@ -1240,7 +1240,7 @@ int32_t Camera3Stream::CloseLocked() {
   }
 
   if (pending_buffer_count_ > 0) {
-    QMMF_ERROR("%s: Can't disconnect with %zu buffers still dequeued!\n",
+    QMMF_ERROR("%s: Can't disconnect with %u buffers still dequeued!\n",
                __func__, pending_buffer_count_);
     auto it = mem_alloc_buffers_.begin();
     int32_t i = 0;

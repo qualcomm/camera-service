@@ -95,8 +95,8 @@ void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
                             buffer.info.planes[0].height,
                             (void **)&mappedBuffer);
     if ((MemAllocError::kAllocOk != mret) || (NULL == mappedBuffer)) {
-       printf("%s: Unable to map buffer: %p res: %d\n", __func__,
-             mappedBuffer, mret);
+       printf("%s: Unable to map buffer: %p res: %ld\n", __func__,
+             mappedBuffer, static_cast<int64_t>(ret));
     }
     uint64_t size = buffer.size;
     if ((file != nullptr) && (mappedBuffer != nullptr) && (size
@@ -108,8 +108,8 @@ void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
     mret = device_client_->alloc_device_interface_->UnmapBuffer(
                                                             buffer.handle);
     if (MemAllocError::kAllocOk != mret) {
-       printf("%s: Unable to unmap buffer: %p res: %d\n", __func__,
-             mappedBuffer, mret);
+       printf("%s: Unable to unmap buffer: %p res: %ld\n", __func__,
+             mappedBuffer, static_cast<int64_t>(mret));
     }
   }
 #else

@@ -6,6 +6,12 @@ include_directories(${Protobuf_INCLUDE_DIR})
 
 add_library(qmmf_proto SHARED ${exclude} qmmf.pb.cc)
 
+file(MD5 "${CMAKE_CURRENT_SOURCE_DIR}/qmmf.proto" PROTO_FILE_MD5)
+
+message(STATUS "MD5(qmmf.proto) = ${PROTO_FILE_MD5}")
+
+set(QMMF_CURRENT_INTERFACE_VER "${PROTO_FILE_MD5}" PARENT_SCOPE)
+
 protobuf_generate(TARGET qmmf_proto
     PROTOC_OUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}
     PROTOS qmmf.proto)

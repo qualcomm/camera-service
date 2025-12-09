@@ -1289,6 +1289,18 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     meta.unlock(meta_buffer);
     break;
   }
+  case RECORDER_SERVICE_CMDS::RECORDER_GET_SUPPORTED_INTERFACE_VER:
+  {
+    // sending response
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_GET_SUPPORTED_INTERFACE_VER);
+    resp_msg.set_status(0);
+
+    // Add here MD5 sums of more supported qmmf.proto contents
+    resp_msg.mutable_get_supported_interface_ver_resp()->
+        add_vers(QMMF_CURRENT_INTERFACE_VER);
+    break;
+  }
 
   default:
     QMMF_WARN ("%s: cmd: %u, Not sending.", __func__, req_msg.command());

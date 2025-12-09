@@ -132,10 +132,12 @@ endif()
 if (NOT HAVE_BINDER_H)
 target_link_libraries(qmmf_recorder_service qmmf_proto)
 
+target_compile_definitions(qmmf_recorder_service PRIVATE
+  "-DQMMF_CURRENT_INTERFACE_VER=\"${QMMF_CURRENT_INTERFACE_VER}\"")
+
 include(CMakePrintHelpers)
 cmake_print_properties(
     TARGETS qmmf_recorder_service
     PROPERTIES MANUALLY_ADDED_DEPENDENCIES INCLUDE_DIRECTORIES
 )
 endif()
-

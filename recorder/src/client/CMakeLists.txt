@@ -58,4 +58,8 @@ endif()
 
 if(NOT HAVE_BINDER_H)
 target_link_libraries(qmmf_recorder_client qmmf_proto)
+
+target_compile_definitions(qmmf_recorder_client PRIVATE
+  "-DQMMF_CURRENT_INTERFACE_VER=\"${QMMF_CURRENT_INTERFACE_VER}\"")
+
 endif()

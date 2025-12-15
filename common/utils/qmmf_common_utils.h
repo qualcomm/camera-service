@@ -53,13 +53,11 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 
-#ifdef QMMF_SERVER_ENABLED
 #ifndef CAMERA_HAL1_SUPPORT
 #include <hardware/camera3.h>
 #endif //CAMERA_HAL1_SUPPORT
 
 #include <hardware/camera_common.h>
-#endif //QMMF_SERVER_ENABLED
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
@@ -70,6 +68,7 @@
 #endif // !HAVE_BINDER
 #include "common/utils/qmmf_condition.h"
 #include "qmmf_memory_interface.h"
+#include "common/utils/qmmf_common_utils_defs.h"
 
 namespace qmmf {
 
@@ -80,10 +79,6 @@ using namespace recorder;
 
 typedef int32_t status_t;
 
-const int64_t kWaitDelay = 2000000000;  // 2 sec
-const uint32_t kMaxSocketBufSize = 300000;
-
-#ifdef QMMF_SERVER_ENABLED
 class CameraModule {
 private:
 
@@ -163,41 +158,6 @@ public:
     }
   }
 };
-#endif //QMMF_SERVER_ENABLED
-
-struct StreamBuffer {
-  BufferMeta info;
-  int64_t  timestamp;
-  uint32_t frame_number;
-  uint32_t camera_id;
-  int32_t  stream_id;
-  android_dataspace data_space;
-  IBufferHandle handle;
-  int32_t fd;
-  uint32_t size;
-  int32_t metafd;
-  void *data;
-  uint32_t flags;
-  bool second_thumb;
-  bool in_use_camera;
-  bool in_use_client;
-
-  ::std::string ToString() const {
-    ::std::stringstream stream;
-    stream << "camera[" << camera_id << "] ";
-    stream << "stream[" << stream_id << "] ";
-    stream << "data[" << data << "] ";
-    stream << "fd[" << fd << "] ";
-    stream << "size[" << size << "] ";
-    stream << "timestamp[" << timestamp << "] ";
-    stream << "flags[" << ::std::setbase(16) << flags << ::std::setbase(10)
-           << "]";
-    stream << "second_thumb[" << second_thumb << "] ";
-    stream << "in_use_client[" << in_use_client << "] ";
-    stream << "in_use_camera[" << in_use_camera << "] ";
-    return stream.str();
-  }
-};
 
 struct ReprocEntry {
   StreamBuffer    buffer;
@@ -205,7 +165,6 @@ struct ReprocEntry {
   int64_t         timestamp;
 };
 
-#ifdef QMMF_SERVER_ENABLED
 inline void get_qmmf_property(const char *key, char *value, const char *default_value) {
 #ifdef HAVE_BINDER
     property_get(key, value, default_value);
@@ -244,11 +203,6 @@ class Property {
     s << default_value;
 
     get_qmmf_property(property.c_str(), prop_val, s.str().c_str());
-//#ifdef HAVE_BINDER
-//    property_get(property.c_str(), prop_val, s.str().c_str());
-//#else
-//    qmmf_property_get(property.c_str(), prop_val, s.str().c_str());
-//#endif // HAVE_BINDER
 
     std::stringstream output(prop_val);
     output >> value;
@@ -272,7 +226,6 @@ class Property {
     set_qmmf_property(property.c_str(), s.str().c_str());
   }
 };
-#endif //QMMF_SERVER_ENABLED
 
 class Common {
  public:

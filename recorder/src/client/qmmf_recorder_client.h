@@ -49,7 +49,7 @@
 #include <gbm_priv.h>
 #endif // USE_LIBGBM
 
-#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils_defs.h"
 #include "common/utils/qmmf_log.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 

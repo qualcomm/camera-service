@@ -84,6 +84,10 @@ endif()
 
 include_directories(${TOP_DIRECTORY}/include)
 
+if (NOT HAVE_BINDER_H)
+add_subdirectory(common/proto)
+endif()
+
 add_subdirectory(qmmf-server)
 
 add_subdirectory(common/camera-meta)
@@ -122,7 +126,3 @@ if (NOT HAVE_ANDROID_UTILS)
 add_subdirectory(common/propertyvault)
 endif()
 add_subdirectory(common/utils)
-
-if (NOT HAVE_BINDER_H)
-add_subdirectory(common/proto)
-endif()

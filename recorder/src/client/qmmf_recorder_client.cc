@@ -56,6 +56,7 @@
 #include <sys/un.h>
 #include <thread>
 #include <unistd.h>
+#include <unordered_set>
 #endif // HAVE_BINDER
 
 #if TARGET_ION_ABI_VERSION >= 2
@@ -158,12 +159,53 @@ class RecorderServiceProxy: public IRecorderService {
 
     RecorderClientReqMsg cmd;
     status_t ret;
-    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONNECT);
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_GET_SUPPORTED_INTERFACE_VER);
     ret = SendRequest(cmd);
     if (ret != 0)
       return ret;
 
     RecorderClientRespMsg resp;
+    ret = RecvResponse(resp);
+    if (ret != 0)
+      return ret;
+
+    ret = resp.status();
+    if (ret != 0)
+      return ret;
+
+    // Add here MD5 sums of more supported qmmf.proto contents
+    const std::unordered_set<std::string_view> kSupportedInterfaceVersions = {
+      QMMF_CURRENT_INTERFACE_VER
+    };
+
+    bool found = false;
+    for (auto i = 0; i < resp.get_supported_interface_ver_resp().vers_size(); ++i) {
+      const std::string& ver = resp.get_supported_interface_ver_resp().vers(i);
+      if (kSupportedInterfaceVersions.find(ver) != kSupportedInterfaceVersions.end()) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      QMMF_ERROR ("%s: Not compatible server interface", __func__);
+      QMMF_INFO ("%s: Supported server interface versions:", __func__);
+      for (auto i = 0; i < resp.get_supported_interface_ver_resp().vers_size(); ++i) {
+        const std::string& ver = resp.get_supported_interface_ver_resp().vers(i);
+        QMMF_INFO ("%s: \t %s", __func__, ver.c_str());
+      }
+      QMMF_INFO ("%s: Supported client interface versions:", __func__);
+      for (const auto& ver : kSupportedInterfaceVersions) {
+        QMMF_INFO ("%s: \t %.*s", __func__, static_cast<int>(ver.size()), ver.data());
+      }
+      return -1;
+    }
+
+    cmd.set_command(RECORDER_SERVICE_CMDS::RECORDER_CONNECT);
+    ret = SendRequest(cmd);
+    if (ret != 0)
+      return ret;
+
     ret = RecvResponse(resp);
     if (ret != 0)
       return ret;

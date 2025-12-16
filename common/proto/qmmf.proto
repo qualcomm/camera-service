@@ -2,13 +2,13 @@ syntax = "proto3";
 
 // Events
 enum EventTypeMsg {
-  EVENT_UNKNOWN       = 0;
-  EVENT_SERVERDIED    = 1;
-  EVENT_CAMERAERROR   = 2;
-  EVENT_CAMERAOPEN  = 3;
+  EVENT_UNKNOWN = 0;
+  EVENT_SERVERDIED = 1;
+  EVENT_CAMERAERROR = 2;
+  EVENT_CAMERAOPEN = 3;
   EVENT_CAMERACLOSING = 4;
-  EVENT_CAMERACLOSED  = 5;
-  EVENT_FRAMEERROR    = 6;
+  EVENT_CAMERACLOSED = 5;
+  EVENT_FRAMEERROR = 6;
   EVENT_METADATAERROR = 7;
 }
 
@@ -42,38 +42,38 @@ message PlaneInfoMsg {
 
 message BufferMetaMsg {
   BufferFormatMsg format = 1;
-  uint32     n_planes = 2;
+  uint32 n_planes = 2;
   repeated PlaneInfoMsg info = 3;
 }
 
 message BufferInfoMsg {
-  int32   ion_fd = 1;
-  int32   ion_meta_fd = 2;
-  int32   img_id = 3;
-  uint32  size = 4;
-  uint64  timestamp = 5;
-  uint64  seqnum = 6;
-  uint32  buffer_id = 7;
-  uint64  flags = 8;
-  uint32  capacity = 9;
+  int32 ion_fd = 1;
+  int32 ion_meta_fd = 2;
+  int32 img_id = 3;
+  uint32 size = 4;
+  uint64 timestamp = 5;
+  uint64 seqnum = 6;
+  uint32 buffer_id = 7;
+  uint64 flags = 8;
+  uint32 capacity = 9;
 }
 
 // Video Related
 enum VideoFormatMsg {
-  VIDOE_FORMAT_JPEG = 0;
-  VIDOE_FORMAT_RGB = 1;
-  VIDOE_FORMAT_NV12 = 2;
-  VIDOE_FORMAT_NV12UBWC = 3;
-  VIDOE_FORMAT_NV16 = 4;
-  VIDOE_FORMAT_YUY2 = 5;
-  VIDOE_FORMAT_UYVY = 6;
-  VIDOE_FORMAT_P010 = 7;
-  VIDOE_FORMAT_TP10UBWC = 8;
-  VIDOE_FORMAT_BAYERIDEAL = 9;
-  VIDOE_FORMAT_BAYERRDI8BIT = 10;
-  VIDOE_FORMAT_BAYERRDI10BIT = 11;
-  VIDOE_FORMAT_BAYERRDI12BIT = 12;
-  VIDOE_FORMAT_BAYERRDI16BIT = 13;
+  VIDEO_FORMAT_JPEG = 0;
+  VIDEO_FORMAT_RGB = 1;
+  VIDEO_FORMAT_NV12 = 2;
+  VIDEO_FORMAT_NV12UBWC = 3;
+  VIDEO_FORMAT_NV16 = 4;
+  VIDEO_FORMAT_YUY2 = 5;
+  VIDEO_FORMAT_UYVY = 6;
+  VIDEO_FORMAT_P010 = 7;
+  VIDEO_FORMAT_TP10UBWC = 8;
+  VIDEO_FORMAT_BAYERIDEAL = 9;
+  VIDEO_FORMAT_BAYERRDI8BIT = 10;
+  VIDEO_FORMAT_BAYERRDI10BIT = 11;
+  VIDEO_FORMAT_BAYERRDI12BIT = 12;
+  VIDEO_FORMAT_BAYERRDI16BIT = 13;
 }
 
 enum RotationMsg {
@@ -84,10 +84,10 @@ enum RotationMsg {
 }
 
 enum VideoFlagsMsg {
-  VIDEO_FLAG_NONE     = 0;
-  VIDEO_FLAG_IAEC     = 1;
+  VIDEO_FLAG_NONE = 0;
+  VIDEO_FLAG_IAEC = 1;
   VIDEO_FLAG_UNCACHED = 2;
-  VIDEO_FLAG_PREVIEW  = 3;
+  VIDEO_FLAG_PREVIEW = 3;
 }
 
 enum VIDEO_PARAM {
@@ -96,14 +96,14 @@ enum VIDEO_PARAM {
 }
 
 message VideoTrackParamMsg {
-  uint32    camera_id = 1;
-  uint32    width = 2;
-  uint32    height = 3;
-  float     framerate = 4;
+  uint32 camera_id = 1;
+  uint32 width = 2;
+  uint32 height = 3;
+  float framerate = 4;
   VideoFormatMsg format = 5;
-  RotationMsg    rotation = 6;
-  uint32      xtrabufs = 7;
-  VideoFlagsMsg  flags = 8;
+  RotationMsg rotation = 6;
+  uint32 xtrabufs = 7;
+  VideoFlagsMsg flags = 8;
 }
 
 // Image related
@@ -125,12 +125,12 @@ enum ImageFormatMsg {
 }
 
 message ImageParamMsg {
-  ImageModeMsg   mode = 1;
-  uint32    width = 2;
-  uint32    height = 3;
+  ImageModeMsg mode = 1;
+  uint32 width = 2;
+  uint32 height = 3;
   ImageFormatMsg format = 4;
-  uint32    quality = 5;
-  RotationMsg    rotation = 6;
+  uint32 quality = 5;
+  RotationMsg rotation = 6;
 }
 
 // TODO: Extra param related (check if required)
@@ -142,13 +142,13 @@ message ExtraParamMsg {
 
 // Offline JPEG
 message OfflineJpegBufferParamsMsg {
-  uint32    width = 1;
-  uint32    height = 2;
-  uint32    format = 3;
+  uint32 width = 1;
+  uint32 height = 2;
+  uint32 format = 3;
 }
 
 message OfflineJpegCreateParamsMsg {
-  uint32                process_mode = 1;
+  uint32 process_mode = 1;
   OfflineJpegBufferParamsMsg in_buffer = 2;
   OfflineJpegBufferParamsMsg out_buffer = 3;
 }
@@ -158,9 +158,9 @@ message OfflineJpegMetaMsg {
 }
 
 message OfflineJpegProcessParamsMsg {
-  int32                 in_buf_fd = 1;
-  int32                 out_buf_fd = 2;
-  OfflineJpegMetaMsg       metadata = 3;
+  int32 in_buf_fd = 1;
+  int32 out_buf_fd = 2;
+  OfflineJpegMetaMsg metadata = 3;
 }
 
 message ConnectRespMsg {
@@ -189,7 +189,6 @@ message StartCameraReqMsg {
   float framerate = 3;
   bool enable_result_cb = 4;
   bytes extra_params = 5;
-
 }
 
 // StopCamera
@@ -336,7 +335,12 @@ message GetCamStaticInfoReqMsg {
 }
 
 message GetCamStaticInfoRespMsg {
-    repeated bytes caps = 1;
+  repeated bytes caps = 1;
+}
+
+// GetSupportedInterfaceVer
+message GetSupportedInterfaceVerRespMsg {
+    repeated string vers = 1;
 }
 
 // GetVendorTagDescriptor
@@ -392,6 +396,7 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_DESTROY_OFFLINE_JPEG = 24;
   RECORDER_CALLBACK_SOCKET_READY = 25;
   RECORDER_GET_CAMERA_STATIC_INFO = 26;
+  RECORDER_GET_SUPPORTED_INTERFACE_VER = 27;
 }
 
 message RecorderClientReqMsg {
@@ -436,6 +441,7 @@ message RecorderClientRespMsg {
     GetVendorTagDescriptorRespMsg get_vendor_tag_descriptor_resp = 7;
     DummyMsg dummy_msg = 8;
     GetCamStaticInfoRespMsg get_cam_static_info_resp = 9;
+    GetSupportedInterfaceVerRespMsg get_supported_interface_ver_resp = 10;
   }
 }
 

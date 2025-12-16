@@ -25,7 +25,7 @@ if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(cam-server qmmf_propertyvault)
+target_link_libraries(cam-server qmmf_config)
 endif()
 
 if (QMMF_SERVER_ENABLED)

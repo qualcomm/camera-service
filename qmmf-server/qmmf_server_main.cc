@@ -33,6 +33,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#define LOG_TAG "ServerMain"
+
 #include <atomic>
 
 #ifdef HAVE_BINDER
@@ -46,8 +48,7 @@
 #ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>
 #else
-#include "properties.h"
-#include "common/propertyvault/qmmf_propertyvault.h"
+#include "common/config/qmmf_config.h"
 #endif
 
 #include "common/utils/qmmf_log.h"

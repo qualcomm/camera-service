@@ -197,7 +197,7 @@ class Property {
   template <typename T>
   static T Get(std::string property, T default_value)  {
     T value = default_value;
-    char prop_val[PROP_VALUE_MAX];
+    char prop_val[QMMF_PROP_VAL_MAX];
 
     std::stringstream s;
     s << default_value;

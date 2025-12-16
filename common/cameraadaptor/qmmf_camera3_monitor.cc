@@ -25,6 +25,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#define LOG_TAG "Camera3Monitor"
+
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_device_client.h"
 #include "qmmf_camera3_utils.h"

@@ -31,6 +31,8 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#define LOG_TAG "MemoryInterface"
+
 #ifdef TARGET_USES_GRALLOC1
 #include "qmmf_gralloc1_interface.h"
 #elif TARGET_USES_GRALLOC2

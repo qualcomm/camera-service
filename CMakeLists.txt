@@ -123,6 +123,6 @@ add_subdirectory(common/resizer-neon)
 endif()
 
 if (NOT HAVE_ANDROID_UTILS)
-add_subdirectory(common/propertyvault)
+add_subdirectory(common/config)
 endif()
 add_subdirectory(common/utils)

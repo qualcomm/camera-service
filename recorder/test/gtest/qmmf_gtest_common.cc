@@ -256,7 +256,7 @@ void GtestCommon::SetUp() {
                                          size_t event_data_size) -> void
       { RecorderCallbackHandler(event_type, event_data, event_data_size); };
 
-  char prop_val[PROP_VALUE_MAX];
+  char prop_val[QMMF_PROP_VAL_MAX];
   get_qmmf_property(PROP_DUMP_JPEG, prop_val, "0");
   is_dump_jpeg_enabled_ = (atoi(prop_val) == 0) ? false : true;
   get_qmmf_property(PROP_DUMP_RAW, prop_val, "0");

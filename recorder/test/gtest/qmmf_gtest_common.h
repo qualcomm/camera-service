@@ -49,8 +49,6 @@
 #include <system/graphics.h>
 #include <cutils/properties.h>
 #include <utils/Errors.h>
-#else
-#include "properties.h"
 #endif
 #include <random>
 #include <fstream>

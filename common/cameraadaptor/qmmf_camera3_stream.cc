@@ -22,6 +22,7 @@
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
+#define LOG_TAG "Camera3Stream"
 
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera3_monitor.h"
@@ -48,8 +49,6 @@
 #ifdef HAVE_ANDROID_UTILS
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif // HAVE_ANDROID_UTILS
-
-#define LOG_TAG "Camera3Stream"
 
 namespace qmmf {
 

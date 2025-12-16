@@ -31,6 +31,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#define LOG_TAG "Camera3Utils"
+
 #include <errno.h>
 #include <string.h>
 

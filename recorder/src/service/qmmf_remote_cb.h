@@ -77,6 +77,8 @@ class RemoteCallBack {
 
     void NotifyCameraResult(uint32_t camera_id, const CameraMetadata &result);
 
+    void NotifyCancelCaptureImage();
+
     void NotifyDeleteVideoTrack(uint32_t track_id);
 
     uint32_t GetClientId() { return client_id_; }

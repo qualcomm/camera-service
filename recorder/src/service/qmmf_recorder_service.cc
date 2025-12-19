@@ -2305,8 +2305,18 @@ void RecorderServiceCallbackProxy::NotifySnapshotData(uint32_t camera_id, uint32
   snapshot_msg->set_img_count(imgcount);
   BufferInfoMsg* buffer_info = snapshot_msg->mutable_buffer();
 
-  buffer_info->set_ion_fd(bn_buffer.ion_fd);
-  buffer_info->set_ion_meta_fd(bn_buffer.ion_meta_fd);
+  {
+    std::lock_guard<std::mutex> l(snapshot_buffers_lock_);
+    if (snapshot_buffers_.count(bn_buffer.buffer_id) != 0) {
+      buffer_info->set_ion_fd(-1);
+      buffer_info->set_ion_meta_fd(-1);
+    } else {
+      buffer_info->set_ion_fd(bn_buffer.ion_fd);
+      buffer_info->set_ion_meta_fd(bn_buffer.ion_meta_fd);
+      snapshot_buffers_.emplace(bn_buffer.buffer_id);
+    }
+  }
+
   buffer_info->set_img_id(bn_buffer.img_id);
   buffer_info->set_size(bn_buffer.size);
   buffer_info->set_timestamp(bn_buffer.timestamp);
@@ -2456,6 +2466,13 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(
     const_cast<CameraMetadata &>(result).unlock(meta_buffer);
   }
 
+  QMMF_VERBOSE("%s: Exit", __func__);
+}
+
+void RecorderServiceCallbackProxy::NotifyCancelCaptureImage() {
+  QMMF_VERBOSE("%s: Enter", __func__);
+  std::lock_guard<std::mutex> l(snapshot_buffers_lock_);
+  snapshot_buffers_.clear();
   QMMF_VERBOSE("%s: Exit", __func__);
 }
 

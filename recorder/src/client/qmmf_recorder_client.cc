@@ -1522,6 +1522,22 @@ status_t RecorderClient::CancelCaptureImage(const uint32_t camera_id,
     return -ENODEV;
   }
   assert(client_id_ > 0);
+
+  {
+    std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
+
+    for (auto& pair : snapshot_buffers_) {
+      auto& buffer_info = pair.second;
+
+      QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)", __func__,
+              buffer_info.ion_fd, buffer_info.vaddr, buffer_info.size);
+
+      UnmapBuffer(buffer_info);
+    }
+
+    snapshot_buffers_.clear();
+  }
+
   auto ret = recorder_service_->CancelCaptureImage(client_id_, camera_id,
                                                    image_id, cache);
   if(0 != ret) {
@@ -1538,22 +1554,6 @@ status_t RecorderClient::ReturnImageCaptureBuffer(const uint32_t camera_id,
   QMMF_DEBUG("%s Enter ", __func__);
   if (!CheckServiceStatus()) {
     return -ENODEV;
-  }
-
-  {
-    // Unmap buffer from client process.
-    std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
-    if (snapshot_buffers_.count(buffer.fd) == 0) {
-      QMMF_ERROR("%s Invalid buffer fd(%d)!", __func__, buffer.fd);
-      return -EINVAL;
-    }
-    auto buffer_info = snapshot_buffers_[buffer.fd];
-
-    QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)", __func__,
-              buffer_info.ion_fd, buffer_info.vaddr, buffer_info.size);
-
-    UnmapBuffer(buffer_info);
-    snapshot_buffers_.erase(buffer.fd);
   }
 
   QMMF_DEBUG("%s Returning buf_id(%d) back to service!", __func__,
@@ -2235,6 +2235,9 @@ void RecorderClient::NotifySnapshotData(uint32_t camera_id, uint32_t imgcount,
     {
       std::lock_guard<std::mutex> lock(snapshot_buffers_lock_);
       snapshot_buffers_.emplace(bn_buffer.buffer_id, buffer_info);
+      QMMF_VERBOSE("%s BufInfo: ion_fd(%d), "
+          "vaddr(%p), size(%lu)", __func__, buffer_info.ion_fd,
+          buffer_info.vaddr, buffer_info.size);
     }
   }
 

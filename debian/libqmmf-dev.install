@@ -1,1 +1,7 @@
 usr/include/*
+usr/lib/libqmmf_camera_metadata.so
+usr/lib/libqmmf_proto.so
+usr/lib/libqmmf_config.so
+usr/lib/libqmmf_utils.so
+usr/lib/libqmmf_recorder_client.so
+usr/lib/pkgconfig/*

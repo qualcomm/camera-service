@@ -1,24 +1,58 @@
 Source: qcom-camera-server
 Section: misc
 Priority: optional
-Maintainer: Tushar Darote <quic_tdarote@quicinc.com>
+Maintainer: Bala Sai Kosuri <bkosuri@qti.qualcomm.com>
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
  dh-cmake,
  cmake,
  libglib2.0-dev,
- qcom-syslog-plumber-dev,
- qcom-camx-kt,
+ qcom-camxapi-dev <qcm6490> <qcs8300> <qcs9100>,
+ qcom-chicdk-qcs8300 <qcs8300>,
+ qcom-camxlib-qcs8300 <qcs8300>,
+ qcom-camxlib-qcs8300-dev <qcs8300>,
+ qcom-camxcommon-qcs8300 <qcs8300>,
+ qcom-camxcommon-qcs8300-dev <qcs8300>,
+ qcom-camx-qcs8300-dev <qcs8300>,
+ qcom-camx-qcs8300 <qcs8300>,
+ qcom-chicdk-qcs9100 <qcs9100>,
+ qcom-camxlib-qcs9100 <qcs9100>,
+ qcom-camxlib-qcs9100-dev <qcs9100>,
+ qcom-camxcommon-qcs9100 <qcs9100>,
+ qcom-camxcommon-qcs9100-dev <qcs9100>,
+ qcom-camx-qcs9100-dev <qcs9100>,
+ qcom-camx-qcs9100 <qcs9100>,
+ qcom-chicdk-qcm6490 <qcm6490>,
+ qcom-chicdk-qcm6490-dev <qcm6490>,
+ qcom-camxlib-qcm6490 <qcm6490>,
+ qcom-camxlib-qcm6490-dev <qcm6490>,
+ qcom-camx-qcm6490-dev <qcm6490>,
+ qcom-camx-qcm6490 <qcm6490>,
  protobuf-compiler,
  protobuf-c-compiler,
- libprotobuf-dev (>= 3.19), libprotobuf-dev (<< 3.20),
+ libprotobuf-dev,
  libprotobuf-c-dev,
  libgtest-dev,
- qcom-property-vault-dev,
  linux-libc-dev-qcom,
 Standards-Version: 4.6.2
 Homepage: https://git.codelinaro.org/clo/le/platform/vendor/qcom-opensource/le-services.git
+
+Package: libqmmf-common
+Section: libs
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Qualcomm MultiMedia Framework libraries - Common libs
+
+Package: libqmmf-client
+Section: libs
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Qualcomm MultiMedia Framework libraries - Client libs
 
 Package: libqmmf-dev
 Section: libdevel
@@ -26,23 +60,56 @@ Architecture: arm64
 Depends:
  libqmmf1 (= ${binary:Version}),
  ${misc:Depends},
-Description: Qualcomm MultiMedia Framework libraries
+Description: Qualcomm MultiMedia Framework libraries - Development package
  Development package.
 
-Package: libqmmf1
+Package: libqmmf1-qcm6490
 Section: libs
 Architecture: arm64
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: Qualcomm MultiMedia Framework libraries
- Library package.
+Description: Qualcomm MultiMedia Framework libraries - QCM6490 support
+ Platform-specific package.
+Build-Profiles: <qcm6490>
+
+Package: libqmmf1-qcs8300
+Section: libs
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Qualcomm MultiMedia Framework libraries - QCS8300 support
+ Platform-specific package.
+Build-Profiles: <qcs8300>
+
+Package: libqmmf1-qcs9100
+Section: libs
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Qualcomm MultiMedia Framework libraries - QCS9100 support
+ Platform-specific package.
+Build-Profiles: <qcs9100>
+
+Package: libqmmf1
+Section: libs
+Architecture: arm64
+Depends:
+ ${misc:Depends},
+ libqmmf-common,
+ libqmmf-client,
+Description: Qualcomm MultiMedia Framework libraries - Meta package
 
 Package: qcom-camera-server
 Architecture: arm64
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- libqmmf1,
+ libqmmf1 (= ${binary:Version}),
+ libqmmf1-qcm6490 <qcm6490>,
+ libqmmf1-qcs8300 <qcs8300>,
+ libqmmf1-qcs9100 <qcs9100>,
 Description: Qualcomm Linux Embedded Camera Server
  Package containing the camera service and test programs.

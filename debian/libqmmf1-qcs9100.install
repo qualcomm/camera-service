@@ -1,0 +1,3 @@
+usr/lib/libqmmf_camera_adaptor.so* usr/lib/qcs9100
+usr/lib/libqmmf_memory_interface.so* usr/lib/qcs9100
+usr/lib/libqmmf_recorder_service.so* usr/lib/qcs9100

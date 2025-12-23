@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #!/bin/sh
-
-adduser --system --group --home /nonexistent --no-create-home system
-usermod -a -G video,render,dmaheap system
+if [ "$1" = "configure" ]; then
+  adduser --system --group --home /nonexistent --no-create-home system
+  usermod -a -G video,render,dmaheap system
+fi
 
 #DEBHELPER#

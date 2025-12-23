@@ -1,15 +1,92 @@
 #!/usr/bin/make -f
 
+# All build profiles active in this build (space-separated)
+ACTIVE_PROFILES := $(strip $(DEB_BUILD_PROFILES))
+
+# List of valid SoC target profiles (adjust to your set)
+TARGETS := qcs8300 qcs9100 qcm6490
+
+# Extract the first SoC target present in DEB_BUILD_PROFILES
+TARGET_MATCHES := $(filter $(TARGETS),$(ACTIVE_PROFILES))
+TARGET_PROFILE := $(firstword $(TARGET_MATCHES))
+
+# Staging directory for COMMON build outputs
+STAGING_DIR = $(CURDIR)/debian/staging
+
+# Common CMake options
+CMAKE_COMMON_OPTS = \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DSYSROOT_INCDIR="/usr/include" \
+  -DSYSROOT_LIBDIR="/usr/lib" \
+  -DCMAKE_CXX_FLAGS="$(CMAKE_CXX_FLAGS) -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -I/usr/include/log"
+
+# Additional options for CLIENT and SERVER builds
+CMAKE_STAGED_OPTS = \
+  -DCMAKE_PREFIX_PATH=$(STAGING_DIR)/usr \
+  -DCMAKE_CXX_FLAGS="$(CMAKE_CXX_FLAGS) -I$(STAGING_DIR)/usr/include" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-L$(STAGING_DIR)/usr/lib" \
+  -DCMAKE_EXE_LINKER_FLAGS="-L$(STAGING_DIR)/usr/lib"
+
 %:
 	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- \
-  -DSYSROOT_INCDIR="/usr/include" \
-  -DSYSROOT_LIBDIR="/usr/lib" \
-  -DBUILD_CATEGORY=ALL \
-  -DTARGET_PRODUCT_PLATFORM=qcm6490 \
-  -DTARGET_BOARD_PLATFORM=qcm6490 \
-  -DGBM_FREE_FD=FALSE \
-  -DCAM_SERVER_SYSTEMD_DIR=lib/systemd/system \
-  -DCMAKE_CXX_FLAGS="$(CMAKE_CXX_FLAGS) -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -I/usr/include/log"
+	# Build 1: COMMON components
+	dh_auto_configure --builddirectory=build-common -- \
+		-DBUILD_CATEGORY=COMMON \
+		$(CMAKE_COMMON_OPTS)
+
+override_dh_auto_build:
+	# Build COMMON first
+	dh_auto_build --builddirectory=build-common
+	# Install COMMON to staging directory for CLIENT and SERVER to use
+	dh_auto_install --builddirectory=build-common --destdir=$(STAGING_DIR)
+	# Configure CLIENT with PKG_CONFIG_PATH pointing to staged COMMON
+	dh_auto_configure --builddirectory=build-client -- \
+		-DBUILD_CATEGORY=CLIENT \
+		$(CMAKE_COMMON_OPTS) \
+		$(CMAKE_STAGED_OPTS)
+	# Configure SERVER with PKG_CONFIG_PATH pointing to staged COMMON
+	dh_auto_configure --builddirectory=build-server -- \
+		-DBUILD_CATEGORY=SERVER \
+		$(CMAKE_COMMON_OPTS) \
+		$(CMAKE_STAGED_OPTS)
+	# Configure TARGET with PKG_CONFIG_PATH pointing to staged COMMON (skip if no TARGET_PROFILE)
+ifneq ($(TARGET_PROFILE),)
+	dh_auto_configure --builddirectory=build-target -- \
+                -DBUILD_CATEGORY=TARGET \
+		-DTARGET_BOARD_PLATFORM=$(TARGET_PROFILE) \
+                $(CMAKE_COMMON_OPTS) \
+                $(CMAKE_STAGED_OPTS)
+endif
+	# Build CLIENT and SERVER
+	dh_auto_build --builddirectory=build-client
+	dh_auto_build --builddirectory=build-server
+	# Build TARGET (skip if no TARGET_PROFILE)
+ifneq ($(TARGET_PROFILE),)
+	dh_auto_build --builddirectory=build-target
+endif
+
+override_dh_auto_install:
+	# Install all builds to debian/tmp (final destination)
+	dh_auto_install --builddirectory=build-common --destdir=debian/tmp
+	dh_auto_install --builddirectory=build-client --destdir=debian/tmp
+	dh_auto_install --builddirectory=build-server --destdir=debian/tmp
+	# Install TARGET (skip if no TARGET_PROFILE)
+ifneq ($(TARGET_PROFILE),)
+	dh_auto_install --builddirectory=build-target --destdir=debian/tmp
+endif
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib
+	sed -i "$(CURDIR)/debian/qcom-camera-server.substvars" -E -e 's/libqmmf1-$(TARGET_PROFILE) \(.*\)//';
+
+override_dh_auto_clean:
+	dh_auto_clean --builddirectory=build-common
+	dh_auto_clean --builddirectory=build-client
+	dh_auto_clean --builddirectory=build-server
+	# Clean TARGET (skip if no TARGET_PROFILE)
+ifneq ($(TARGET_PROFILE),)
+	dh_auto_clean --builddirectory=build-target
+endif
+	rm -rf $(STAGING_DIR)

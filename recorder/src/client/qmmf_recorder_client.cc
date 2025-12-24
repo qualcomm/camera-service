@@ -2054,7 +2054,17 @@ void RecorderClient::UnmapBuffer(BufferInfo& info) {
 
 #ifdef USE_LIBGBM
   ReleaseBuffer(info.ion_fd, info.ion_meta_fd);
-#endif // USE_LIBGBM
+#else
+  if (info.ion_fd >= 0) {
+    close(info.ion_fd);
+    info.ion_fd = -1;
+  }
+
+  if (info.ion_meta_fd >= 0) {
+    close(info.ion_meta_fd);
+    info.ion_meta_fd = -1;
+  }
+#endif
 
   QMMF_DEBUG("%s Exit ", __func__);
   return;

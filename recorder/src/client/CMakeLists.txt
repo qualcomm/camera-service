@@ -1,4 +1,4 @@
-project(qmmf_recorder_client)
+project(qmmf_recorder_client VERSION 1.0)
 
 if (NOT RECORDER_CLIENT_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)

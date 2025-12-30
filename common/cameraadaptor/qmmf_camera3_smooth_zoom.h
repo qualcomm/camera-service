@@ -41,7 +41,6 @@
 #include <hardware/camera_hardware.h>
 #endif // HAVE_ANDROID_UTILS
 #include "qmmf-sdk/qmmf_camera_metadata.h"
-#include "common/cameraadaptor/qmmf_camera3_types.h"
 #include "common/cameraadaptor/qmmf_camera3_internal_types.h"
 #include "common/utils/qmmf_thread.h"
 

@@ -108,6 +108,8 @@ endif()
 
 add_subdirectory(common/memory)
 
+add_subdirectory(common/interfaces)
+
 add_subdirectory(common/cameraadaptor)
 
 if (NOT CAMERA_HAL1_SUPPORT AND CAMERAADAPTOR_GTEST_ENABLED)

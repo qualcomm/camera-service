@@ -88,8 +88,9 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
   camera3_stream::width = outputConfiguration.width;
   camera3_stream::height = outputConfiguration.height;
   camera3_stream::format = outputConfiguration.format;
-  camera3_stream::data_space = outputConfiguration.data_space;
-  data_space_ = outputConfiguration.data_space;
+  camera3_stream::data_space =
+      static_cast<android_dataspace>(outputConfiguration.data_space);
+  data_space_ = static_cast<android_dataspace>(outputConfiguration.data_space);
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 33)
   camera3_stream::color_space = outputConfiguration.color_space;
   color_space_ = outputConfiguration.color_space;
@@ -99,7 +100,8 @@ Camera3Stream::Camera3Stream(int id, size_t maxSize,
   camera3_stream::dynamic_range_profile = outputConfiguration.hdrmode;
   hdrmode_ = outputConfiguration.hdrmode;
 #endif
-  camera3_stream::rotation = outputConfiguration.rotation;
+  camera3_stream::rotation =
+      static_cast<camera3_stream_rotation_t>(outputConfiguration.rotation);
   camera3_stream::usage =
     AllocUsageFactory::GetAllocUsage().ToGralloc(outputConfiguration.allocFlags);
   camera3_stream::max_buffers = outputConfiguration.bufferCount;

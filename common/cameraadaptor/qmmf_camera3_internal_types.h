@@ -29,10 +29,12 @@
 #include <atomic>
 #include <map>
 #include <vector>
+#include <unordered_map>
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
+#include "common/utils/qmmf_common_utils_defs.h"
 
 using namespace android;
 

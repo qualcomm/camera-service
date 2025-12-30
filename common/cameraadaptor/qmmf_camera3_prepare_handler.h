@@ -28,9 +28,7 @@
 
 #include <pthread.h>
 
-#include "qmmf_camera3_types.h"
 #include "qmmf_camera3_internal_types.h"
-
 #include "common/utils/qmmf_thread.h"
 
 #ifdef HAVE_BINDER

@@ -88,6 +88,9 @@ float CameraContext::kHFRBatchModeThreshold = 90.0f;
 float CameraContext::kHFRBatchModeThreshold = 120.0f;
 #endif
 
+// Camera Adaptor lib to open
+const char* kAdaptorLibName = "libqmmf_camera_adaptor.so";
+
 CameraContext::CameraContext()
     : camera_id_(-1),
       streaming_request_id_(-1),
@@ -114,8 +117,9 @@ CameraContext::CameraContext()
       multi_roi_count_tag_(0),
       multi_roi_info_tag_(0),
       multi_roi_info_{},
-      video_streams_active_(false) {
-
+      video_streams_active_(false),
+      camera_adaptor_handle_(nullptr),
+      destroy_camera_device_fn_(nullptr) {
   QMMF_INFO("%s: Enter", __func__);
 
   //Setup Camera3DeviceClient callbacks.
@@ -134,15 +138,55 @@ CameraContext::CameraContext()
 
   camera_callbacks_.systemCb = [&] (uint32_t errcode) { CameraSystemCb(errcode); };
 
-  camera_device_ = std::make_shared<Camera3DeviceClient>(camera_callbacks_);
-  if (!camera_device_) {
-    QMMF_ERROR("%s: Can't Instantiate Camera3DeviceClient", __func__);
+  camera_adaptor_handle_ = dlopen(kAdaptorLibName, RTLD_NOW | RTLD_LOCAL);
+  if (!camera_adaptor_handle_) {
+    QMMF_ERROR("%s: dlopen(%s) failed: %s", __func__, kAdaptorLibName,
+               dlerror());
+    QMMF_INFO("%s: Exit (no camera device)", __func__);
+    return;
   }
 
-  if (camera_device_ && camera_device_->Initialize() != 0) {
-    QMMF_ERROR("%s: Unable to Initialize Camera3DeviceClient", __func__);
-    camera_device_.reset();
+  dlerror();
+
+  auto create_fn = reinterpret_cast<CreateCameraDeviceClientFn>(
+      dlsym(camera_adaptor_handle_, "CreateCameraDeviceClient"));
+  const char* err = dlerror();
+  if (err || !create_fn) {
+    QMMF_ERROR("%s: dlsym(CreateCameraDeviceClient) failed: %s", __func__,
+               err ? err : "nullptr");
+    dlclose(camera_adaptor_handle_);
+    camera_adaptor_handle_ = nullptr;
+    QMMF_INFO("%s: Exit (no camera device)", __func__);
+    return;
   }
+
+  dlerror();
+
+  destroy_camera_device_fn_ = reinterpret_cast<DestroyCameraDeviceClientFn>(
+      dlsym(camera_adaptor_handle_, "DestroyCameraDeviceClient"));
+  err = dlerror();
+  if (err || !destroy_camera_device_fn_) {
+    QMMF_ERROR("%s: dlsym(DestroyCameraDeviceClient) failed: %s", __func__,
+               err ? err : "nullptr");
+    dlclose(camera_adaptor_handle_);
+    camera_adaptor_handle_ = nullptr;
+    destroy_camera_device_fn_ = nullptr;
+    QMMF_INFO("%s: Exit (no camera device)", __func__);
+    return;
+  }
+
+  ICameraDeviceClient* raw_dev = create_fn(camera_callbacks_);
+  if (!raw_dev) {
+    QMMF_ERROR("%s: CreateCameraDeviceClient returned nullptr", __func__);
+    dlclose(camera_adaptor_handle_);
+    camera_adaptor_handle_ = nullptr;
+    destroy_camera_device_fn_ = nullptr;
+    QMMF_INFO("%s: Exit (no camera device)", __func__);
+    return;
+  }
+
+  camera_device_ = std::shared_ptr<ICameraDeviceClient>(
+      raw_dev, CameraDeviceDeleter{destroy_camera_device_fn_});
 
   QMMF_INFO("%s: Exit", __func__);
 }
@@ -151,6 +195,15 @@ CameraContext::~CameraContext() {
 
   QMMF_INFO("%s: Enter", __func__);
   //TODO: check all active ports
+  camera_device_.reset();
+
+  if (camera_adaptor_handle_) {
+    QMMF_INFO("%s: Closing camera adaptor library", __func__);
+    dlclose(camera_adaptor_handle_);
+    camera_adaptor_handle_ = nullptr;
+  }
+  destroy_camera_device_fn_ = nullptr;
+
   is_camera_dead_ = false;
   QMMF_INFO("%s: Exit", __func__);
 }

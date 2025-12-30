@@ -25,10 +25,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Changes from Qualcomm Technologies, Inc. are provided under the following license:
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 /*
@@ -45,6 +41,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+/* Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #define LOG_TAG "CameraAdaptor"
@@ -2478,6 +2479,17 @@ uint32_t Camera3DeviceClient::GetOpMode() {
   return operation_mode;
 }
 
-}  // namespace cameraadaptor ends here
+ICameraDeviceClient *CreateCameraDeviceClient(CameraClientCallbacks &cb) {
+  auto dev = new Camera3DeviceClient(cb);
+  if (!dev) return nullptr;
+  if (dev->Initialize() != 0) {
+    delete dev;
+    return nullptr;
+  }
+  return dev;
+}
 
+void DestroyCameraDeviceClient(ICameraDeviceClient *dev) { delete dev; }
+
+}  // namespace cameraadaptor ends here
 }  // namespace qmmf ends here

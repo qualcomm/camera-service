@@ -37,7 +37,7 @@ if (NOT CAMERA_HAL1_SUPPORT)
 add_dependencies(
   qmmf_recorder_service
   qmmf_utils
-  qmmf_camera_adaptor
+  qmmf_memory_interface
   qmmf_recorder_client
 )
 if (RESIZER_C2D_ENABLED)
@@ -90,7 +90,7 @@ set_target_properties(qmmf_recorder_service PROPERTIES
 install(TARGETS qmmf_recorder_service DESTINATION lib OPTIONAL)
 if (NOT CAMERA_HAL1_SUPPORT)
 target_link_libraries(qmmf_recorder_service dl pthread camera_metadata
-  qmmf_recorder_client qmmf_utils qmmf_camera_adaptor )
+  qmmf_recorder_client qmmf_utils qmmf_memory_interface qmmf_camera_interfaces)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_service log utils cutils binder)
 else()

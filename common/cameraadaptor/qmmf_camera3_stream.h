@@ -30,8 +30,8 @@
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
 
-#include "qmmf_camera3_types.h"
 #include "qmmf_memory_interface.h"
+#include "common/utils/qmmf_common_utils.h"
 
 using namespace android;
 

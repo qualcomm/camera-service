@@ -217,10 +217,10 @@ status_t OfflineProcess::GetParams(const uint32_t client_id,
                                    const OfflineCameraInputParams &in_params,
                                    OfflineCameraOutputParams &out_params) {
 
-  int32_t ret = NO_ERROR;
+  int32_t ret = 0;
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
   ret = CameraModule::GetCameraInfo(in_params.camera_id[0], &device_info_);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Failed to get camera static metadata", __func__);
     return ret;
   }

@@ -362,7 +362,7 @@ message GetVendorTagDescriptorRespMsg {
 message GetOfflineJPEGParamsReqMsg {
   uint32 client_id = 1;
   OfflineJpegInputParamsMsg in_params = 2;
-  OfflineCameraOutputParamsMsg out_params = 3;
+  OfflineJpegOutputParamsMsg out_params = 3;
 }
 
 // CreateOfflineJPEG

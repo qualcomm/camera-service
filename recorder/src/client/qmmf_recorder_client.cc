@@ -858,6 +858,13 @@ class RecorderServiceProxy: public IRecorderService {
     return resp.status();
   }
 
+  status_t GetOfflineParams(const uint32_t client_id,
+                            const OfflineCameraInputParams &in_params,
+                            OfflineCameraOutputParams &out_params) {
+    // To be implemented
+    return -EPERM;
+  }
+
   status_t CreateOfflineProcess(const uint32_t client_id,
                                 const OfflineCameraCreateParams& params) {
     // To be implemented
@@ -1732,13 +1739,13 @@ status_t RecorderClient::GetOfflineParams(const OfflineCameraInputParams &in_par
   QMMF_DEBUG("%s Enter ", __func__);
   std::lock_guard<std::mutex> lock(lock_);
   if (!CheckServiceStatus()) {
-    return NO_INIT;
+    return -ENODEV;
   }
   assert(client_id_ > 0);
 
   auto ret = recorder_service_->GetOfflineParams(client_id_,
       in_params, out_params);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s GetOfflineParams failed!", __func__);
   }
 

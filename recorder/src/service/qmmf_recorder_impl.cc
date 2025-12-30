@@ -1248,20 +1248,20 @@ status_t RecorderImpl::GetOfflineParams(const uint32_t client_id,
   assert(offline_process_ != nullptr);
   if (!offline_process_->IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client (%u) is not found", __func__, client_id);
-    return BAD_VALUE;
+    return -EINVAL;
   }
   auto ret = offline_process_->GetParams(client_id, in_params, out_params);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: get offline params failed!", __func__);
     return ret;
   }
 #else
   QMMF_ERROR("Offline Process not supported on this platform");
-  return INVALID_OPERATION;
+  return -ENOSYS;
 #endif
 
   QMMF_DEBUG("%s Exit client_id(%u)", __func__, client_id);
-  return NO_ERROR;
+  return 0;
 }
 
 

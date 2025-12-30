@@ -617,7 +617,7 @@ status_t RecorderService::onTransact(uint32_t code, const Parcel& data,
           reply->writeBlob(out_params_blob_size, false, &blob);
           memcpy(blob.data(), &out_params, out_params_blob_size);
         }
-        return NO_ERROR;
+        return 0;
       }
       break;
       case RECORDER_CONFIGURE_OFFLINE_PROC: {
@@ -1994,10 +1994,10 @@ status_t RecorderService::GetOfflineParams(const uint32_t client_id,
   QMMF_INFO("%s:Enter client_id(%d)", __func__, client_id);
   if (!IsRecorderInitialized()) {
     QMMF_ERROR("%s: Recorder not initialized!", __func__);
-    return NO_INIT;
+    return -ENODEV;
   }
   auto ret = recorder_->GetOfflineParams(client_id, in_params, out_params);
-  if (ret != NO_ERROR) {
+  if (ret != 0) {
     QMMF_ERROR("%s: Can't get OfflineCameraParams!", __func__);
   }
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);

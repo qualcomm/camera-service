@@ -362,7 +362,7 @@ status_t Recorder::GetOfflineJpegParams(const OfflineJpegInputParams &in_params,
 
   auto ret = recorder_client_->GetOfflineParams(offline_in_params,
       offline_out_params);
-  if (NO_ERROR != ret) {
+  if (0 != ret) {
     QMMF_ERROR("%s: GetOfflineJpegParams failed!", __func__);
   }
 

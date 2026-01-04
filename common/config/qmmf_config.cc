@@ -6,7 +6,7 @@
 #define LOG_TAG "CommonConfig"
 
 #include <cstring>
-#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_log.h"
 
 int
 qmmf_property_get (const char *key, char *value, const char *default_value)

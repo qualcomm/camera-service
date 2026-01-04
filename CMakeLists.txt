@@ -88,21 +88,29 @@ if (NOT HAVE_BINDER_H)
 add_subdirectory(common/proto)
 endif()
 
+if(QMMF_SERVER_ENABLED)
 add_subdirectory(qmmf-server)
+endif()
 
 add_subdirectory(common/camera-meta)
 
+if(RECORDER_SERVICE_ENABLED)
 add_subdirectory(recorder/src/service)
+endif()
 
+if(RECORDER_GTEST_ENABLED)
 add_subdirectory(recorder/test/gtest)
+endif()
 
+if(RECORDER_CLIENT_ENABLED)
 add_subdirectory(recorder/src/client)
+endif()
 
 add_subdirectory(common/memory)
 
 add_subdirectory(common/cameraadaptor)
 
-if (NOT CAMERA_HAL1_SUPPORT)
+if (NOT CAMERA_HAL1_SUPPORT AND CAMERAADAPTOR_GTEST_ENABLED)
 add_subdirectory(common/cameraadaptor/gtest)
 endif()
 

@@ -25,9 +25,18 @@ find_package(PkgConfig)
 
 pkg_check_modules(GBM gbm)
 
-string(REGEX MATCH "^[0-9]+" GBM_VERSION_MAJOR ${GBM_VERSION})
+if(GBM_FOUND AND USE_LIBGBM)
+  string(REGEX MATCH "^[0-9]+" GBM_VERSION_MAJOR "${GBM_VERSION}")
+  target_compile_definitions(qmmf_recorder_client
+    PRIVATE GBM_VER="${GBM_VERSION_MAJOR}"
+  )
 
-target_compile_definitions(qmmf_recorder_client PRIVATE GBM_VER="${GBM_VERSION_MAJOR}")
+  target_link_libraries(qmmf_recorder_client
+    PRIVATE
+      ${CMAKE_DL_LIBS}
+      gbm
+  )
+endif()
 
 target_include_directories(qmmf_recorder_client
  PRIVATE ${TOP_DIRECTORY})
@@ -46,14 +55,6 @@ if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_client log binder utils cutils ion)
 else()
 target_link_libraries(qmmf_recorder_client ${PROTOBUF_LIBRARIES} qmmf_config)
-endif()
-
-if(USE_LIBGBM)
-target_link_libraries(qmmf_recorder_client ${CMAKE_DL_LIBS})
-endif()
-
-if(USE_LIBGBM)
-target_link_libraries(qmmf_recorder_client gbm)
 endif()
 
 if(NOT HAVE_BINDER_H)

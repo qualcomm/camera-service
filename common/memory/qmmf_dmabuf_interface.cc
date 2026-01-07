@@ -247,6 +247,17 @@ MemAllocError DMABufDevice::Perform(const IBufferHandle& handle,
 
 DMABufDevice::DMABufDevice() {
   dma_dev_fd_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
+
+  if (dma_dev_fd_ < 0) {
+    QMMF_WARN ("%s: Failed to open /dev/dma_heap/qcom,system, "
+      "Falling back to /dev/dma_heap/system", __func__);
+    dma_dev_fd_ = open ("/dev/dma_heap/system", O_RDONLY | O_CLOEXEC);
+  }
+
+  if (dma_dev_fd_ < 0) {
+    QMMF_WARN ("%s: Failed to open /dev/dma_heap/system", __func__);
+  }
+
   assert(dma_dev_fd_ >= 0);
 }
 

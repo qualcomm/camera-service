@@ -977,6 +977,13 @@ RecorderClient::RecorderClient()
 
 #ifdef USE_LIBGBM
   gbm_fd_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
+
+  if (gbm_fd_ < 0) {
+    QMMF_WARN ("%s: Failed to open /dev/dma_heap/qcom,system, "
+      "Falling back to /dev/dma_heap/system", __func__);
+    gbm_fd_ = open ("/dev/dma_heap/system", O_RDONLY | O_CLOEXEC);
+  }
+
   if (gbm_fd_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/ion \n", __func__);
     gbm_fd_ = open("/dev/ion", O_RDONLY | O_CLOEXEC);
@@ -1059,6 +1066,13 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   }
 
   ion_device_ = open("/dev/dma_heap/qcom,system", O_RDONLY | O_CLOEXEC);
+
+  if (ion_device_ < 0) {
+    QMMF_WARN ("%s: Failed to open /dev/dma_heap/qcom,system, "
+      "Falling back to /dev/dma_heap/system", __func__);
+    ion_device_ = open ("/dev/dma_heap/system", O_RDONLY | O_CLOEXEC);
+  }
+
   if (ion_device_ < 0) {
     QMMF_WARN("%s: Falling back to /dev/ion \n", __func__);
     ion_device_ = open("/dev/ion", O_RDONLY | O_CLOEXEC);

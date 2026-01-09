@@ -36,6 +36,12 @@
 #include <sstream>
 #include <iomanip>
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+
 #include "qmmf_memory_interface_defs.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
 
@@ -44,8 +50,46 @@ namespace qmmf {
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
 
+inline const char* kCameraMetaDataLibName = "libcamera_metadata";
+
 #define FORCE_SENSOR_MODE_MASK (0x00F00000)
 #define FORCE_SENSOR_MODE_DATA(idx) ((idx + 1) << 20)
+
+#define SOC_DEV_PATH_PRIMARY "/sys/devices/soc0/soc_id"
+#define SOC_DEV_PATH_SECONDARY "/sys/devices/system/soc/soc0/id"
+#define CHIPSET_BUFFER_SIZE 32
+
+enum class SocId {
+  kInvalid = 0,
+  kKODIAK_SM = 475,
+  kKODIAK_SC7280 = 487,
+  kKODIAK_SC7295 = 488,
+  kQCM6490_IOT = 497,
+  kQCS6490 = 498,
+  kKODIAK_APQ = 499,
+  kKODIAK_LTE_ONLY = 515,
+  kLEMANS_IVI = 532,
+  kLEMANS_ADAS_H = 533,
+  kLEMANS_IVI_ADAS = 534,
+  kLEMANS_ADAS = 535,
+  kKODIAK_SC7280P = 546,
+  kKODIAK_SC8270 = 553,
+  kKODIAK_SC8270P = 563,
+  kKODIAK_SC7270P = 567,
+  kQCS5430_LITE = 575,
+  kQCM5430_LITE = 576,
+  kMONACO_ADAS = 605,
+  kMONACO_IVI = 606,
+  kMONACO_SRV1L = 607,
+  kLEMANS_IVI_ADAS_L = 619,
+  kMONACO_SRV1L_FC = 620,
+  KLEMANS_QRB = 656,
+  kQCS9100_IOT = 667,
+  kQCS8300 = 674,
+  kQCS8275 = 675,
+  kQCS9075 = 676,
+  kMONACO_FLEX = 695,
+};
 
 struct StreamBuffer {
   BufferMeta info;
@@ -270,6 +314,105 @@ typedef struct {
 
 enum {
   NO_IN_FLIGHT_REPEATING_FRAMES = -1,
+};
+
+class Target {
+ public:
+  // GetSocId
+  // @brief  Query for HW for the SoC Id
+  // @return socId returned by the HW being probed; SocId::Invalid on failure
+  static SocId GetSocId() {
+    static SocId id = SocId::kInvalid;
+
+    if (id != SocId::kInvalid) return id;
+
+    int32_t soc_fd;
+    char buf[CHIPSET_BUFFER_SIZE] = {0};
+
+    if (0 == access(SOC_DEV_PATH_PRIMARY, F_OK)) {
+      soc_fd = open(SOC_DEV_PATH_PRIMARY, O_RDONLY);
+    } else {
+      soc_fd = open(SOC_DEV_PATH_SECONDARY, O_RDONLY);
+    }
+    if (soc_fd >= 0) {
+      auto ret = read(soc_fd, buf, sizeof(buf) - 1);
+      if (-1 != ret) id = static_cast<SocId>(atoi(buf));
+      close(soc_fd);
+    }
+    return id;
+  }
+
+  // FileExists
+  // @param[in] name     Base name of the shared library
+  // @param[in] version  Library version string
+  // @brief  Return true/false if file exist
+  // @return bool
+  static bool FileExists(const std::string &name, const std::string &version) {
+    std::string full_path = "/usr/lib/" + name + ".so." + version;
+    return access(full_path.c_str(), F_OK) == 0;
+  }
+
+  // GetLibName
+  // @param[in] name     Base name of the shared library
+  // @param[in] version  Library version string
+  // @brief  Return the target based lib name
+  // @return string return for libname
+  static std::string GetLibName(const std::string &name,
+                                const std::string &version) {
+    std::string lib_name;
+    auto file_exist = Target::FileExists(name, version);
+    if (file_exist) {
+      lib_name = name + ".so." + version;
+    } else {
+      auto soc_id = Target::GetSocId();
+      auto suffix = Target::GetName(soc_id);
+      lib_name = name + "_" + std::string(suffix) + ".so." + version;
+    }
+    return lib_name;
+  }
+
+  // GetName
+  // @param[in] id Soc id of the target
+  // @brief  Return the target name based on SOC ID
+  // @return string return for soc ID
+  static std::string GetName(SocId id) {
+    switch (id) {
+      case SocId::kQCM6490_IOT:
+      case SocId::kQCS6490:
+      case SocId::kQCS5430_LITE:
+      case SocId::kQCM5430_LITE:
+      case SocId::kKODIAK_SM:
+      case SocId::kKODIAK_SC7280:
+      case SocId::kKODIAK_SC7295:
+      case SocId::kKODIAK_APQ:
+      case SocId::kKODIAK_LTE_ONLY:
+      case SocId::kKODIAK_SC7280P:
+      case SocId::kKODIAK_SC8270:
+      case SocId::kKODIAK_SC8270P:
+      case SocId::kKODIAK_SC7270P:
+        return "kodiak";
+
+      case SocId::kQCS9100_IOT:
+      case SocId::kQCS9075:
+      case SocId::kLEMANS_IVI:
+      case SocId::kLEMANS_ADAS_H:
+      case SocId::kLEMANS_IVI_ADAS:
+      case SocId::kLEMANS_ADAS:
+      case SocId::kLEMANS_IVI_ADAS_L:
+      case SocId::KLEMANS_QRB:
+      case SocId::kQCS8300:
+      case SocId::kQCS8275:
+      case SocId::kMONACO_IVI:
+      case SocId::kMONACO_ADAS:
+      case SocId::kMONACO_SRV1L:
+      case SocId::kMONACO_SRV1L_FC:
+      case SocId::kMONACO_FLEX:
+        return "lemans";
+
+      default:
+        return {};
+    }
+  }
 };
 
 };  // namespace qmmf.

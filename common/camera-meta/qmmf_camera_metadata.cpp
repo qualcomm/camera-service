@@ -28,6 +28,7 @@
 #include <binder/Parcel.h>
 #endif
 #include <common/utils/qmmf_log.h>
+#include <common/utils/qmmf_common_utils_defs.h>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
@@ -104,159 +105,161 @@ const char** CameraMetadata::camera_metadata_type_names = NULL;
 void CameraMetadata_libCameraMetadataOpen() __attribute__ ((constructor (101)));
 void CameraMetadata_libCameraMetadataClose() __attribute__ ((destructor (101)));
 
-void CameraMetadata_libCameraMetadataOpen()
-{
-    if (NULL == CameraMetadata::libcamera_metadata_handle) {
-        CameraMetadata::libcamera_metadata_handle =
-            dlopen("libcamera_metadata.so.0", RTLD_LAZY);
-        char* err = dlerror();
+void CameraMetadata_libCameraMetadataOpen() {
+  if (NULL == CameraMetadata::libcamera_metadata_handle) {
+    std::string lib_name =
+        Target::GetLibName(std::string(kCameraMetaDataLibName), "0");
 
-        if ((NULL != CameraMetadata::libcamera_metadata_handle) && (NULL == err)) {
-            CameraMetadata::add_camera_metadata_entry =
-                reinterpret_cast<add_camera_metadata_entry_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "add_camera_metadata_entry"));
-            CameraMetadata::allocate_camera_metadata =
-                reinterpret_cast<allocate_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "allocate_camera_metadata"));
-            CameraMetadata::allocate_copy_camera_metadata_checked =
-                reinterpret_cast<allocate_copy_camera_metadata_checked_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "allocate_copy_camera_metadata_checked"));
-            CameraMetadata::append_camera_metadata =
-                reinterpret_cast<append_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "append_camera_metadata"));
-            CameraMetadata::calculate_camera_metadata_entry_data_size =
-                reinterpret_cast<calculate_camera_metadata_entry_data_size_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "calculate_camera_metadata_entry_data_size"));
-            CameraMetadata::clone_camera_metadata =
-                reinterpret_cast<clone_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "clone_camera_metadata"));
-            CameraMetadata::copy_camera_metadata =
-                reinterpret_cast<copy_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "copy_camera_metadata"));
-            CameraMetadata::delete_camera_metadata_entry =
-                reinterpret_cast<delete_camera_metadata_entry_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "delete_camera_metadata_entry"));
-            CameraMetadata::dump_indented_camera_metadata =
-                reinterpret_cast<dump_indented_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "dump_indented_camera_metadata"));
-            CameraMetadata::find_camera_metadata_entry =
-                reinterpret_cast<find_camera_metadata_entry_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "find_camera_metadata_entry"));
-            CameraMetadata::find_camera_metadata_ro_entry =
-                reinterpret_cast<find_camera_metadata_ro_entry_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "find_camera_metadata_ro_entry"));
-            CameraMetadata::free_camera_metadata =
-                reinterpret_cast<free_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "free_camera_metadata"));
-            CameraMetadata::get_camera_metadata_alignment =
-                reinterpret_cast<get_camera_metadata_alignment_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_alignment"));
-            CameraMetadata::get_camera_metadata_compact_size =
-                reinterpret_cast<get_camera_metadata_compact_size_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_compact_size"));
-            CameraMetadata::get_camera_metadata_data_capacity =
-                reinterpret_cast<get_camera_metadata_data_capacity_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_data_capacity"));
-            CameraMetadata::get_camera_metadata_data_count =
-                reinterpret_cast<get_camera_metadata_data_count_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_data_count"));
-            CameraMetadata::get_camera_metadata_entry_capacity =
-                reinterpret_cast<get_camera_metadata_entry_capacity_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_entry_capacity"));
-            CameraMetadata::get_camera_metadata_entry_count =
-                reinterpret_cast<get_camera_metadata_entry_count_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_entry_count"));
-            CameraMetadata::get_camera_metadata_section_name =
-                reinterpret_cast<get_camera_metadata_section_name_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_section_name"));
-            CameraMetadata::get_camera_metadata_tag_name =
-                reinterpret_cast<get_camera_metadata_tag_name_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_tag_name"));
-            CameraMetadata::get_camera_metadata_tag_type =
-                reinterpret_cast<get_camera_metadata_tag_type_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_tag_type"));
-            CameraMetadata::get_camera_metadata_size =
-                reinterpret_cast<get_camera_metadata_size_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "get_camera_metadata_size"));
-            CameraMetadata::sort_camera_metadata =
-                reinterpret_cast<sort_camera_metadata_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "sort_camera_metadata"));
-            CameraMetadata::update_camera_metadata_entry =
-                reinterpret_cast<update_camera_metadata_entry_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "update_camera_metadata_entry"));
-            CameraMetadata::validate_camera_metadata_structure =
-                reinterpret_cast<validate_camera_metadata_structure_fnp*>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "validate_camera_metadata_structure"));
-            CameraMetadata::camera_metadata_section_bounds =
-                reinterpret_cast<unsigned int (*)[2]>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "camera_metadata_section_bounds"));
-            CameraMetadata::camera_metadata_section_names =
-                reinterpret_cast<const char**>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "camera_metadata_section_names"));
-            CameraMetadata::camera_metadata_type_names =
-                reinterpret_cast<const char**>(
-                dlsym(CameraMetadata::libcamera_metadata_handle,
-                "camera_metadata_type_names"));
-            char* dlsym_err = dlerror();
-            if (dlsym_err != NULL) {
-                assert(CameraMetadata::add_camera_metadata_entry);
-                assert(CameraMetadata::allocate_camera_metadata);
-                assert(CameraMetadata::allocate_copy_camera_metadata_checked);
-                assert(CameraMetadata::append_camera_metadata);
-                assert(CameraMetadata::calculate_camera_metadata_entry_data_size);
-                assert(CameraMetadata::clone_camera_metadata);
-                assert(CameraMetadata::copy_camera_metadata);
-                assert(CameraMetadata::delete_camera_metadata_entry);
-                assert(CameraMetadata::dump_indented_camera_metadata);
-                assert(CameraMetadata::find_camera_metadata_entry);
-                assert(CameraMetadata::find_camera_metadata_ro_entry);
-                assert(CameraMetadata::free_camera_metadata);
-                assert(CameraMetadata::get_camera_metadata_alignment);
-                assert(CameraMetadata::get_camera_metadata_compact_size);
-                assert(CameraMetadata::get_camera_metadata_data_capacity);
-                assert(CameraMetadata::get_camera_metadata_data_count);
-                assert(CameraMetadata::get_camera_metadata_entry_capacity);
-                assert(CameraMetadata::get_camera_metadata_entry_count);
-                assert(CameraMetadata::get_camera_metadata_section_name);
-                assert(CameraMetadata::get_camera_metadata_tag_name);
-                assert(CameraMetadata::get_camera_metadata_tag_type);
-                assert(CameraMetadata::get_camera_metadata_size);
-                assert(CameraMetadata::sort_camera_metadata);
-                assert(CameraMetadata::update_camera_metadata_entry);
-                assert(CameraMetadata::validate_camera_metadata_structure);
-                assert(CameraMetadata::camera_metadata_section_bounds);
-                assert(CameraMetadata::camera_metadata_section_names);
-                assert(CameraMetadata::camera_metadata_type_names);
-            }
-        }
+    CameraMetadata::libcamera_metadata_handle =
+        dlopen(lib_name.c_str(), RTLD_LAZY);
+    char* err = dlerror();
+
+    if ((NULL != CameraMetadata::libcamera_metadata_handle) && (NULL == err)) {
+      CameraMetadata::add_camera_metadata_entry =
+          reinterpret_cast<add_camera_metadata_entry_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "add_camera_metadata_entry"));
+      CameraMetadata::allocate_camera_metadata =
+          reinterpret_cast<allocate_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "allocate_camera_metadata"));
+      CameraMetadata::allocate_copy_camera_metadata_checked =
+          reinterpret_cast<allocate_copy_camera_metadata_checked_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "allocate_copy_camera_metadata_checked"));
+      CameraMetadata::append_camera_metadata =
+          reinterpret_cast<append_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "append_camera_metadata"));
+      CameraMetadata::calculate_camera_metadata_entry_data_size =
+          reinterpret_cast<calculate_camera_metadata_entry_data_size_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "calculate_camera_metadata_entry_data_size"));
+      CameraMetadata::clone_camera_metadata =
+          reinterpret_cast<clone_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "clone_camera_metadata"));
+      CameraMetadata::copy_camera_metadata =
+          reinterpret_cast<copy_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "copy_camera_metadata"));
+      CameraMetadata::delete_camera_metadata_entry =
+          reinterpret_cast<delete_camera_metadata_entry_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "delete_camera_metadata_entry"));
+      CameraMetadata::dump_indented_camera_metadata =
+          reinterpret_cast<dump_indented_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "dump_indented_camera_metadata"));
+      CameraMetadata::find_camera_metadata_entry =
+          reinterpret_cast<find_camera_metadata_entry_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "find_camera_metadata_entry"));
+      CameraMetadata::find_camera_metadata_ro_entry =
+          reinterpret_cast<find_camera_metadata_ro_entry_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "find_camera_metadata_ro_entry"));
+      CameraMetadata::free_camera_metadata =
+          reinterpret_cast<free_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "free_camera_metadata"));
+      CameraMetadata::get_camera_metadata_alignment =
+          reinterpret_cast<get_camera_metadata_alignment_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_alignment"));
+      CameraMetadata::get_camera_metadata_compact_size =
+          reinterpret_cast<get_camera_metadata_compact_size_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_compact_size"));
+      CameraMetadata::get_camera_metadata_data_capacity =
+          reinterpret_cast<get_camera_metadata_data_capacity_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_data_capacity"));
+      CameraMetadata::get_camera_metadata_data_count =
+          reinterpret_cast<get_camera_metadata_data_count_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_data_count"));
+      CameraMetadata::get_camera_metadata_entry_capacity =
+          reinterpret_cast<get_camera_metadata_entry_capacity_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_entry_capacity"));
+      CameraMetadata::get_camera_metadata_entry_count =
+          reinterpret_cast<get_camera_metadata_entry_count_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_entry_count"));
+      CameraMetadata::get_camera_metadata_section_name =
+          reinterpret_cast<get_camera_metadata_section_name_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_section_name"));
+      CameraMetadata::get_camera_metadata_tag_name =
+          reinterpret_cast<get_camera_metadata_tag_name_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_tag_name"));
+      CameraMetadata::get_camera_metadata_tag_type =
+          reinterpret_cast<get_camera_metadata_tag_type_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_tag_type"));
+      CameraMetadata::get_camera_metadata_size =
+          reinterpret_cast<get_camera_metadata_size_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "get_camera_metadata_size"));
+      CameraMetadata::sort_camera_metadata =
+          reinterpret_cast<sort_camera_metadata_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "sort_camera_metadata"));
+      CameraMetadata::update_camera_metadata_entry =
+          reinterpret_cast<update_camera_metadata_entry_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "update_camera_metadata_entry"));
+      CameraMetadata::validate_camera_metadata_structure =
+          reinterpret_cast<validate_camera_metadata_structure_fnp*>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "validate_camera_metadata_structure"));
+      CameraMetadata::camera_metadata_section_bounds =
+          reinterpret_cast<unsigned int(*)[2]>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "camera_metadata_section_bounds"));
+      CameraMetadata::camera_metadata_section_names =
+          reinterpret_cast<const char**>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "camera_metadata_section_names"));
+      CameraMetadata::camera_metadata_type_names =
+          reinterpret_cast<const char**>(
+              dlsym(CameraMetadata::libcamera_metadata_handle,
+                    "camera_metadata_type_names"));
+      char* dlsym_err = dlerror();
+      if (dlsym_err != NULL) {
+        assert(CameraMetadata::add_camera_metadata_entry);
+        assert(CameraMetadata::allocate_camera_metadata);
+        assert(CameraMetadata::allocate_copy_camera_metadata_checked);
+        assert(CameraMetadata::append_camera_metadata);
+        assert(CameraMetadata::calculate_camera_metadata_entry_data_size);
+        assert(CameraMetadata::clone_camera_metadata);
+        assert(CameraMetadata::copy_camera_metadata);
+        assert(CameraMetadata::delete_camera_metadata_entry);
+        assert(CameraMetadata::dump_indented_camera_metadata);
+        assert(CameraMetadata::find_camera_metadata_entry);
+        assert(CameraMetadata::find_camera_metadata_ro_entry);
+        assert(CameraMetadata::free_camera_metadata);
+        assert(CameraMetadata::get_camera_metadata_alignment);
+        assert(CameraMetadata::get_camera_metadata_compact_size);
+        assert(CameraMetadata::get_camera_metadata_data_capacity);
+        assert(CameraMetadata::get_camera_metadata_data_count);
+        assert(CameraMetadata::get_camera_metadata_entry_capacity);
+        assert(CameraMetadata::get_camera_metadata_entry_count);
+        assert(CameraMetadata::get_camera_metadata_section_name);
+        assert(CameraMetadata::get_camera_metadata_tag_name);
+        assert(CameraMetadata::get_camera_metadata_tag_type);
+        assert(CameraMetadata::get_camera_metadata_size);
+        assert(CameraMetadata::sort_camera_metadata);
+        assert(CameraMetadata::update_camera_metadata_entry);
+        assert(CameraMetadata::validate_camera_metadata_structure);
+        assert(CameraMetadata::camera_metadata_section_bounds);
+        assert(CameraMetadata::camera_metadata_section_names);
+        assert(CameraMetadata::camera_metadata_type_names);
+      }
     }
+  }
 }
 
 void CameraMetadata_libCameraMetadataClose()

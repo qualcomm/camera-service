@@ -40,16 +40,13 @@
 #include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
 #include "common/utils/qmmf_condition.h"
-#include "recorder/src/service/qmmf_camera_interface.h"
 #include "qmmf_camera3_device_intf.h"
+#include "common/cameraadaptor/qmmf_camera3_device_client.h"
+#include "recorder/src/service/qmmf_camera_interface.h"
 
 namespace qmmf {
 
 using namespace cameraadaptor;
-
-using CreateCameraDeviceClientFn =
-    ICameraDeviceClient* (*)(CameraClientCallbacks&);
-using DestroyCameraDeviceClientFn = void (*)(ICameraDeviceClient*);
 
 #define MAX_SENSOR_FPS              480
 #define STREAM_BUFFER_COUNT          12
@@ -178,18 +175,6 @@ class CameraContext : public CameraInterface {
   void SetReprocPortId( uint32_t port_id) { reproc_port_id_ = port_id; }
 
  private:
-  struct CameraDeviceDeleter {
-    DestroyCameraDeviceClientFn destroy_fn = nullptr;
-    void operator()(ICameraDeviceClient* p) const noexcept {
-      if (!p) return;
-      if (destroy_fn)
-        destroy_fn(p);
-      else {
-        QMMF_ERROR("%s: destroy_fn missing; falling back to delete", __func__);
-        delete p;
-      }
-    }
-  };
 
   struct HFRMode_t {
     uint32_t width;
@@ -303,7 +288,7 @@ class CameraContext : public CameraInterface {
 
   bool IsNeedReconfigSnapshotStream();
 
-  std::shared_ptr<ICameraDeviceClient>  camera_device_;
+  std::shared_ptr<Camera3DeviceClient>  camera_device_;
   CameraClientCallbacks                 camera_callbacks_;
   uint32_t                              camera_id_;
   std::mutex                            device_access_lock_;
@@ -394,8 +379,6 @@ class CameraContext : public CameraInterface {
 
   std::vector<Camera3Request>   last_submitted_streaming_requests_;
   bool                          video_streams_active_;
-  void                          * camera_adaptor_handle_;
-  DestroyCameraDeviceClientFn   destroy_camera_device_fn_;
 };
 
 enum class CameraPortType {

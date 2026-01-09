@@ -72,6 +72,9 @@
 
 namespace qmmf {
 
+inline const char* kCameraHardwareLibName = "libcamera_hardware";
+using HwGetModuleFn = int (*)(const char* id, const struct hw_module_t** module_out);
+
 #ifdef HAVE_ANDROID_UTILS
 using namespace android;
 #endif // HAVE_ANDROID_UTILS
@@ -86,6 +89,10 @@ private:
 
   static CameraModule *instance_;
 
+  void *handle_;
+
+  HwGetModuleFn get_module_fn_;
+
   camera_module_t *camera_module_;
 
   int32_t status_;
@@ -95,11 +102,58 @@ private:
   vendor_tag_ops_t vendor_tag_ops_;
   std::shared_ptr<VendorTagDescriptor> vendor_tag_desc_;
 
+  int32_t LoadHwGetModule(HwGetModuleFn *out_fn) {
+    std::string lib_name =
+        Target::GetLibName(std::string(kCameraHardwareLibName), "0");
+
+    handle_ = dlopen(lib_name.c_str(), RTLD_NOW);
+    if (!handle_) {
+      QMMF_ERROR("%s: dlopen(%s) failed: %s", __func__, lib_name, dlerror());
+      return -EINVAL;
+    }
+
+    dlerror();
+    void *sym = dlsym(handle_, "hw_get_module");
+    const char *err = dlerror();
+    if (err != nullptr) {
+      QMMF_ERROR("%s: dlsym(hw_get_module) failed: %s", __func__, err);
+      dlclose(handle_);
+      handle_ = nullptr;
+      return -EINVAL;
+    }
+
+    get_module_fn_ = reinterpret_cast<HwGetModuleFn>(sym);
+    if (!get_module_fn_) {
+      QMMF_ERROR("%s: dlsym(hw_get_module) returned null", __func__);
+      dlclose(handle_);
+      handle_ = nullptr;
+      return -EINVAL;
+    }
+
+    QMMF_INFO("%s Successfully loaded hw_get_module from %s", __func__,
+              lib_name);
+
+    *out_fn = get_module_fn_;
+    return 0;
+  }
+
+  void UnloadHwGetModule() {
+    if (handle_) dlclose(handle_);
+    handle_ = nullptr;
+    get_module_fn_ = nullptr;
+  }
+
   // Private Constructor
   CameraModule() : status_(-1) {}
 
   int32_t LoadCamModuleAndVendorTags() {
-    int32_t status = hw_get_module(CAMERA_HARDWARE_MODULE_ID,
+    qmmf::HwGetModuleFn hw_get_module_fn = nullptr;
+    auto status = LoadHwGetModule(&hw_get_module_fn);
+    if (status != 0 || !hw_get_module_fn) {
+      return status;
+    }
+
+    status = hw_get_module_fn(CAMERA_HARDWARE_MODULE_ID,
         (const hw_module_t **)&camera_module_);
 
     if (camera_module_->get_vendor_tag_ops) {
@@ -186,6 +240,7 @@ public:
       VendorTagDescriptor::clearGlobalVendorTagDescriptor();
       dlclose(instance_->camera_module_->common.dso);
       instance_->camera_module_ = NULL;
+      instance_->UnloadHwGetModule();
     }
   }
 };

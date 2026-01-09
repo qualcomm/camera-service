@@ -46,7 +46,7 @@ if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_adaptor log binder utils cutils hardware)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(qmmf_camera_adaptor qmmf_config camera_hardware)
+target_link_libraries(qmmf_camera_adaptor qmmf_config)
 endif()
 
 if(USE_LIBGBM)

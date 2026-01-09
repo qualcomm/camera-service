@@ -6,9 +6,18 @@
 #pragma once
 
 #include "common/utils/qmmf_log.h"
-
 #include "qmmf_memory_interface.h"
 
+#include <camx/camxformatutilexternal.h>
+
+using FormatUtilGetBufferSizeFn =
+      int (*)(CamxPixelFormat, int, int, unsigned int*);
+using FormatUtilGetPlaneTypesFn =
+      int (*)(CamxPixelFormat, CamxPlaneType[], int*);
+using FormatUtilGetStrideInBytesFn =
+     int (*)(CamxPixelFormat, CamxPlaneType, int, int*);
+using FormatUtilGetScanlineFn =
+      int (*)(CamxPixelFormat, CamxPlaneType, int, int*);
 
 class DMABufUsage : public IMemAllocUsage {
  public:
@@ -71,5 +80,14 @@ class DMABufDevice : public IAllocDevice {
   MemAllocError UnmapBuffer(const IBufferHandle& handle) override
                               { return MemAllocError::kAllocOk; }
  private:
+  bool LoadFormatUtil();
+  void UnloadFormatUtil();
+
   int dma_dev_fd_;
+
+  void * format_util_handle_;
+  FormatUtilGetBufferSizeFn get_buffer_size_fn_;
+  FormatUtilGetPlaneTypesFn get_plane_types_fn_;
+  FormatUtilGetStrideInBytesFn get_stride_in_bytes_fn_;
+  FormatUtilGetScanlineFn  get_scanline_fn_;
 };

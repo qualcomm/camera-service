@@ -27,6 +27,7 @@
 
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
 #include <common/utils/qmmf_log.h>
+#include <common/utils/qmmf_common_utils_defs.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -69,33 +70,35 @@ static std::shared_ptr<VendorTagDescriptor> sGlobalVendorTagDescriptor;
 void VendorTagDescriptor_libCameraMetadataOpen() __attribute__ ((constructor (101)));
 void VendorTagDescriptor_libCameraMetadataClose() __attribute__ ((destructor (101)));
 
-void VendorTagDescriptor_libCameraMetadataOpen()
-{
-    if (NULL == VendorTagDescriptor::libcamera_metadata_handle) {
-        VendorTagDescriptor::libcamera_metadata_handle =
-            dlopen("libcamera_metadata.so.0", RTLD_LAZY);
-        char* err = dlerror();
+void VendorTagDescriptor_libCameraMetadataOpen() {
+  if (NULL == VendorTagDescriptor::libcamera_metadata_handle) {
+    std::string lib_name =
+        Target::GetLibName(std::string(kCameraMetaDataLibName), "0");
 
-        if ((NULL != VendorTagDescriptor::libcamera_metadata_handle) && (NULL == err)) {
-            libcamera_metadata_set_camera_metadata_vendor_ops =
-                reinterpret_cast<set_camera_metadata_vendor_ops_fnp*>(
-                dlsym(VendorTagDescriptor::libcamera_metadata_handle,
-                "set_camera_metadata_vendor_ops"));
-            VendorTagDescriptor::camera_metadata_type_names =
-                reinterpret_cast<const char**>(
-                dlsym(VendorTagDescriptor::libcamera_metadata_handle,
-                "camera_metadata_type_names"));
-            char* dlsym_err = dlerror();
-            if (dlsym_err != NULL) {
-                assert(libcamera_metadata_set_camera_metadata_vendor_ops);
-                assert(VendorTagDescriptor::camera_metadata_type_names);
-            }
-        }
+    VendorTagDescriptor::libcamera_metadata_handle =
+        dlopen(lib_name.c_str(), RTLD_LAZY);
+    char* err = dlerror();
+
+    if ((NULL != VendorTagDescriptor::libcamera_metadata_handle) &&
+        (NULL == err)) {
+      libcamera_metadata_set_camera_metadata_vendor_ops =
+          reinterpret_cast<set_camera_metadata_vendor_ops_fnp*>(
+              dlsym(VendorTagDescriptor::libcamera_metadata_handle,
+                    "set_camera_metadata_vendor_ops"));
+      VendorTagDescriptor::camera_metadata_type_names =
+          reinterpret_cast<const char**>(
+              dlsym(VendorTagDescriptor::libcamera_metadata_handle,
+                    "camera_metadata_type_names"));
+      char* dlsym_err = dlerror();
+      if (dlsym_err != NULL) {
+        assert(libcamera_metadata_set_camera_metadata_vendor_ops);
+        assert(VendorTagDescriptor::camera_metadata_type_names);
+      }
     }
+  }
 }
 
-void VendorTagDescriptor_libCameraMetadataClose()
-{
+void VendorTagDescriptor_libCameraMetadataClose() {
     if (VendorTagDescriptor::libcamera_metadata_handle != NULL) {
       dlclose(VendorTagDescriptor::libcamera_metadata_handle);
     }

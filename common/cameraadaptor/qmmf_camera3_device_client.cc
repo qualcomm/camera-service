@@ -2479,17 +2479,5 @@ uint32_t Camera3DeviceClient::GetOpMode() {
   return operation_mode;
 }
 
-ICameraDeviceClient *CreateCameraDeviceClient(CameraClientCallbacks &cb) {
-  auto dev = new Camera3DeviceClient(cb);
-  if (!dev) return nullptr;
-  if (dev->Initialize() != 0) {
-    delete dev;
-    return nullptr;
-  }
-  return dev;
-}
-
-void DestroyCameraDeviceClient(ICameraDeviceClient *dev) { delete dev; }
-
 }  // namespace cameraadaptor ends here
 }  // namespace qmmf ends here

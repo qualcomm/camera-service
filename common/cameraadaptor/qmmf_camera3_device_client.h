@@ -314,11 +314,6 @@ class Camera3DeviceClient : public ICameraDeviceClient,
   CameraMetadata session_metadata_;
 };
 
-extern "C" {
-ICameraDeviceClient *CreateCameraDeviceClient(CameraClientCallbacks &cb);
-void DestroyCameraDeviceClient(ICameraDeviceClient *dev);
-}
-
 }  // namespace cameraadaptor ends here
 }  // namespace qmmf ends here
 

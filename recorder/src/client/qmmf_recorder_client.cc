@@ -102,7 +102,10 @@ class RecorderServiceProxy: public IRecorderService {
   get_camera_metadata_compact_size_fnp* get_camera_metadata_compact_size_;
 
   RecorderServiceProxy() {
-    libcamera_metadata_handle_ = dlopen("libcamera_metadata.so.0", RTLD_LAZY);
+    std::string lib_name =
+        Target::GetLibName(std::string(kCameraMetaDataLibName), "0");
+
+    libcamera_metadata_handle_ = dlopen(lib_name.c_str(), RTLD_LAZY);
     char* err = dlerror();
 
     if ((NULL != libcamera_metadata_handle_) && (NULL == err)) {

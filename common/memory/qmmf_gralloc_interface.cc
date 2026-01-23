@@ -33,7 +33,8 @@
 
 #include "qmmf_gralloc_interface.h"
 #include <dlfcn.h>
-#include "qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
+
 using namespace qmmf;
 
 const std::unordered_map<int32_t, int32_t> GrallocUsage::usage_flag_map_ = {

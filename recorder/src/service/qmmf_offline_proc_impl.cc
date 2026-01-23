@@ -12,7 +12,7 @@
 
 #include "common/utils/qmmf_log.h"
 #ifdef QCAMERA3_TAG_LOCAL_COPY
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #else
 #include <QCamera3VendorTags.h>
 #endif

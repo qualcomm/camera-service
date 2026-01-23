@@ -36,7 +36,7 @@
 #include <grallocusage/GrallocUsageConversion.h>
 #include <libgralloc1/gralloc_priv.h>
 #include "qmmf_memory_interface.h"
-#include "qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 
 class Gralloc1Usage : public IMemAllocUsage {
  public:

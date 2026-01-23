@@ -83,7 +83,7 @@
 #endif
 
 #ifdef QCAMERA3_TAG_LOCAL_COPY
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #else
 #ifndef CAMERA_HAL1_SUPPORT
 #include <QCamera3VendorTags.h>

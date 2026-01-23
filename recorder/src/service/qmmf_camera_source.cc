@@ -43,7 +43,7 @@
 #include <hardware/camera3.h>
 #endif
 #ifndef HAVE_BINDER
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #endif
 
 #include "recorder/src/service/qmmf_camera_source.h"

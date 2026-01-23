@@ -37,7 +37,7 @@
 #include <utils/RefBase.h>
 #endif
 
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #include "common/utils/qmmf_condition.h"
 #include "common/utils/qmmf_log.h"
 

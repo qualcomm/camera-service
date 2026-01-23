@@ -40,7 +40,7 @@
 
 #include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #include "common/utils/qmmf_condition.h"
 #include "recorder/src/service/qmmf_camera_interface.h"
 #include "recorder/src/service/qmmf_recorder_common.h"

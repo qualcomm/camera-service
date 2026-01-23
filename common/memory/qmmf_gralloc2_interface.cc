@@ -32,6 +32,6 @@
  */
 
 #include "qmmf_gralloc2_interface.h"
-#include "qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 
 using namespace qmmf;

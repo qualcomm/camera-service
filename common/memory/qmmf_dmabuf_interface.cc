@@ -11,7 +11,8 @@
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
 #include <sys/ioctl.h>
-#include "qmmf_common_utils.h"
+#include <camx/camxformatutilexternal.h>
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 
 using namespace qmmf;
 

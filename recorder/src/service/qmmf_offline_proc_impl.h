@@ -7,7 +7,7 @@
 
 #include <chicdk/chiofflinepostprocintf.h>
 
-#include "common/utils/qmmf_common_utils.h"
+#include "common/cameraadaptor/qmmf_camera3_utils.h"
 #include "common/utils/qmmf_thread.h"
 #include "qmmf_memory_interface.h"
 #include "qmmf-sdk/qmmf_camera_metadata.h"

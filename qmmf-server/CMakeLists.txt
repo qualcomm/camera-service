@@ -10,17 +10,13 @@ add_executable(cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
 add_dependencies(cam-server qmmf_recorder_service)
 else()
-add_dependencies(cam-server qmmf_proto qmmf_recorder_service)
+add_dependencies(cam-server qmmf_proto)
 endif()
 
 target_include_directories(cam-server
  PRIVATE ${TOP_DIRECTORY})
 
-target_include_directories(cam-server
- PRIVATE ${TOP_DIRECTORY}/common/memory)
-
 install(TARGETS cam-server DESTINATION bin OPTIONAL)
-target_link_libraries(cam-server qmmf_recorder_service)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)
 else()

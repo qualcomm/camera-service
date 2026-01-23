@@ -52,19 +52,20 @@
 #endif
 
 #include "common/utils/qmmf_log.h"
-#include "recorder/src/service/qmmf_recorder_service.h"
+#include "common/utils/qmmf_common_utils_defs.h"
 
 /**
  * Property to indicate completion of QMMF services initialization.
  * When completed, value is set to 1.
  */
 #define QMMF_BOOT_COMPLETE "vendor.qmmf.boot.complete"
+const char* kRecorderServiceLibName = "libqmmf_recorder_service";
 
 #ifdef HAVE_BINDER
 using namespace android;
 #endif
-using namespace qmmf;
-using namespace recorder;
+
+using CreateRecorderServiceInstanceFn  = int (*)(void);
 
 #define INFO(...) \
   do { \
@@ -94,11 +95,39 @@ int32_t main(int32_t argc, char **argv) {
   IPCThreadState::self()->joinThreadPool();
 #else
   try {
-    RecorderService server;
-    server.MainLoop();
+    std::string lib_name =
+        qmmf::Target::GetLibName(std::string(kRecorderServiceLibName), "1");
+
+    void* handle = dlopen(lib_name.c_str(), RTLD_NOW);
+    if (!handle) {
+      QMMF_ERROR("%s: Failed to dlopen %s: %s\n", __func__, lib_name,
+                 dlerror());
+      return EXIT_FAILURE;
+    }
+
+    dlerror();
+
+    auto create_fn = reinterpret_cast<CreateRecorderServiceInstanceFn>(
+        dlsym(handle, "CreateRecorderServiceInstance"));
+    const char* err = dlerror();
+    if (err != nullptr) {
+      QMMF_ERROR("%s: Failed to resolve recorder service symbols: %s\n",
+                 __func__, err);
+      dlclose(handle);
+      return EXIT_FAILURE;
+    }
+
+    auto rc = create_fn();
+    if (rc != 0) {
+      QMMF_ERROR("%s: Recorder service failed\n", __func__);
+      dlclose(handle);
+      return EXIT_FAILURE;
+    }
+    dlclose(handle);
+
   } catch (int err) {
     return err;
   }
-#endif // HAVE_BINDER
+#endif  // HAVE_BINDER
   return 0;
 }

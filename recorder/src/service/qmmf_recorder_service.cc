@@ -42,6 +42,19 @@ namespace qmmf {
 
 namespace recorder {
 
+extern "C" {
+
+int CreateRecorderServiceInstance(void) {
+  QMMF_INFO("%s: Starting RecorderService main loop", __func__);
+
+  qmmf::recorder::RecorderService server;
+  server.MainLoop();
+
+  QMMF_INFO("%s: RecorderService main loop exited", __func__);
+  return 0;
+}
+}
+
 #ifndef HAVE_BINDER
 ThreadPool::ThreadPool()
     : stop_(false), total_tasks_executed_(0), total_tasks_cancelled_(0) {

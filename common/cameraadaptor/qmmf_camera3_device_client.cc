@@ -1243,7 +1243,7 @@ void Camera3DeviceClient::HandleCaptureResult(
           vTags.get(), &tag);
 
       if (tag > 0) {
-        res = find_camera_metadata_ro_entry(result->result, tag, &entry);
+        res = CameraMetadata::find_camera_metadata_ro_entry(result->result, tag, &entry);
         if (res == 0 && entry.count > 0) {
           CamReqModeInputParams params;
 
@@ -1284,7 +1284,7 @@ void Camera3DeviceClient::HandleCaptureResult(
     goto exit;
   }
 
-  res = find_camera_metadata_ro_entry(result->result, ANDROID_SENSOR_TIMESTAMP,
+  res = CameraMetadata::find_camera_metadata_ro_entry(result->result, ANDROID_SENSOR_TIMESTAMP,
                                       &entry);
   if ((0 == res) && (entry.count == 1)) {
     request.sensorTS = entry.data.i64[0];

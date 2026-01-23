@@ -85,11 +85,12 @@ target_include_directories(qmmf_recorder_service
 set_target_properties(qmmf_recorder_service PROPERTIES
  VERSION ${PROJECT_VERSION}
  SOVERSION ${PROJECT_VERSION_MAJOR}
+ OUTPUT_NAME ${PROJECT_NAME}${TARGET_SUFFIX}
 )
 
 install(TARGETS qmmf_recorder_service DESTINATION lib OPTIONAL)
 if (NOT CAMERA_HAL1_SUPPORT)
-target_link_libraries(qmmf_recorder_service dl pthread camera_metadata
+target_link_libraries(qmmf_recorder_service dl pthread
   qmmf_recorder_client qmmf_utils qmmf_camera_adaptor qmmf_camera_interfaces)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_service log utils cutils binder)

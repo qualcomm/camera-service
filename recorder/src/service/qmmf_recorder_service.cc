@@ -1094,10 +1094,10 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
         RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_CHARACTERISTICS);
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
-    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+    uint32_t size = CameraMetadata::get_camera_metadata_compact_size(meta_buffer);
     std::string *data = new std::string;
     data->resize(size);
-    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    auto copy_ptr = CameraMetadata::copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
     if (copy_ptr) {
       resp_msg.mutable_get_camera_characteristics_resp()->set_allocated_meta(data);
     } else {
@@ -1121,11 +1121,11 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     uint32_t size = meta.size();
     for (uint32_t i = 0; i < size; i++) {
       const camera_metadata_t *meta_buffer = meta[i].getAndLock();
-      uint32_t size = get_camera_metadata_compact_size (meta_buffer);
+      uint32_t size = CameraMetadata::get_camera_metadata_compact_size (meta_buffer);
       std::string *data =
           resp_msg.mutable_get_cam_static_info_resp()->add_caps();
       data->resize(size);
-      copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+      CameraMetadata::copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
       const_cast<CameraMetadata&>(meta[i]).unlock(meta_buffer);
     }
     break;
@@ -1143,10 +1143,10 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
         RECORDER_SERVICE_CMDS::RECORDER_GET_CAMERA_PARAMS);
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
-    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+    uint32_t size = CameraMetadata::get_camera_metadata_compact_size(meta_buffer);
     std::string *data = new std::string;
     data->resize(size);
-    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    auto copy_ptr = CameraMetadata::copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
     if (copy_ptr) {
       resp_msg.mutable_get_camera_param_resp()->set_allocated_meta(data);
     } else {
@@ -1167,7 +1167,7 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     const std::string& data = req_msg.set_camera_param().meta();
     uint8_t *raw_buf = new uint8_t[data.size()];
     camera_metadata_t *meta_buffer =
-        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+        CameraMetadata::copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
     if (meta_buffer) {
       meta.clear();
       meta.acquire(meta_buffer);
@@ -1190,7 +1190,7 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     const std::string& data = req_msg.set_camera_session_param().meta();
     uint8_t *raw_buf = new uint8_t[data.size()];
     camera_metadata_t *meta_buffer =
-        copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
+        CameraMetadata::copy_camera_metadata (raw_buf, data.size(), reinterpret_cast<const camera_metadata_t *>(data.data()));
     if (meta_buffer) {
       meta.clear();
       meta.acquire(meta_buffer);
@@ -1229,7 +1229,7 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
       CameraMetadata meta;
       uint8_t *raw_buf = new uint8_t[meta_proto.size()];
       camera_metadata_t *meta_buffer =
-          copy_camera_metadata (raw_buf, meta_proto.size(), reinterpret_cast<const camera_metadata_t *>(meta_proto.data()));
+          CameraMetadata::copy_camera_metadata (raw_buf, meta_proto.size(), reinterpret_cast<const camera_metadata_t *>(meta_proto.data()));
       meta.clear();
       meta.acquire(meta_buffer);
       meta_array.push_back(meta);
@@ -1312,10 +1312,10 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
         RECORDER_SERVICE_CMDS::RECORDER_GET_DEFAULT_CAPTURE_PARAMS);
     resp_msg.set_status(ret);
     const camera_metadata_t *meta_buffer = meta.getAndLock();
-    uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+    uint32_t size = CameraMetadata::get_camera_metadata_compact_size(meta_buffer);
     std::string *data = new std::string;
     data->resize(size);
-    auto copy_ptr = copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
+    auto copy_ptr = CameraMetadata::copy_camera_metadata (&data->at(0), data->size(), meta_buffer);
     if (copy_ptr) {
       resp_msg.mutable_get_default_capture_param_resp()->set_allocated_meta(data);
     } else {
@@ -2462,7 +2462,7 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(
     return;
   }
 
-  uint32_t size = get_camera_metadata_compact_size(meta_buffer);
+  uint32_t size = CameraMetadata::get_camera_metadata_compact_size(meta_buffer);
   if (size <= 0) {
     const_cast<CameraMetadata &>(result).unlock(meta_buffer);
     return;
@@ -2470,7 +2470,7 @@ void RecorderServiceCallbackProxy::NotifyCameraResult(
 
   std::string data;
   data.resize(size);
-  auto copy_ptr = copy_camera_metadata(&data.at(0), data.size(), meta_buffer);
+  auto copy_ptr = CameraMetadata::copy_camera_metadata(&data.at(0), data.size(), meta_buffer);
   if (copy_ptr) {
     ncr->set_result_meta(data);
     const_cast<CameraMetadata &>(result).unlock(meta_buffer);

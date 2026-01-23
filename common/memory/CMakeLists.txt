@@ -41,6 +41,7 @@ target_include_directories(qmmf_memory_interface
 set_target_properties(qmmf_memory_interface PROPERTIES
  VERSION ${PROJECT_VERSION}
  SOVERSION ${PROJECT_VERSION_MAJOR}
+ OUTPUT_NAME ${PROJECT_NAME}${TARGET_SUFFIX}
 )
 
 install(TARGETS qmmf_memory_interface DESTINATION lib OPTIONAL)

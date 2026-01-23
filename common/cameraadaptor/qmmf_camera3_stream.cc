@@ -46,9 +46,7 @@
 #define MMM_COLOR_FMT_UV_META_SCANLINES VENUS_UV_META_SCANLINES
 #endif
 
-#ifdef HAVE_ANDROID_UTILS
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif // HAVE_ANDROID_UTILS
 
 namespace qmmf {
 

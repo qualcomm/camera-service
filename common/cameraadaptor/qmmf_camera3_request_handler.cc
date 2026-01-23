@@ -25,6 +25,8 @@
 
 #define LOG_TAG "Camera3RequestHandler"
 
+#include <stdarg.h>
+
 #include <qmmf_camera3_utils.h>
 #include <qmmf_camera3_device_client.h>
 #include <qmmf_camera3_request_handler.h>

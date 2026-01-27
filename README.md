@@ -26,7 +26,7 @@ How to install the software itself.
 
 ## Usage
 
-Describe how to use the project.
+This is for testing purpose
 
 ## Development
 

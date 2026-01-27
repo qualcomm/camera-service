@@ -803,7 +803,7 @@ class Common {
       jpegBufferSize = maxJpegBufferSize;
     }
 
-    QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%d",
+    QMMF_INFO("%s: scaleFactor=%f jpegBufferSize=%ld",
         __func__, scaleFactor, jpegBufferSize);
 
     return jpegBufferSize;

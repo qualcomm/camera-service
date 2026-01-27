@@ -8,7 +8,6 @@
 #include <string>
 #include <sstream>
 #include <dlfcn.h>
-#include <glib.h>
 
 #ifdef HAVE_ANDROID_UTILS
 #include <cutils/properties.h>

@@ -20,3 +20,15 @@ set_target_properties(qmmf_config PROPERTIES
 )
 
 install(TARGETS qmmf_config DESTINATION lib OPTIONAL)
+
+# Configure and install pkg-config file
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_config.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qmmf_config.pc
+  @ONLY
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_config.pc
+  DESTINATION lib/pkgconfig
+)

@@ -16,12 +16,30 @@ protobuf_generate(TARGET qmmf_proto
     PROTOC_OUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}
     PROTOS qmmf.proto)
 
+# Install the generated header so parent recipes can include it
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/qmmf.pb.h
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/proto"
+)
+
 set_target_properties(qmmf_proto PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
   )
 
 install(TARGETS qmmf_proto DESTINATION lib OPTIONAL)
+
+# Configure and install pkg-config file
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_proto.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qmmf_proto.pc
+  @ONLY
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_proto.pc
+  DESTINATION lib/pkgconfig
+)
 
 target_link_libraries(qmmf_proto ${PROTOBUF_LIBRARIES}
     absl::log_internal_message

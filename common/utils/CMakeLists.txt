@@ -19,6 +19,18 @@ set_target_properties(qmmf_utils PROPERTIES
 )
 
 install(TARGETS qmmf_utils DESTINATION lib OPTIONAL)
+
+# Configure and install pkg-config file
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_utils.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qmmf_utils.pc
+  @ONLY
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_utils.pc
+  DESTINATION lib/pkgconfig
+)
 target_link_libraries(qmmf_utils pthread)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_utils log)

@@ -33,7 +33,7 @@
 
 #pragma once
 
-#include "recorder/src/client/qmmf_recorder_service_intf.h"
+#include "qmmf_recorder_service_intf.h"
 
 namespace qmmf {
 

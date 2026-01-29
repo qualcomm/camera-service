@@ -7,6 +7,7 @@ endif()
 add_library(qmmf_utils SHARED ${exclude}
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_condition.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_thread.cc
+${CMAKE_CURRENT_SOURCE_DIR}/qmmf_extra_param.cc
 )
 
 target_include_directories(qmmf_utils PUBLIC ${TOP_DIRECTORY})

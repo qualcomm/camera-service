@@ -53,7 +53,7 @@
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
 #include "qmmf-sdk/qmmf_vendor_tag_descriptor.h"
-#include "recorder/src/client/qmmf_recorder_service_intf.h"
+#include "qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_impl.h"
 
 namespace qmmf {

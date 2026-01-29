@@ -20,4 +20,4 @@ target_include_directories(camera_factory_test
 
 install(TARGETS camera_factory_test DESTINATION bin)
 
-target_link_libraries(camera_factory_test qmmf_camera_adaptor qmmf_camera_interfaces)
+target_link_libraries(camera_factory_test qmmf_camera_adaptor qmmf_camera_interface)

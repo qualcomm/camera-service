@@ -18,7 +18,6 @@ endif()
 add_library(qmmf_recorder_client SHARED ${exclude}
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_client.cc
-${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_extra_param.cc
 )
 
 find_package(PkgConfig)
@@ -50,7 +49,7 @@ set_target_properties(qmmf_recorder_client PROPERTIES
 )
 
 install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata)
+target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata qmmf_recorder_service_interface)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_client log binder utils cutils ion)
 else()

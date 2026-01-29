@@ -51,6 +51,7 @@
 #ifndef CAMERA3DEVICE_H_
 #define CAMERA3DEVICE_H_
 
+#include <stdarg.h>
 #include <pthread.h>
 #ifdef HAVE_ANDROID_UTILS
 #include <hardware/hardware.h>

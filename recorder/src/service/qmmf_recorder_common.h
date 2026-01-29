@@ -38,7 +38,7 @@
 #include "common/utils/qmmf_common_utils_defs.h"
 #include "common/utils/qmmf_log.h"
 
-#include "recorder/src/client/qmmf_recorder_service_intf.h"
+#include "qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_remote_cb.h"
 
 #ifdef HAVE_BINDER

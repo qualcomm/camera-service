@@ -23,11 +23,13 @@ target_include_directories(qmmf_camera_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_camera_adaptor_gtest DESTINATION bin OPTIONAL)
+
 target_link_libraries(qmmf_camera_adaptor_gtest gtest
   gtest_main
   qmmf_camera_adaptor
-  qmmf_camera_interfaces
+  qmmf_camera_interface
 )
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_adaptor_gtest log cutils utils)
 endif()
@@ -45,11 +47,13 @@ target_include_directories(qmmf_ccamera_dual_adaptor_gtest
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
 install(TARGETS qmmf_ccamera_dual_adaptor_gtest DESTINATION bin OPTIONAL)
+
 target_link_libraries(qmmf_ccamera_dual_adaptor_gtest gtest
   gtest_main
   qmmf_camera_adaptor
-  qmmf_camera_interfaces
+  qmmf_camera_interface
 )
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_ccamera_dual_adaptor_gtest log cutils utils)
 endif()

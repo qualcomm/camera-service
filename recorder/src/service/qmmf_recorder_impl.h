@@ -44,7 +44,7 @@
 #include <set>
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"
-#include "recorder/src/client/qmmf_recorder_service_intf.h"
+#include "qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_remote_cb.h"

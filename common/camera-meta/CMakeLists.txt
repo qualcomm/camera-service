@@ -1,14 +1,18 @@
 project(qmmf_camera_metadata VERSION 1.0)
 
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(CAMERA_METADATA REQUIRED camera_metadata)
+
 add_library(qmmf_camera_metadata SHARED ${exclude}
   ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_vendor_tag_descriptor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera_metadata.cpp
 )
 
 target_include_directories(qmmf_camera_metadata
- PRIVATE ${TOP_DIRECTORY})
-
-include_directories(${SYSROOT_INCDIR}/camx-api/camx/service)
+ PRIVATE ${TOP_DIRECTORY}
+ PUBLIC ${CAMERA_METADATA_INCLUDE_DIRS}
+)
 
 #EXPORT_HEADERS
 install(FILES

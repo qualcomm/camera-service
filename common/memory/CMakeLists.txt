@@ -1,5 +1,14 @@
 project(qmmf_memory_interface VERSION 1.0)
 
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(QMMF_CAMERA_METADATA
+  REQUIRED qmmf_camera_metadata)
+pkg_check_modules(QMMF_PROTO
+  REQUIRED qmmf_proto)
+pkg_check_modules(QMMF_UTILS
+  REQUIRED qmmf_utils)
+
 if (NOT MEMORY_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
 endif()
@@ -27,10 +36,12 @@ add_library(qmmf_memory_interface SHARED ${exclude}
 qmmf_memory_interface.cc
 qmmf_gralloc_interface.cc)
 endif()
-add_dependencies(qmmf_memory_interface qmmf_utils)
 
 target_include_directories(qmmf_memory_interface
- PRIVATE ${TOP_DIRECTORY})
+ PRIVATE ${TOP_DIRECTORY}
+         ${QMMF_UTILS_INCLUDE_DIRS}
+         ${QMMF_CONFIG_INCLUDE_DIRS}
+ )
 
 target_include_directories(qmmf_memory_interface
  PRIVATE ${TOP_DIRECTORY}/common/memory)
@@ -45,12 +56,12 @@ set_target_properties(qmmf_memory_interface PROPERTIES
 )
 
 install(TARGETS qmmf_memory_interface DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_memory_interface qmmf_utils dl)
+target_link_libraries(qmmf_memory_interface ${QMMF_UTILS_LIBRARIES} dl)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_memory_interface log utils cutils hardware)
 endif()
 if(USE_LIBGBM)
 target_link_libraries(qmmf_memory_interface gbm)
 else()
-target_link_libraries(qmmf_memory_interface qmmf_config)
+target_link_libraries(qmmf_memory_interface ${QMMF_CONFIG_LIBRARIES})
 endif()

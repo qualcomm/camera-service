@@ -1,5 +1,16 @@
 project(qmmf_camera_adaptor VERSION 1.0)
 
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(QMMF_CAMERA_METADATA
+  REQUIRED qmmf_camera_metadata)
+pkg_check_modules(QMMF_PROTO
+  REQUIRED qmmf_proto)
+pkg_check_modules(QMMF_CONFIG
+  REQUIRED qmmf_config)
+pkg_check_modules(QMMF_UTILS
+  REQUIRED qmmf_utils)
+
 if (NOT CAMERAADAPTOR_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
 endif()
@@ -16,13 +27,15 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera3_smooth_zoom.cc
 
 if (HAVE_BINDER_H)
 add_dependencies(qmmf_camera_adaptor qmmf_utils)
-else()
-add_dependencies(qmmf_camera_adaptor qmmf_proto qmmf_utils)
 endif()
 
-
 target_include_directories(qmmf_camera_adaptor
- PRIVATE ${TOP_DIRECTORY})
+ PRIVATE ${TOP_DIRECTORY}
+         ${QMMF_UTILS_INCLUDE_DIRS}
+         ${QMMF_CONFIG_INCLUDE_DIRS}
+         ${QMMF_CAMERA_METADATA_INCLUDE_DIRS}
+         ${QMMF_PROTO_INCLUDE_DIRS}
+)
 
 target_include_directories(qmmf_camera_adaptor
  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -42,18 +55,20 @@ set_target_properties(qmmf_camera_adaptor PROPERTIES
 
 install(TARGETS qmmf_camera_adaptor DESTINATION lib OPTIONAL)
 
-target_link_libraries(qmmf_camera_adaptor qmmf_camera_metadata qmmf_utils)
-target_link_libraries(qmmf_camera_adaptor pthread
+target_link_libraries(qmmf_camera_adaptor
+  pthread
   ${CMAKE_DL_LIBS}
   qmmf_memory_interface
   qmmf_camera_interface
+  ${QMMF_CAMERA_METADATA_LIBRARIES}
+  ${QMMF_UTILS_LIBRARIES}
 )
 
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_adaptor log binder utils cutils hardware)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(qmmf_camera_adaptor qmmf_config)
+target_link_libraries(qmmf_camera_adaptor ${QMMF_CONFIG_LIBRARIES})
 endif()
 
 if(USE_LIBGBM)

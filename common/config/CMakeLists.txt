@@ -11,7 +11,7 @@ target_link_libraries(qmmf_config
 
 target_compile_definitions(
   qmmf_config PRIVATE
-  QMMF_CONFIG_FILE=\"${CAM_SERVER_CONFIG_DIR}/cam-server.ini\"
+  QMMF_CONFIG_FILE=\"${CMAKE_INSTALL_SYSCONFDIR}/cam-server.ini\"
 )
 
 set_target_properties(qmmf_config PROPERTIES

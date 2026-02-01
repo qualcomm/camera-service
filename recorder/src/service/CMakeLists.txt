@@ -83,6 +83,7 @@ target_include_directories(qmmf_recorder_service
          ${QMMF_UTILS_INCLUDE_DIRS}
          ${QMMF_CONFIG_INCLUDE_DIRS}
          ${QMMF_PROTO_INCLUDE_DIRS}
+         ${CAMX_INCLUDE_DIRS}
  )
 
 target_include_directories(qmmf_recorder_service

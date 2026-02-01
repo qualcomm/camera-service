@@ -26,6 +26,12 @@ target_include_directories(cam-server
  )
 
 install(TARGETS cam-server DESTINATION bin OPTIONAL)
+
+install(FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/cam-server.ini
+        ${CMAKE_CURRENT_SOURCE_DIR}/cam-server-env
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)
 else()
@@ -35,7 +41,8 @@ endif()
 
 if (QMMF_SERVER_ENABLED)
     if (CAM_SERVER_ENABLED)
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service
+               DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/systemd/system RENAME cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs605")
         install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qrb5165" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")

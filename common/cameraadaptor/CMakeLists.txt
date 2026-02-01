@@ -35,6 +35,7 @@ target_include_directories(qmmf_camera_adaptor
          ${QMMF_CONFIG_INCLUDE_DIRS}
          ${QMMF_CAMERA_METADATA_INCLUDE_DIRS}
          ${QMMF_PROTO_INCLUDE_DIRS}
+         ${CAMX_INCLUDE_DIRS}
 )
 
 target_include_directories(qmmf_camera_adaptor

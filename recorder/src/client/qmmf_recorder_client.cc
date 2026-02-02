@@ -1779,6 +1779,23 @@ status_t RecorderClient::CancelCaptureImage(const uint32_t camera_id,
   if(0 != ret) {
     QMMF_ERROR("%s CancelCaptureImage failed!", __func__);
   }
+
+  {
+    std::lock_guard<std::mutex> l(snapshot_buffers_lock_);
+    if (snapshot_buffers_.size() != 0) {
+      for (auto& pair : snapshot_buffers_) {
+        auto& buffer_info = pair.second;
+
+        QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)",
+                  __func__, buffer_info.ion_fd, buffer_info.vaddr,
+                  buffer_info.size);
+
+        UnmapBuffer(buffer_info);
+      }
+      snapshot_buffers_.clear();
+    }
+  }
+
   QMMF_DEBUG("%s Exit ", __func__);
   return ret;
 }

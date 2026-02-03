@@ -886,6 +886,45 @@ status_t RecorderImpl::SetVideoTrackParam(const uint32_t client_id,
   return 0;
 }
 
+status_t RecorderImpl::CaptureImage(
+    const uint32_t client_id, const uint32_t camera_id,
+    const ImageGroupType &pad_group,
+    const SnapshotType type, const uint32_t n_burst,
+    const std::vector<CameraMetadata> &meta) {
+  QMMF_DEBUG("%s: Enter client_id(%u):camera_id(%d)", __func__, client_id,
+             camera_id);
+
+  if (!IsClientValid(client_id)) {
+    QMMF_ERROR("%s: Client(%u) is not connected!", __func__, client_id);
+    return -EINVAL;
+  }
+
+  if (!IsCameraValid(client_id, camera_id)) {
+    QMMF_ERROR("%s Client(%u): Camera(%u) is not owned by this client,"
+               " operation not allowed!",
+               __func__, client_id, camera_id);
+    return -ENOSYS;
+  }
+
+  assert(camera_source_ != nullptr);
+  SnapshotCb cb = [this, client_id](uint32_t camera_id, uint32_t count,
+                                    BnBuffer &buf, BufferMeta &meta) {
+    CameraSnapshotCb(client_id, camera_id, count, buf, meta);
+  };
+
+  auto ret = camera_source_->CaptureImage(camera_id, pad_group, type,
+                                                 n_burst, meta, cb);
+  if (ret != 0) {
+    QMMF_ERROR("%s: client_id(%u):camera_id(%d) CaptureImage failed!",
+               __func__, client_id, camera_id);
+    return ret;
+  }
+  QMMF_DEBUG("%s: Exit client_id(%u):camera_id(%d)", __func__, client_id,
+             camera_id);
+
+  return 0;
+}
+
 status_t RecorderImpl::CaptureImage(const uint32_t client_id,
                                     const uint32_t camera_id,
                                     const SnapshotType type,

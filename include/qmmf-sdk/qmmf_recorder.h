@@ -151,6 +151,40 @@ class Recorder {
   /// event cb is called by recorder
   status_t StopVideoTracks(const std::unordered_set<uint32_t>& track_ids);
 
+  /// @brief Capture burst or single images from a camera with dynamic pad group configuration
+  ///
+  /// This is an async API that allows flexible image capture with customizable
+  /// pad group configurations. Each pad group represents a set of image pads
+  /// that will be captured together in one request. The function supports burst
+  /// capture mode where multiple bursts can be captured based on the pad group
+  /// configuration.
+  ///
+  /// This is an overloaded version of CaptureImage() that provides more flexibility by
+  /// allowing clients to specify which image pads should be captured together
+  /// in each request through the pad_group parameter.
+  ///
+  /// When the image is ready, data callback specified through cb is called
+  /// which enables clients to process the image data. If multiple images are
+  /// captured, data cb is called for every image.
+  ///
+  /// @param camera_id: ID of camera
+  /// @param pad_group: A 2D vector where each inner vector represents a group
+  ///        of image pad IDs to be captured together in one request. For example:
+  ///        {{1}, {2,3}} means first request captures pad 1, second
+  ///        request captures pad 2 and 3.
+  /// @param type: The type of snapshot capture request (kStill or kVideo)
+  /// @param n_burst: Number of burst captures to perform. Each burst will
+  ///        iterate through all pad groups defined in pad_group parameter.
+  /// @param meta: Optional camera meta parameter for each image to be captured.
+  ///        If this vector is empty, default parameters are used for image
+  ///        capture. The size should match (pad_group.size() * n_burst).
+  /// @param cb: Callbacks for data and error notifications
+  status_t CaptureImage(const uint32_t camera_id,
+                        const ImageGroupType &pad_group,
+                        const SnapshotType type, const uint32_t n_burst,
+                        const std::vector<CameraMetadata> &meta,
+                        const ImageCaptureCb &cb);
+
   /// @brief Capture burst or single images from a camera
   ///
   /// This is an async API. When the image is ready, data callback specified

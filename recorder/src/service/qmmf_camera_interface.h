@@ -99,6 +99,12 @@ class CameraInterface {
                                       const SnapshotParam& param,
                                       const ImageExtraParam &xtraparam) = 0;
 
+  /// Dynamic Image Capture
+  virtual status_t CaptureImage(const ImageGroupType &pad_group,
+                                const SnapshotType type, const uint32_t n_burst,
+                                const std::vector<CameraMetadata> &meta,
+                                const StreamSnapshotCb &cb) = 0;
+
   /// Image Capture
   virtual status_t CaptureImage(const SnapshotType type, const uint32_t n_images,
                                 const std::vector<CameraMetadata> &meta,

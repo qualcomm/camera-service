@@ -58,6 +58,7 @@ namespace qmmf {
 namespace recorder {
 
 typedef int32_t status_t;
+using ImageGroupType = std::vector<std::vector<uint32_t>>;
 
 enum class EventType : uint32_t {
   kUnknown                   = 0,  // Indicates a unknown event has occured.

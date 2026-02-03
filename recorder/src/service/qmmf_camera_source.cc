@@ -214,6 +214,38 @@ status_t CameraSource::StopCamera(const uint32_t camera_id) {
   return 0;
 }
 
+status_t CameraSource::CaptureImage(
+    const uint32_t camera_id,
+    const ImageGroupType &pad_group,
+    const SnapshotType type, const uint32_t n_burst,
+    const std::vector<CameraMetadata> &meta, const SnapshotCb &cb) {
+  QMMF_DEBUG("%s: Enter", __func__);
+  QMMF_KPI_DETAIL();
+  active_cameras_lock_.lock();
+  if (active_cameras_.count(camera_id) == 0) {
+    active_cameras_lock_.unlock();
+    QMMF_ERROR("%s: Invalid Camera Id(%d)", __func__, camera_id);
+    return -EINVAL;
+  }
+  auto const &camera = active_cameras_[camera_id];
+  active_cameras_lock_.unlock();
+
+  client_snapshot_cb_ = cb;
+  StreamSnapshotCb stream_cb = [&](uint32_t image_id, uint32_t count,
+                                   StreamBuffer &buf) {
+    SnapshotCallback(image_id, count, buf);
+  };
+  auto ret =
+      camera->CaptureImage(pad_group, type, n_burst, meta, stream_cb);
+  if (ret != 0) {
+    QMMF_ERROR("%s: CaptureImage Failed!", __func__);
+    return ret;
+  }
+
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
+}
+
 status_t CameraSource::CaptureImage(const uint32_t camera_id,
                                     const SnapshotType type,
                                     const uint32_t n_images,

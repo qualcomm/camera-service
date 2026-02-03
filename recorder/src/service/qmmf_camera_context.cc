@@ -238,8 +238,10 @@ status_t CameraContext::DeleteSnapshotStream(uint32_t image_id, bool cache) {
       snapshot_request_.streamIds.begin(),
       snapshot_request_.streamIds.end(), stream_id));
 
-  if (snapshot_request_.streamIds.empty())
+  // Reset capture_request_id_ if no more snapshot streams exist
+  if (stream_image_map_.empty() || snapshot_request_.streamIds.empty()) {
     capture_request_id_ = -1;
+  }
 
   QMMF_INFO("%s Exit", __func__);
   return ret;
@@ -869,6 +871,186 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
   return 0;
 }
 
+status_t CameraContext::BuildRequestsWithVideo(std::vector<Camera3Request>& requests) {
+  QMMF_DEBUG("%s: Enter", __func__);
+
+  if (streaming_active_requests_.empty()) {
+    QMMF_INFO("%s: No active video streams to add", __func__);
+    return 0;
+  }
+
+  uint8_t jpeg_quality = snapshot_quality_;
+  uint32_t active_streamid_count = 0;
+
+  if (streaming_active_requests_.size() == 1) {
+    if (port_paused_ == true) {
+      QMMF_INFO("%s: streaming request is paused need to resume!", __func__);
+      Camera3Request &req = streaming_active_requests_[0];
+      // at this point stream id vector should be empty.
+      assert(req.streamIds.size() == 0);
+
+      for (auto& request : requests) {
+        // Replace metadata with streaming metadata
+        if (!req.metadata.isEmpty()) {
+          request.metadata.clear();
+          request.metadata.append(streaming_active_requests_[0].metadata);
+          request.metadata.update(ANDROID_JPEG_QUALITY, &jpeg_quality, 1);
+        }
+
+        // Add paused stream ids from stopped_stream_ids_
+        for (auto stream_id : stopped_stream_ids_) {
+          QMMF_DEBUG("%s: stream_id: %d to resume!", __func__, stream_id);
+          if (std::find(request.streamIds.begin(),
+                        request.streamIds.end(),
+                        stream_id) == request.streamIds.end()) {
+            request.streamIds.push_back(stream_id);
+            active_streamid_count++;
+          }
+          // Also add paused stream ids back to streaming request
+          if (std::find(req.streamIds.begin(),
+                        req.streamIds.end(),
+                        stream_id) == req.streamIds.end()) {
+            req.streamIds.push_back(stream_id);
+          }
+        }
+      }
+      port_paused_ = false;
+      QMMF_DEBUG("%s: Added paused streams! active_streamid_count=%d",
+                __func__, active_streamid_count);
+    } else {
+      // Normal case: port is not paused
+      auto req = streaming_active_requests_[0];
+
+      for (auto& request : requests) {
+        // Replace metadata with streaming metadata
+        if (!req.metadata.isEmpty()) {
+          request.metadata.clear();
+          request.metadata.append(req.metadata);
+          request.metadata.update(ANDROID_JPEG_QUALITY, &jpeg_quality, 1);
+        }
+
+        // Add all stream IDs from streaming_active_requests_[0]
+        for (auto stream_id : req.streamIds) {
+          if (std::find(request.streamIds.begin(),
+                        request.streamIds.end(),
+                        stream_id) == request.streamIds.end()) {
+            request.streamIds.push_back(stream_id);
+            active_streamid_count++;
+          }
+        }
+      }
+      QMMF_DEBUG("%s: Added active streams! active_streamid_count=%d",
+                __func__, active_streamid_count);
+    }
+  } else {
+    QMMF_DEBUG("%s: No other active video streams!", __func__);
+  }
+
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
+}
+
+status_t CameraContext::CaptureImage(
+    const ImageGroupType &pad_group,
+    const SnapshotType type, const uint32_t n_burst,
+    const std::vector<CameraMetadata> &meta, const StreamSnapshotCb &cb) {
+  QMMF_DEBUG("%s: Enter", __func__);
+
+  if (pad_group.empty()) {
+    QMMF_ERROR("%s: pad_group is empty", __func__);
+    return -EINVAL;
+  }
+
+  if (type == SnapshotType::kStill) {
+    size_t required_meta_count = n_burst * pad_group.size();
+    if (meta.size() < required_meta_count) {
+      QMMF_ERROR("%s: Insufficient metadata: need %zu, got %zu",
+                __func__, required_meta_count, meta.size());
+      return -EINVAL;
+    }
+  }
+
+  int32_t ret = 0;
+  int64_t last_frame_number;
+
+  client_snapshot_cb_ = cb;
+
+  if (n_burst == 0) {
+    QMMF_ERROR("%s: n_burst is zero", __func__);
+    return -EINVAL;
+  }
+
+  // Use local variable instead of member variable
+  std::vector<Camera3Request> dynamic_requests;
+  {
+    std::lock_guard<std::mutex> stream_image_lock(stream_image_lock_);
+    std::vector<CameraMetadata>::const_iterator it = meta.begin();
+    for (int32_t i = 0; i < n_burst; i++) {
+      // traverse vector , construct snapshot_req
+      for (const auto &group : pad_group) {
+        Camera3Request snapshot_req;
+        if (type == SnapshotType::kStill) {
+          snapshot_req.metadata.append(*it++);
+        }
+        for (auto &pad : group) {
+          int32_t stream_id = -1;
+          // find stream_id according to pad index
+          QMMF_DEBUG("%s pad = %d", __func__, pad);
+          for (auto &pair : stream_image_map_) {
+            if (pair.second == pad) {
+              stream_id = pair.first;
+              break;
+            }
+          }
+          if (stream_id >= 0) {
+            QMMF_DEBUG("%s stream_id = %d", __func__, stream_id);
+            snapshot_req.streamIds.push_back(stream_id);
+          }
+        }
+        QMMF_DEBUG("%s add snapshot req", __func__);
+        dynamic_requests.push_back(snapshot_req);
+      }
+    }
+  }
+
+  if (dynamic_requests.empty()) {
+    QMMF_ERROR("%s: No valid requests generated", __func__);
+    return -EINVAL;
+  }
+
+  if (type == SnapshotType::kVideo || type == SnapshotType::kVideoPlusRaw) {
+    std::lock_guard<std::mutex> device_access_lock(device_access_lock_);
+    // Add video streams to dynamic_requests
+    ret = BuildRequestsWithVideo(dynamic_requests);
+    if (ret != 0) {
+      QMMF_ERROR("%s: BuildRequestsWithVideo failed: %d", __func__, ret);
+      return ret;
+    }
+  }
+
+  {
+    std::lock_guard<std::mutex> device_access_lock(device_access_lock_);
+    std::unique_lock<std::mutex> lock(capture_lock_);
+    std::unique_lock<std::mutex> pending_frames_lock(pending_frames_lock_);
+    cancel_capture_ = false;
+    auto request_id = camera_device_->SubmitRequestList(dynamic_requests, false,
+                                                        &last_frame_number);
+
+    QMMF_INFO("%s: last_frame_number: current=%lld previous=%lld", __func__,
+              last_frame_number, last_frame_number_);
+
+    if (last_frame_number != NO_IN_FLIGHT_REPEATING_FRAMES) {
+      last_frame_number_ = last_frame_number;
+    }
+
+    assert(request_id >= 0);
+    capture_request_id_ = request_id;
+  }
+
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
+}
+
 status_t CameraContext::CaptureImage(const SnapshotType type,
                                      const uint32_t n_images,
                                      const std::vector<CameraMetadata> &meta,
@@ -897,63 +1079,37 @@ status_t CameraContext::CaptureImage(const SnapshotType type,
   if (snapshot_mode_ != ImageMode::kZsl) {
     device_access_lock_.lock();
     int64_t last_frame_number;
-    uint8_t jpeg_quality = snapshot_quality_;
     std::vector<Camera3Request> requests;
     std::vector<CameraMetadata>::const_iterator it = meta.begin();
     for (uint32_t i = 0; i < imgcnt; i++) {
-      if (streaming_active_requests_.size() > 0 &&
-          !streaming_active_requests_[0].metadata.isEmpty() &&
-          (type == SnapshotType::kVideo || type == SnapshotType::kVideoPlusRaw)) {
-        snapshot_request_.metadata.clear();
-        snapshot_request_.metadata.append(streaming_active_requests_[0].metadata);
-      } else if (it != meta.end()) {
+      if (it != meta.end() && type == SnapshotType::kStill) {
         snapshot_request_.metadata.clear();
         snapshot_request_.metadata.append(*it++);
       }
-      snapshot_request_.metadata.update(ANDROID_JPEG_QUALITY, &jpeg_quality, 1);
-      uint32_t active_streamid_count = 0;
+      // Record original snapshot stream count
+      size_t original_size = snapshot_request_.streamIds.size();
 
       if (continuous_mode_is_on_ || type == SnapshotType::kVideo ||
           type == SnapshotType::kVideoPlusRaw) {
-        if (streaming_active_requests_.size() == 1) {
-          if (port_paused_ == true) {
-            QMMF_INFO("%s: streaming request is paused need to resume!",
-                __func__);
-            Camera3Request &req = streaming_active_requests_[0];
-            // at this point stream id vector should be empty.
-            assert(req.streamIds.size() == 0);
-            for (auto stream_id : stopped_stream_ids_) {
-              QMMF_INFO("%s: stream_id: %d to resume!", __func__, stream_id);
-              // Add paused stream ids to snapshot request so they can be
-              // resumed, and capture request for both video and snapshot can
-              // go at same time.
-              snapshot_request_.streamIds.push_back(stream_id);
-              active_streamid_count++;
-              // Also add puased stream ids back to streaming request so next
-              // Update request will takecare them. eg cancel capture request
-              // will call update request to remove snapshot stream id from
-              // request and resume the streaming request.
-              req.streamIds.push_back(stream_id);
-              QMMF_INFO("%s: Added all Request to snapshot request! "
-                "active_streamid_count=%d", __func__, active_streamid_count);
-            }
-            port_paused_ = false;
-          } else {
-            auto request = streaming_active_requests_[0];
-            for (auto stream_id : request.streamIds) {
-              snapshot_request_.streamIds.push_back(stream_id);
-              active_streamid_count++;
-              QMMF_INFO("%s: Added all Request to streaming request! "
-                "active_streamid_count=%d", __func__, active_streamid_count);
-            }
-          }
-        } else {
-          QMMF_INFO("%s: No other active video streams!", __func__);
+        // Create temporary list and call unified function to add video streams
+        std::vector<Camera3Request> temp_requests;
+        temp_requests.push_back(snapshot_request_);
+
+        ret = BuildRequestsWithVideo(temp_requests);
+        if (ret != 0) {
+          QMMF_ERROR("%s: BuildRequestsWithVideo failed: %d", __func__, ret);
+          device_access_lock_.unlock();
+          return ret;
         }
+
+        // Retrieve the request with video streams added
+        snapshot_request_ = temp_requests.front();
       }
+
       requests.push_back(snapshot_request_);
-      snapshot_request_.streamIds.
-        resize(snapshot_request_.streamIds.size() - active_streamid_count);
+
+      // Restore to original size, removing temporarily added video streams
+      snapshot_request_.streamIds.resize(original_size);
     }
 
     bool streaming = continuous_mode_is_on_ ? true : false;
@@ -1010,7 +1166,8 @@ status_t CameraContext::CancelCaptureImage(const uint32_t image_id,
     // After cancel image capture snapshot mode is not ZSL anymore.
     // Switch mode to default.
     snapshot_mode_ = ImageMode::kSnapshot;
-  } else if (!snapshot_request_.streamIds.empty()) {
+  } else if (!snapshot_request_.streamIds.empty() ||
+             (capture_request_id_ >= 0)) {
     {
       std::unique_lock<std::mutex> lock(capture_lock_);
       cancel_capture_ = true;

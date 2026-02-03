@@ -129,6 +129,12 @@ class RecorderImpl {
                               void *param,
                               size_t size);
 
+  /// Dynamic Image Capture
+  status_t CaptureImage(const uint32_t client_id, const uint32_t camera_id,
+                        const ImageGroupType &pad_group,
+                        const SnapshotType type, const uint32_t n_burst,
+                        const std::vector<CameraMetadata> &meta);
+
   /// Image Capture
   status_t CaptureImage(const uint32_t client_id,
                         const uint32_t camera_id,

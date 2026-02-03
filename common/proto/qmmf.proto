@@ -290,6 +290,19 @@ enum SNAPSHOT_TYPE {
   SNAPSHOT_TYPE_VIDEOPLUSRAW = 3;
 }
 
+message ImageGroup {
+  repeated uint32 pads = 1;
+}
+
+message DynamicCaptureImageReqMsg {
+  uint32 client_id = 1;
+  uint32 camera_id = 2;
+  repeated ImageGroup pad_groups = 3;
+  SNAPSHOT_TYPE type = 4;
+  uint32 n_burst = 5;
+  repeated bytes meta = 6;
+}
+
 message CaptureImageReqMsg {
   uint32 client_id = 1;
   uint32 camera_id = 2;
@@ -423,6 +436,7 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_CREATE_OFFLINE_CAMERA      = 26;
   RECORDER_PROCESS_OFFLINE_CAMERA     = 27;
   RECORDER_DESTROY_OFFLINE_CAMERA     = 28;
+  RECORDER_DYNAMIC_CAPTURE_IMAGE = 29;
 }
 
 message RecorderClientReqMsg {
@@ -454,6 +468,7 @@ message RecorderClientReqMsg {
     CreateOfflineCameraReqMsg create_offline_camera = 25;
     ProcessOfflineCameraReqMsg process_offline_camera = 26;
     DestroyOfflineCameraReqMsg destroy_offline_camera = 27;
+    DynamicCaptureImageReqMsg dynamic_capture_image = 28;
   }
 }
 

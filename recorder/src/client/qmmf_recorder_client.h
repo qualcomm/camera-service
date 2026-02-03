@@ -106,6 +106,12 @@ class RecorderClient {
   status_t StopVideoTracks(const std::unordered_set<uint32_t>& track_ids);
 
   status_t CaptureImage(const uint32_t camera_id,
+                        const ImageGroupType &pad_group,
+                        const SnapshotType type, const uint32_t n_burst,
+                        const std::vector<CameraMetadata> &meta,
+                        const ImageCaptureCb &cb);
+
+  status_t CaptureImage(const uint32_t camera_id,
                         const SnapshotType type,
                         const uint32_t n_images,
                         const std::vector<CameraMetadata> &meta,

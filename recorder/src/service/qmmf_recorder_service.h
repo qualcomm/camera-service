@@ -282,6 +282,11 @@ class RecorderService : public IRecorderService {
                               void *param,
                               size_t size) override;
 
+  status_t CaptureImage(const uint32_t client_id, const uint32_t camera_id,
+                        const ImageGroupType &pad_group,
+                        const SnapshotType type, const uint32_t n_burst,
+                        const std::vector<CameraMetadata> &meta) override;
+
   status_t CaptureImage(const uint32_t client_id,
                         const uint32_t camera_id,
                         const SnapshotType type,

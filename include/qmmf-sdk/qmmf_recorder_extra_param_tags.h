@@ -64,8 +64,8 @@ enum ParamTag {
   QMMF_CAM_OP_MODE_CONTROL,
   QMMF_INPUT_ROI,
   QMMF_STREAM_CAMERA_ID,
-  QMMF_STITCH_LAYOUT,
   QMMF_OFFLINE_IFE,
+  QMMF_STREAM_USECASE,
   QMMF_SUPER_FRAMES,
   QMMF_SW_TNR,
 };
@@ -124,13 +124,15 @@ enum class VHDRMode {
 };
 #endif // VHDR_MODES_ENABLE
 
-enum class StitchLayout {
+enum class RecorderStreamUsecase {
   /**< this is invalid usage */
   kNone,
   /**< stitch images side by side */
   kSideBySide,
   /**< stitch images to panorama */
   kPanorama,
+  /**< PD image data> */
+  kPD,
 };
 
 struct SourceVideoTrack : DataTagBase {
@@ -335,14 +337,14 @@ struct StreamCameraId: DataTagBase {
     stream_camera_id{""} {}
 };
 
-struct StitchLayoutSelect: DataTagBase {
-  /**< Add support to select stitch layout for a stream */
-  /**< Select layout to stitch images for a stream */
-  /**< Default: StitchLayout::kNone */
-  StitchLayout stitch_layout;
-  StitchLayoutSelect() :
-    DataTagBase(QMMF_STITCH_LAYOUT),
-    stitch_layout(StitchLayout::kNone) {}
+struct StreamUsecaseSelect: DataTagBase {
+  /**< Add support to select stream usecase */
+  /**< Select usecase for a stream */
+  /**< Default: RecorderStreamUsecase::kNone */
+  RecorderStreamUsecase stream_usecase;
+  StreamUsecaseSelect() :
+    DataTagBase(QMMF_STREAM_USECASE),
+    stream_usecase(RecorderStreamUsecase::kNone) {}
 };
 
 struct OfflineIFE: DataTagBase {

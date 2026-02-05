@@ -736,26 +736,29 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
     }
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
-    if (xtraparam.Exists(QMMF_STITCH_LAYOUT)) {
-      StitchLayoutSelect layout;
+    if (xtraparam.Exists(QMMF_STREAM_USECASE)) {
+      StreamUsecaseSelect usecase_select;
       size_t count = 0;
 
-      count = xtraparam.EntryCount(QMMF_STITCH_LAYOUT);
+      count = xtraparam.EntryCount(QMMF_STREAM_USECASE);
       if (count == 1) {
-        xtraparam.Fetch(QMMF_STITCH_LAYOUT, layout);
-        switch (layout.stitch_layout) {
-          case StitchLayout::kNone:
+        xtraparam.Fetch(QMMF_STREAM_USECASE, usecase_select);
+        switch (usecase_select.stream_usecase) {
+          case RecorderStreamUsecase::kNone:
             stream_param.usecase = StreamUsecase::kStreamUsecaseNone;
             break;
-          case StitchLayout::kSideBySide:
+          case RecorderStreamUsecase::kSideBySide:
             stream_param.usecase = StreamUsecase::kStreamUsecaseSideBySide;
             break;
-          case StitchLayout::kPanorama:
+          case RecorderStreamUsecase::kPanorama:
             stream_param.usecase = StreamUsecase::kStreamUsecasePanorama;
             break;
+          case RecorderStreamUsecase::kPD:
+            stream_param.usecase = StreamUsecase::kStreamUsecasePD;
+            break;
           default:
-            QMMF_WARN ("%s: Unknown stitch layout %d, treat as default.",
-                __func__, layout.stitch_layout);
+            QMMF_WARN ("%s: Unknown stream usecase %d, treat as default.",
+                __func__, usecase_select.stream_usecase);
         }
       }
     }
@@ -3335,26 +3338,29 @@ CameraPort::CameraPort(const StreamParam& param,
   }
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
-  if (extraparam.Exists(QMMF_STITCH_LAYOUT)) {
-    StitchLayoutSelect layout;
+  if (extraparam.Exists(QMMF_STREAM_USECASE)) {
+    StreamUsecaseSelect usecase_select;
     size_t count = 0;
 
-    count = extraparam.EntryCount(QMMF_STITCH_LAYOUT);
+    count = extraparam.EntryCount(QMMF_STREAM_USECASE);
     if (count == 1) {
-      extraparam.Fetch(QMMF_STITCH_LAYOUT, layout);
-      switch (layout.stitch_layout) {
-        case StitchLayout::kNone:
+      extraparam.Fetch(QMMF_STREAM_USECASE, usecase_select);
+      switch (usecase_select.stream_usecase) {
+        case RecorderStreamUsecase::kNone:
           cam_stream_params_.usecase = StreamUsecase::kStreamUsecaseNone;
           break;
-        case StitchLayout::kSideBySide:
+        case RecorderStreamUsecase::kSideBySide:
           cam_stream_params_.usecase = StreamUsecase::kStreamUsecaseSideBySide;
           break;
-        case StitchLayout::kPanorama:
+        case RecorderStreamUsecase::kPanorama:
           cam_stream_params_.usecase = StreamUsecase::kStreamUsecasePanorama;
           break;
+        case RecorderStreamUsecase::kPD:
+          cam_stream_params_.usecase = StreamUsecase::kStreamUsecasePD;
+          break;
         default:
-          QMMF_WARN ("%s: Unknown stitch layout %d, treat as default.", __func__,
-              layout.stitch_layout);
+          QMMF_WARN ("%s: Unknown stream usecase %d, treat as default.", __func__,
+              usecase_select.stream_usecase);
       }
     }
   }

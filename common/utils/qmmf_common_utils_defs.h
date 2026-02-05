@@ -169,6 +169,7 @@ enum StreamUsecase {
   kStreamUsecaseNone = 0x00000,
   kStreamUsecaseSideBySide = 0x10002,
   kStreamUsecasePanorama = 0x10003,
+  kStreamUsecasePD = 0x10004,
 };
 
 #define CAM_OPMODE_FLAG_FRAMESELECTION (1 << kCamOpModeFrameSelectionEnum)

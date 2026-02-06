@@ -53,9 +53,7 @@ enum ParamTag {
   QMMF_TRACK_CROP,
   QMMF_FORCE_SENSOR_MODE,
   QMMF_EIS,
-#ifdef EIS_MODES_ENABLE
   QMMF_EIS_MODE,
-#endif // EIS_MODES_ENABLE
   QMMF_PARTIAL_METADATA,
   QMMF_CAMERA_SLAVE_MODE,
   QMMF_USE_LINKED_TRACK_IN_SLAVE_MODE,
@@ -89,7 +87,6 @@ enum class FrameRateControlMode {
   kCaptureRequest
 };
 
-#ifdef EIS_MODES_ENABLE
 enum class EisMode {
   /**< Eis is off */
   kEisOff,
@@ -98,7 +95,6 @@ enum class EisMode {
   /**< EIS on dual stream */
   kEisDualStream,
 };
-#endif // EIS_MODES_ENABLE
 
 enum class CamOpMode {
   /**< camera operation mode is normal */
@@ -225,7 +221,6 @@ struct EISSetup : DataTagBase {
   }
 };
 
-#ifdef EIS_MODES_ENABLE
 struct EISModeSetup : DataTagBase {
   /**< Add support for electronic image stabilization mode  */
   EisMode mode;
@@ -234,7 +229,6 @@ struct EISModeSetup : DataTagBase {
     mode(EisMode::kEisOff) {
   }
 };
-#endif // EIS_MODES_ENABLE
 
 struct PartialMetadata : DataTagBase {
   /**< Client can configure whether it requires partial Metadata or not. */

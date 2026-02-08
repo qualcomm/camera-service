@@ -47,7 +47,7 @@
 #include <binder/Parcel.h>
 #else
 #include "common/utils/qmmf_thread.h"
-#include "common/proto/qmmf.pb.h"
+#include "proto/qmmf.pb.h"
 #endif // HAVE_BINDER
 
 #include "qmmf-sdk/qmmf_camera_metadata.h"

@@ -1,5 +1,13 @@
 project(cam-server)
 
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(QMMF_CONFIG
+  REQUIRED qmmf_config)
+
+pkg_check_modules(QMMF_CAMERA_METADATA
+  REQUIRED qmmf_camera_metadata)
+
 if (NOT QMMF_SERVER_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
 endif()
@@ -9,19 +17,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAEC_WAIT_TIMEOUT=500000000")
 add_executable(cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
 add_dependencies(cam-server qmmf_recorder_service)
-else()
-add_dependencies(cam-server qmmf_proto)
 endif()
 
 target_include_directories(cam-server
- PRIVATE ${TOP_DIRECTORY})
+ PRIVATE ${TOP_DIRECTORY}
+ PRIVATE ${TOP_DIRECTORY}/common/memory
+ PRIVATE ${QMMF_CAMERA_METADATA_INCLUDE_DIRS}
+ )
 
 install(TARGETS cam-server DESTINATION bin OPTIONAL)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(cam-server qmmf_config)
+target_link_libraries(cam-server ${QMMF_CONFIG_LIBRARIES})
 endif()
 
 if (QMMF_SERVER_ENABLED)

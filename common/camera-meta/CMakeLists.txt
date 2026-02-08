@@ -23,6 +23,18 @@ set_target_properties(qmmf_camera_metadata PROPERTIES
 
 install(TARGETS qmmf_camera_metadata DESTINATION lib OPTIONAL)
 
+# Configure and install pkg-config file
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera_metadata.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qmmf_camera_metadata.pc
+  @ONLY
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_camera_metadata.pc
+  DESTINATION lib/pkgconfig
+)
+
 target_link_libraries(qmmf_camera_metadata pthread ${CMAKE_DL_LIBS})
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_camera_metadata log binder utils cutils)

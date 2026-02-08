@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-include_directories(${SYSROOT_INCDIR})
-
-link_directories(${SYSROOT_LIBDIR})
-
 project(qmmf-sdk)
+
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -75,15 +73,10 @@ endif()
 
 if(HAVE_ANDROID_UTILS)
 add_compile_definitions(HAVE_ANDROID_UTILS)
-include_directories(${SYSROOT_INCDIR}/mm-core)
+include_directories(${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/mm-core)
 else()
 # required for camera headers
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLE_CAMERA")
-include_directories(${SYSROOT_INCDIR}/camx-api/camx/service)
-include_directories(${SYSROOT_INCDIR}/camx-api/camx/service/hardware)
-include_directories(${SYSROOT_INCDIR}/camx-api/camx/service/system)
-include_directories(${SYSROOT_INCDIR}/glib-2.0)
-include_directories(${SYSROOT_LIBDIR}/glib-2.0/include)
 endif()
 
 include_directories(${TOP_DIRECTORY}/include)

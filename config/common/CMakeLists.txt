@@ -74,6 +74,40 @@ if(BUILD_CATEGORY STREQUAL "TARGET" OR BUILD_CATEGORY STREQUAL "ALL")
    set(CAMERAADAPTOR_ENABLED "1" PARENT_SCOPE)
    set(RECORDER_SERVICE_ENABLED "1" PARENT_SCOPE)
    set(MEMORY_ENABLED "1" PARENT_SCOPE)
+
+   SET(SYSROOT_INCLUDE_DIR "${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
+
+   # TODO: Find a better way to search for camx header presence
+   find_path(CAMX_KODIAK_DIR
+     camx/kodiak/camx-api/camx/service/hardware/camera_common.h
+     PATHS "${SYSROOT_INCLUDE_DIR}"
+     NO_DEFAULT_PATH
+   )
+
+   find_path(CAMX_DIR
+     camx-api/camx/service/hardware/camera_common.h
+     PATHS "${SYSROOT_INCLUDE_DIR}"
+     NO_DEFAULT_PATH
+   )
+
+
+   if(CAMX_KODIAK_DIR)
+     set(CAMX_INCLUDE_DIRS
+       "${SYSROOT_INCLUDE_DIR}/camx/kodiak"
+       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service"
+       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/hardware"
+       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/system"
+        PARENT_SCOPE
+     )
+   elseif(CAMX_DIR)
+     set(CAMX_INCLUDE_DIRS
+       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service"
+       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/hardware"
+       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/system"
+       PARENT_SCOPE
+     )
+   endif()
+
 endif()
 
 if(BUILD_CATEGORY STREQUAL "TESTS" OR BUILD_CATEGORY STREQUAL "ALL")

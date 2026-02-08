@@ -45,7 +45,11 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(CMAKE_STATIC_LINKER_FLAGS
     "${CMAKE_STATIC_LINKER_FLAGS} -Wl,-no-undefined")
 
-add_subdirectory(config/${TARGET_BOARD_PLATFORM})
+#Add configuration
+add_subdirectory(config/common)
+if(DEFINED TARGET_BOARD_PLATFORM)
+  add_subdirectory(config/${TARGET_BOARD_PLATFORM})
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
 
@@ -84,40 +88,47 @@ endif()
 
 include_directories(${TOP_DIRECTORY}/include)
 
-if (NOT HAVE_BINDER_H)
+# === Common libs ===
+if (NOT HAVE_BINDER_H AND QMMF_PROTO_ENABLED)
 add_subdirectory(common/proto)
 endif()
 
-if(QMMF_SERVER_ENABLED)
-add_subdirectory(qmmf-server)
-endif()
-
+if(QMMF_CAMERA_METADATA_ENABLED)
 add_subdirectory(common/camera-meta)
-
-if(RECORDER_SERVICE_ENABLED)
-add_subdirectory(recorder/src/service)
 endif()
 
-if(RECORDER_GTEST_ENABLED)
-add_subdirectory(recorder/test/gtest)
+if (NOT HAVE_ANDROID_UTILS AND QMMF_CONFIG_ENABLED)
+add_subdirectory(common/config)
 endif()
 
+if(QMMF_UTILS_ENABLED)
+add_subdirectory(common/utils)
+endif()
+
+
+# === Client ===
 if(RECORDER_CLIENT_ENABLED)
 add_subdirectory(recorder/src/client)
 endif()
 
-add_subdirectory(common/memory)
 
-add_subdirectory(common/interfaces)
-
-add_subdirectory(common/cameraadaptor)
-
-if (NOT CAMERA_HAL1_SUPPORT AND CAMERAADAPTOR_GTEST_ENABLED)
-add_subdirectory(common/cameraadaptor/gtest)
+# === Server ===
+if(QMMF_SERVER_ENABLED)
+add_subdirectory(qmmf-server)
 endif()
 
-if(ENABLE_CAMERA_FACTORY_TEST)
-add_subdirectory(common/cameraadaptor/test)
+
+# === Server Libs ===
+if(RECORDER_SERVICE_ENABLED)
+add_subdirectory(recorder/src/service)
+endif()
+
+if(MEMORY_ENABLED)
+add_subdirectory(common/memory)
+endif()
+
+if(CAMERAADAPTOR_ENABLED)
+add_subdirectory(common/cameraadaptor)
 endif()
 
 if (RESIZER_FASTCV_ENABLED)
@@ -132,7 +143,18 @@ if (RESIZER_NEON_ENABLED)
 add_subdirectory(common/resizer-neon)
 endif()
 
-if (NOT HAVE_ANDROID_UTILS)
-add_subdirectory(common/config)
+add_subdirectory(common/interfaces)
+
+
+# === Tests ===
+if (NOT CAMERA_HAL1_SUPPORT AND CAMERAADAPTOR_GTEST_ENABLED)
+add_subdirectory(common/cameraadaptor/gtest)
 endif()
-add_subdirectory(common/utils)
+
+if(RECORDER_GTEST_ENABLED)
+add_subdirectory(recorder/test/gtest)
+endif()
+
+if(ENABLE_CAMERA_FACTORY_TEST)
+add_subdirectory(common/cameraadaptor/test)
+endif()

@@ -14,6 +14,15 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAEC_WAIT_TIMEOUT=500000000")
 set(CAM_SERVER_SYSTEMD_DIR lib/systemd/system)
+set(CAM_SERVER_USER "root" CACHE STRING "User for camera server service")
+set(CAM_SERVER_GROUP "root" CACHE STRING "Group for camera server service")
+set(CAM_SERVER_SUPP_GROUP "" CACHE STRING "Supplementary groups")
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service.in
+  ${CMAKE_CURRENT_BINARY_DIR}/cam-server-base.service
+  @ONLY
+)
 
 add_executable(cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
@@ -42,7 +51,7 @@ endif()
 
 if (QMMF_SERVER_ENABLED)
     if (CAM_SERVER_ENABLED)
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cam-server-base.service
                DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs605")
         install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)

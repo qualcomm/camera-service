@@ -19,6 +19,9 @@ set_target_properties(qmmf_config PROPERTIES
  SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
+# Add destination of compiletime pkg-config file to PKG_CONFIG_PATH
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
+
 install(TARGETS qmmf_config DESTINATION lib OPTIONAL)
 
 # Configure and install pkg-config file

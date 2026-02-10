@@ -6,6 +6,8 @@ include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(BUILD_CATEGORY "ALL" CACHE STRING "Build Category")
+
 set(TOP_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 
 include_directories(${TOP_DIRECTORY}/include)
@@ -43,11 +45,8 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(CMAKE_STATIC_LINKER_FLAGS
     "${CMAKE_STATIC_LINKER_FLAGS} -Wl,-no-undefined")
 
-#Add configuration
+#Add default configuration
 add_subdirectory(config/common)
-if(DEFINED TARGET_BOARD_PLATFORM)
-  add_subdirectory(config/${TARGET_BOARD_PLATFORM})
-endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
 
@@ -82,63 +81,74 @@ endif()
 include_directories(${TOP_DIRECTORY}/include)
 
 # === Common libs ===
-if (NOT HAVE_BINDER_H AND QMMF_PROTO_ENABLED)
+if (NOT HAVE_BINDER_H)
 add_subdirectory(common/proto)
 endif()
 
-if(QMMF_CAMERA_METADATA_ENABLED)
 add_subdirectory(common/camera-meta)
-endif()
 
-if (NOT HAVE_ANDROID_UTILS AND QMMF_CONFIG_ENABLED)
+if (NOT HAVE_ANDROID_UTILS)
 add_subdirectory(common/config)
 endif()
 
-if(QMMF_UTILS_ENABLED)
 add_subdirectory(common/utils)
-endif()
 
+add_subdirectory(common/interfaces)
 
 # === Client ===
 if(RECORDER_CLIENT_ENABLED)
 add_subdirectory(recorder/src/client)
 endif()
 
-
 # === Server ===
 if(QMMF_SERVER_ENABLED)
 add_subdirectory(qmmf-server)
 endif()
 
+# Using function to limit TARGET variables scope
+function(build_target TARGET_SUFFIX PLATFORM CAMX_INCLUDE_DIRS)
+
+  # Use the two-arg form to give this subdir a unique binary dir per variant.
+  # Prevents CMake from reusing one build dir for different sources (avoids
+  # “binary directory already used to build a source directory” errors).
+  set(BINROOT "${CMAKE_BINARY_DIR}/${PLATFORM}")
+
+  #Load platform specific configuration
+  add_subdirectory("config/${PLATFORM}" "${BINROOT}/config/${PLATFORM}" )
+
+  add_subdirectory("recorder/src/service" "${BINROOT}/recorder/src/service")
+  add_subdirectory("common/memory" "${BINROOT}/common/memory")
+  add_subdirectory("common/cameraadaptor" "${BINROOT}/common/cameraadaptor")
+endfunction()
 
 # === Server Libs ===
-if(RECORDER_SERVICE_ENABLED)
-add_subdirectory(recorder/src/service)
+if(CAMERAADAPTOR_ENABLED AND RECORDER_SERVICE_ENABLED AND MEMORY_ENABLED)
+
+  # If TARGET_BOARD_PLATFORM is set, build specifically for
+  # that platform (qli 1.x)
+  if(DEFINED TARGET_BOARD_PLATFORM)
+    build_target("" ${TARGET_BOARD_PLATFORM} "")
+  else()
+    # Mainline build
+    # Camx include paths are defined in common config
+    build_target("_kodiak" "qcm6490" "${CAMX_KODIAK_INCLUDE_DIRS}")
+    # Using lemans config as common target
+    build_target("" "qcs9100" "${CAMX_TARGET_INCLUDE_DIRS}")
+  endif()
+
 endif()
 
-if(MEMORY_ENABLED)
-add_subdirectory(common/memory)
-endif()
+ if (RESIZER_FASTCV_ENABLED)
+    add_subdirectory(common/resizer-fastCV)
+ endif()
 
-if(CAMERAADAPTOR_ENABLED)
-add_subdirectory(common/cameraadaptor)
-endif()
+ if (RESIZER_C2D_ENABLED)
+    add_subdirectory(common/resizer-c2d)
+ endif()
 
-if (RESIZER_FASTCV_ENABLED)
-add_subdirectory(common/resizer-fastCV)
-endif()
-
-if (RESIZER_C2D_ENABLED)
-add_subdirectory(common/resizer-c2d)
-endif()
-
-if (RESIZER_NEON_ENABLED)
-add_subdirectory(common/resizer-neon)
-endif()
-
-add_subdirectory(common/interfaces)
-
-
+ if (RESIZER_NEON_ENABLED)
+    add_subdirectory(common/resizer-neon)
+ endif()
 # === Tests ===
 if (NOT CAMERA_HAL1_SUPPORT AND CAMERAADAPTOR_GTEST_ENABLED)
 add_subdirectory(common/cameraadaptor/gtest)

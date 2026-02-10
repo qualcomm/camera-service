@@ -45,7 +45,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "proto/qmmf.pb.h"
+#include "common/proto/qmmf.pb.h"
 #endif // !HAVE_BINDER
 
 namespace qmmf {

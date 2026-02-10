@@ -14,6 +14,9 @@ target_include_directories(qmmf_camera_metadata
  PUBLIC ${CAMERA_METADATA_INCLUDE_DIRS}
 )
 
+# Add destination of compiletime pkg-config file to PKG_CONFIG_PATH
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
+
 #EXPORT_HEADERS
 install(FILES
   ${TOP_DIRECTORY}/include/qmmf-sdk/qmmf_camera_metadata.h

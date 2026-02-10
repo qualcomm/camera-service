@@ -90,17 +90,21 @@ if(BUILD_CATEGORY STREQUAL "TARGET" OR BUILD_CATEGORY STREQUAL "ALL")
      NO_DEFAULT_PATH
    )
 
-
+   # In single bb, both camx-kodiak and lemans are in DEPENDS, so
+   # find_path identifies both dirs. Include Kodiak paths only if
+   # building for kodiak.
    if(CAMX_KODIAK_DIR)
-     set(CAMX_INCLUDE_DIRS
+     set(CAMX_KODIAK_INCLUDE_DIRS
        "${SYSROOT_INCLUDE_DIR}/camx/kodiak"
        "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service"
        "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/hardware"
        "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/system"
         PARENT_SCOPE
      )
-   elseif(CAMX_DIR)
-     set(CAMX_INCLUDE_DIRS
+   endif()
+
+   if(CAMX_DIR)
+     set(CAMX_TARGET_INCLUDE_DIRS
        "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service"
        "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/hardware"
        "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/system"
@@ -111,9 +115,9 @@ if(BUILD_CATEGORY STREQUAL "TARGET" OR BUILD_CATEGORY STREQUAL "ALL")
 endif()
 
 if(BUILD_CATEGORY STREQUAL "TESTS" OR BUILD_CATEGORY STREQUAL "ALL")
-   set(RECORDER_GTEST_ENABLED "1" PARENT_SCOPE)
-   set(CAMERAADAPTOR_GTEST_ENABLED "1" PARENT_SCOPE)
-   set(ENABLE_CAMERA_FACTORY_TEST TRUE PARENT_SCOPE)
+   set(RECORDER_GTEST_ENABLED "0" PARENT_SCOPE)
+   set(CAMERAADAPTOR_GTEST_ENABLED "0" PARENT_SCOPE)
+   set(ENABLE_CAMERA_FACTORY_TEST FALSE PARENT_SCOPE)
 endif()
 
 set(PLATFORM_CXX_FLAGS ${PLATFORM_CXX_FLAGS} PARENT_SCOPE)

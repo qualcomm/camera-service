@@ -2,8 +2,6 @@ project(qmmf_camera_adaptor VERSION 1.0)
 
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(QMMF_CAMERA_METADATA
-  REQUIRED qmmf_camera_metadata)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
 pkg_check_modules(QMMF_CONFIG
@@ -33,7 +31,6 @@ target_include_directories(qmmf_camera_adaptor
  PRIVATE ${TOP_DIRECTORY}
          ${QMMF_UTILS_INCLUDE_DIRS}
          ${QMMF_CONFIG_INCLUDE_DIRS}
-         ${QMMF_CAMERA_METADATA_INCLUDE_DIRS}
          ${QMMF_PROTO_INCLUDE_DIRS}
          ${CAMX_INCLUDE_DIRS}
 )
@@ -61,7 +58,7 @@ target_link_libraries(qmmf_camera_adaptor
   ${CMAKE_DL_LIBS}
   qmmf_memory_interface
   qmmf_camera_interface
-  ${QMMF_CAMERA_METADATA_LIBRARIES}
+  qmmf_camera_metadata
   ${QMMF_UTILS_LIBRARIES}
 )
 

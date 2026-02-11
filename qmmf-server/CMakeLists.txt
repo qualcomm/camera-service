@@ -5,9 +5,6 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(QMMF_CONFIG
   REQUIRED qmmf_config)
 
-pkg_check_modules(QMMF_CAMERA_METADATA
-  REQUIRED qmmf_camera_metadata)
-
 if (NOT QMMF_SERVER_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
 endif()
@@ -23,7 +20,6 @@ endif()
 target_include_directories(cam-server
  PRIVATE ${TOP_DIRECTORY}
  PRIVATE ${TOP_DIRECTORY}/common/memory
- PRIVATE ${QMMF_CAMERA_METADATA_INCLUDE_DIRS}
  )
 
 install(TARGETS cam-server DESTINATION bin OPTIONAL)

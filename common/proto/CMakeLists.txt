@@ -1,6 +1,6 @@
 project(qmmf_proto VERSION 1.0)
 
-find_package(absl REQUIRED)
+find_package(absl)
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIR})
 
@@ -44,6 +44,8 @@ install(
   DESTINATION lib/pkgconfig
 )
 
-target_link_libraries(qmmf_proto ${PROTOBUF_LIBRARIES}
-    absl::log_internal_message
-    absl::log_internal_check_op)
+target_link_libraries(qmmf_proto
+  ${PROTOBUF_LIBRARIES}
+  $<$<TARGET_EXISTS:absl::log_internal_message>:absl::log_internal_message>
+  $<$<TARGET_EXISTS:absl::log_internal_check_op>:absl::log_internal_check_op>
+)

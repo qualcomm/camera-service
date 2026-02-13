@@ -16,6 +16,9 @@ protobuf_generate(TARGET qmmf_proto
     PROTOC_OUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}
     PROTOS qmmf.proto)
 
+# Add destination of compiletime pkg-config file to PKG_CONFIG_PATH
+set(ENV{PKG_CONFIG_PATH} "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
+
 # Install the generated header so parent recipes can include it
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/qmmf.pb.h

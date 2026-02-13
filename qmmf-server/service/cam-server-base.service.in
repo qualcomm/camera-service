@@ -35,14 +35,12 @@ SourcePath=/usr/bin/cam-server
 After=var-volatile-lib.service
 
 [Service]
-User=system
-Group=video
-SupplementaryGroups=system
+User=@CAM_SERVER_USER@
+Group=@CAM_SERVER_GROUP@
+SupplementaryGroups=@CAM_SERVER_SUPP_GROUP@
 Restart=always
-EnvironmentFile=/etc/cam-server-env
-ExecStartPre=/bin/mkdir -p /tmp/socket/cam_server
-ExecStartPre=+/bin/chmod 0775 /tmp/socket/cam_server
-ExecStartPre=+/bin/sh -c 'if selinuxenabled && command -v restorecon >/dev/null 2>&1; then /sbin/restorecon -F /tmp/socket/cam_server; fi'
+RuntimeDirectory=cam_server
+RuntimeDirectoryMode=0775
 CacheDirectory=camera
 ExecStart=/usr/bin/cam-server
 

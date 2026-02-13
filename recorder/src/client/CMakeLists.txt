@@ -2,8 +2,6 @@ project(qmmf_recorder_client VERSION 1.0)
 
 find_package(PkgConfig)
 
-pkg_check_modules(QMMF_CAMERA_METADATA
-  REQUIRED qmmf_camera_metadata)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
 pkg_check_modules(QMMF_CONFIG
@@ -60,8 +58,7 @@ set_target_properties(qmmf_recorder_client PROPERTIES
 )
 
 install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
-target_link_libraries(qmmf_recorder_client dl
-  ${QMMF_CAMERA_METADATA_LIBRARIES}
+target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata
   ${QMMF_UTILS_LIBRARIES} qmmf_recorder_service_interface
 )
 

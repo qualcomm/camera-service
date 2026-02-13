@@ -2,8 +2,6 @@ project(qmmf_recorder_service_${PLATFORM} VERSION 1.0)
 
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(QMMF_CAMERA_METADATA
-  REQUIRED qmmf_camera_metadata)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
 pkg_check_modules(QMMF_CONFIG

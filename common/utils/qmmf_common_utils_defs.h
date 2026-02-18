@@ -355,20 +355,25 @@ class Target {
   // GetLibName
   // @param[in] name     Base name of the shared library
   // @param[in] version  Library version string
-  // @brief  Return the target based lib name
+  // @brief
+  //   If platform-specific lib exits  → return the lib name with suffix.
+  //   else returns lib name without suffix.
   // @return string return for libname
   static std::string GetLibName(const std::string &name,
                                 const std::string &version) {
     std::string lib_name;
-    auto file_exist = Target::FileExists(name, version);
+
+    auto soc_id = Target::GetSocId();
+    auto suffix = Target::GetName(soc_id);
+    lib_name = name + "_" + std::string(suffix);
+
+    auto file_exist = Target::FileExists(lib_name , version);
+
     if (file_exist) {
-      lib_name = name + ".so." + version;
-    } else {
-      auto soc_id = Target::GetSocId();
-      auto suffix = Target::GetName(soc_id);
-      lib_name = name + "_" + std::string(suffix) + ".so." + version;
+      return lib_name + ".so." + version;
     }
-    return lib_name;
+
+    return name + ".so." + version;
   }
 
   // GetName

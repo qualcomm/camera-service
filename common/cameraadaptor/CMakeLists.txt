@@ -25,6 +25,11 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_camera3_smooth_zoom.cc
 
 if (HAVE_BINDER_H)
 add_dependencies(qmmf_camera_adaptor_${PLATFORM} qmmf_utils)
+else()
+add_dependencies(qmmf_camera_adaptor_${PLATFORM} qmmf_proto
+  qmmf_utils
+  qmmf_config
+)
 endif()
 
 target_include_directories(qmmf_camera_adaptor_${PLATFORM}

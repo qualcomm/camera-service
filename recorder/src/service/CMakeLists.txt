@@ -46,6 +46,9 @@ if (NOT CAMERA_HAL1_SUPPORT)
 add_dependencies(
   qmmf_recorder_service_${PLATFORM}
   qmmf_camera_adaptor_${PLATFORM}
+  qmmf_proto
+  qmmf_config
+  qmmf_utils
 )
 if (RESIZER_C2D_ENABLED)
 add_dependencies(

@@ -1,4 +1,4 @@
-qcom-camera-server (1.8.0-qcom0) noble; urgency=medium
+qcom-camera-server (1.8.0) noble; urgency=medium
 
   [ Hui Liu ]
   * le-service: add JPEG size calculation interface

@@ -24,6 +24,8 @@ configure_file(
 add_executable(cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
 add_dependencies(cam-server qmmf_recorder_service)
+else()
+add_dependencies(cam-server qmmf_proto qmmf_config)
 endif()
 
 target_include_directories(cam-server

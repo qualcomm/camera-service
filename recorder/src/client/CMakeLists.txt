@@ -29,6 +29,12 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_client.cc
 )
 
+add_dependencies(qmmf_recorder_client
+  qmmf_proto
+  qmmf_utils
+  qmmf_config
+)
+
 pkg_check_modules(GBM gbm)
 
 if(GBM_FOUND AND USE_LIBGBM)

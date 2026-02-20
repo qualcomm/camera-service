@@ -37,6 +37,11 @@ qmmf_memory_interface.cc
 qmmf_gralloc_interface.cc)
 endif()
 
+add_dependencies(qmmf_memory_interface_${PLATFORM}
+  qmmf_utils
+  qmmf_config
+)
+
 target_include_directories(qmmf_memory_interface_${PLATFORM}
  PRIVATE ${TOP_DIRECTORY}
          ${QMMF_UTILS_INCLUDE_DIRS}

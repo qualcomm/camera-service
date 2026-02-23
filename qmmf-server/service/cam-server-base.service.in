@@ -42,6 +42,7 @@ Restart=always
 RuntimeDirectory=cam_server
 RuntimeDirectoryMode=0775
 CacheDirectory=camera
+ExecCondition=/usr/bin/check-camx-overlay.sh
 ExecStart=/usr/bin/cam-server
 
 [Install]

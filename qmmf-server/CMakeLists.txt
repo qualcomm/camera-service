@@ -40,6 +40,10 @@ install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/cam-server-env
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
+install(PROGRAMS
+        ${CMAKE_CURRENT_SOURCE_DIR}/check-camx-overlay.sh
+        DESTINATION bin)
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)
 else()

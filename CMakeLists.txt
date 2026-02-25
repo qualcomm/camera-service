@@ -48,7 +48,7 @@ set(CMAKE_STATIC_LINKER_FLAGS
 #Add default configuration
 add_subdirectory(config/common)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_CXX_FLAGS}")
 
 if (RESIZER_FASTCV_ENABLED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_RESCALER_FASTCV")
@@ -115,6 +115,7 @@ function(build_target TARGET_SUFFIX PLATFORM CAMX_INCLUDE_DIRS)
 
   #Load platform specific configuration
   add_subdirectory("config/${PLATFORM}" "${BINROOT}/config/${PLATFORM}" )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
 
   add_subdirectory("recorder/src/service" "${BINROOT}/recorder/src/service")
   add_subdirectory("common/memory" "${BINROOT}/common/memory")

@@ -124,6 +124,73 @@ enum ImageFormatMsg {
   IMAGE_FORMAT_BAYERRDI16BIT = 7;
 }
 
+// Offline Camera
+enum OfflinePostProcModeMsg {
+  OFFLINE_POSTPROC_YUV_TO_JPEG     = 0;
+  OFFLINE_POSTPROC_YUV_TO_YUV      = 1;
+  OFFLINE_POSTPROC_RAW_TO_YUV      = 2;
+  OFFLINE_POSTPROC_RAW_TO_JPEG_SBS = 3;
+}
+
+message OfflineCameraBufferParamsMsg {
+  uint32 width  = 1;
+  uint32 height = 2;
+  VideoFormatMsg format = 3;
+}
+
+message OfflineCameraInputParamsMsg {
+  repeated uint32 camera_id = 1;
+  uint32 width  = 2;
+  uint32 height = 3;
+}
+
+message OfflineCameraOutputParamsMsg {
+  uint32 size = 1;
+}
+
+message OfflineCameraCreateParamsMsg {
+  repeated uint32 camera_id = 1;
+  OfflineCameraBufferParamsMsg in_buffer = 2;
+  OfflineCameraBufferParamsMsg out_buffer = 3;
+  OfflinePostProcModeMsg process_mode = 4;
+  repeated uint32 metadata_step = 5;
+  repeated bytes request_metadata_path = 6;
+  repeated bytes session_meta = 7;
+}
+
+message OfflineCameraProcessParamsMsg {
+  repeated int32 in_buf_fd = 1;
+  int32 out_buf_fd = 2;
+  bytes meta = 3;
+}
+
+message GetOfflineCameraParamsReqMsg {
+  uint32 client_id = 1;
+  OfflineCameraInputParamsMsg in_params = 2;
+}
+
+message GetOfflineCameraParamsRespMsg {
+  uint32 status = 1;
+  OfflineCameraOutputParamsMsg out_params = 2;
+}
+
+// Create offline camera post-processing context
+message CreateOfflineCameraReqMsg {
+  uint32 client_id = 1;
+  OfflineCameraCreateParamsMsg params = 2;
+}
+
+// Run offline camera processing
+message ProcessOfflineCameraReqMsg {
+  uint32 client_id = 1;
+  OfflineCameraProcessParamsMsg process_params = 2;
+}
+
+// Destroy offline camera post-processing context
+message DestroyOfflineCameraReqMsg {
+  uint32 client_id = 1;
+}
+
 message ImageParamMsg {
   ImageModeMsg mode = 1;
   uint32 width = 2;
@@ -138,39 +205,6 @@ message ExtraParamMsg {
   uint32 tag_id = 1;
   uint32 entry_id = 2;
   uint32 data_size = 3;
-}
-
-// Offline JPEG
-message OfflineJpegInputParamsMsg {
-  uint32 camera_id = 1;
-  uint32 width = 2;
-  uint32 height = 3;
-}
-
-message OfflineJpegOutputParamsMsg {
-  uint32 size = 1;
-}
-
-message OfflineJpegBufferParamsMsg {
-  uint32 width = 1;
-  uint32 height = 2;
-  uint32 format = 3;
-}
-
-message OfflineJpegCreateParamsMsg {
-  uint32 process_mode = 1;
-  OfflineJpegBufferParamsMsg in_buffer = 2;
-  OfflineJpegBufferParamsMsg out_buffer = 3;
-}
-
-message OfflineJpegMetaMsg {
-  uint32 quality = 1;
-}
-
-message OfflineJpegProcessParamsMsg {
-  int32 in_buf_fd = 1;
-  int32 out_buf_fd = 2;
-  OfflineJpegMetaMsg metadata = 3;
 }
 
 message ConnectRespMsg {
@@ -358,32 +392,6 @@ message GetVendorTagDescriptorRespMsg {
   bytes descs = 2;
 }
 
-// GetOfflineJPEGParams
-message GetOfflineJPEGParamsReqMsg {
-  uint32 client_id = 1;
-  OfflineJpegInputParamsMsg in_params = 2;
-  OfflineJpegOutputParamsMsg out_params = 3;
-}
-
-// CreateOfflineJPEG
-message CreateOfflineJPEGReqMsg {
-  uint32 client_id = 1;
-  OfflineJpegCreateParamsMsg params = 2;
-}
-
-// EncodeOfflineJPEG
-message EncodeOfflineJPEGReqMsg {
-  uint32 client_id = 1;
-  BufferInfoMsg in_buf = 2;
-  BufferInfoMsg out_buf = 3;
-  OfflineJpegMetaMsg meta = 4;
-}
-
-// DestroyOfflineJPEG
-message DestroyOfflineJPEGReqMsg {
-  uint32 client_id = 1;
-}
-
 // Client to Server API messages
 enum RECORDER_SERVICE_CMDS {
   RECORDER_UNKNOWN = 0;
@@ -408,13 +416,13 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_GET_DEFAULT_CAPTURE_PARAMS = 19;
   RECORDER_GET_CAMERA_CHARACTERISTICS = 20;
   RECORDER_GET_VENDOR_TAG_DESCRIPTOR = 21;
-  RECORDER_CONFIGURE_OFFLINE_JPEG = 22;
-  RECORDER_ENCODE_OFFLINE_JPEG = 23;
-  RECORDER_DESTROY_OFFLINE_JPEG = 24;
-  RECORDER_CALLBACK_SOCKET_READY = 25;
-  RECORDER_GET_CAMERA_STATIC_INFO = 26;
-  RECORDER_GET_SUPPORTED_INTERFACE_VER = 27;
-  RECORDER_GET_OFFLINE_PARAMS = 28;
+  RECORDER_CALLBACK_SOCKET_READY = 22;
+  RECORDER_GET_CAMERA_STATIC_INFO = 23;
+  RECORDER_GET_SUPPORTED_INTERFACE_VER = 24;
+  RECORDER_GET_OFFLINE_CAMERA_PARAMS  = 25;
+  RECORDER_CREATE_OFFLINE_CAMERA      = 26;
+  RECORDER_PROCESS_OFFLINE_CAMERA     = 27;
+  RECORDER_DESTROY_OFFLINE_CAMERA     = 28;
 }
 
 message RecorderClientReqMsg {
@@ -439,13 +447,13 @@ message RecorderClientReqMsg {
     SetVHDRReqMsg set_vhdr = 18;
     GetDefaultCaptureParamReqMsg get_default_capture_param = 19;
     GetCameraCharacteristicsReqMsg get_camera_characteristics = 20;
-    CreateOfflineJPEGReqMsg create_offline_jpeg = 21;
-    EncodeOfflineJPEGReqMsg encode_offline_jpeg = 22;
-    DestroyOfflineJPEGReqMsg destroy_offline_jpeg = 23;
-    CallbackSocketReadyMsg callback_socket_ready = 24;
-    DummyMsg dummy_msg = 25;
-    GetCamStaticInfoReqMsg get_cam_static_info = 26;
-    GetOfflineJPEGParamsReqMsg get_offline_jpeg_params = 28;
+    CallbackSocketReadyMsg callback_socket_ready = 21;
+    DummyMsg dummy_msg = 22;
+    GetCamStaticInfoReqMsg get_cam_static_info = 23;
+    GetOfflineCameraParamsReqMsg get_offline_camera_params = 24;
+    CreateOfflineCameraReqMsg create_offline_camera = 25;
+    ProcessOfflineCameraReqMsg process_offline_camera = 26;
+    DestroyOfflineCameraReqMsg destroy_offline_camera = 27;
   }
 }
 
@@ -461,6 +469,7 @@ message RecorderClientRespMsg {
     DummyMsg dummy_msg = 8;
     GetCamStaticInfoRespMsg get_cam_static_info_resp = 9;
     GetSupportedInterfaceVerRespMsg get_supported_interface_ver_resp = 10;
+    GetOfflineCameraParamsRespMsg get_offline_camera_params_resp = 11;
   }
 }
 
@@ -468,7 +477,7 @@ message RecorderClientRespMsg {
 enum RECORDER_SERVICE_CB_CMDS {
   RECORDER_NOTIFY_EVENT= 0;
   RECORDER_NOTIFY_SNAPSHOT_DATA= 1;
-  RECORDER_NOTIFY_OFFLINE_JPEG_DATA= 2;
+  RECORDER_NOTIFY_OFFLINE_CAMERA_DATA = 2;
   RECORDER_NOTIFY_VIDEO_TRACK_DATA= 3;
   RECORDER_NOTIFY_VIDEO_TRACK_EVENT= 4;
   RECORDER_NOTIFY_CAMERA_RESULT= 5;
@@ -484,11 +493,6 @@ message NotifySnapshotDataMsg {
   uint32 img_count = 2;
   BufferInfoMsg buffer = 3;
   BufferMetaMsg meta = 4;
-}
-
-message NotifyOfflineJpegDataMsg {
-  int32 buf_fd = 1;
-  uint32 encoded_size = 2;
 }
 
 message NotifyVideoTrackDataMsg {
@@ -508,12 +512,17 @@ message NotifyCameraResultMsg {
   bytes result_meta = 2;
 }
 
+message NotifyOfflineCameraDataMsg {
+  int32 buf_fd = 1;
+  uint32 encoded_size = 2;
+}
+
 message RecorderClientCallbacksAsync {
   RECORDER_SERVICE_CB_CMDS cmd = 1;
   oneof callback {
     NotifyRecorderEventMsg recorder_event = 2;
     NotifySnapshotDataMsg snapshot_data = 3;
-    NotifyOfflineJpegDataMsg offline_jpeg_data = 4;
+    NotifyOfflineCameraDataMsg offline_camera_data = 4;
     NotifyVideoTrackDataMsg video_track_data = 5;
     NotifyVideoTrackEventMsg video_track_event = 6;
     NotifyCameraResultMsg camera_result = 7;

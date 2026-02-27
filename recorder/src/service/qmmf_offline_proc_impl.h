@@ -5,6 +5,12 @@
 
 #pragma once
 
+#include <errno.h>
+
+#include <cstddef>
+#include <cstdlib>
+#include <cerrno>
+
 #include <chicdk/chiofflinepostprocintf.h>
 
 #include "common/cameraadaptor/qmmf_camera3_utils.h"
@@ -102,7 +108,7 @@ struct OfflineCbData {
   uint32_t client_id;
 };
 
-int32_t OfflineCb(PostProcSessionParams* pproc_params,
+void OfflineCb(PostProcSessionParams* pproc_params,
                   uint32_t out_size,
                   void* user_data);
 

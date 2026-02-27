@@ -61,6 +61,13 @@ inline const char* kCameraMetaDataLibName = "libcamera_metadata";
 
 enum class SocId {
   kInvalid = 0,
+  kTALOS_SDM640 = 355,
+  kTALOS_SM6150P = 369,
+  kTALOS_SA6155P = 377,
+  kTALOS_SA4155P = 380,
+  kTALOS_SA6155 = 384,
+  kTALOS_QCS610 = 401,
+  kTALOS_QCS410 = 406,
   kKODIAK_SM = 475,
   kKODIAK_SC7280 = 487,
   kKODIAK_SC7295 = 488,
@@ -88,6 +95,7 @@ enum class SocId {
   kQCS8300 = 674,
   kQCS8275 = 675,
   kQCS9075 = 676,
+  kTALOS_QCS615 = 680,
   kMONACO_FLEX = 695,
 };
 
@@ -413,6 +421,16 @@ class Target {
       case SocId::kMONACO_SRV1L_FC:
       case SocId::kMONACO_FLEX:
         return "lemans";
+
+      case SocId::kTALOS_SDM640:
+      case SocId::kTALOS_SM6150P:
+      case SocId::kTALOS_SA6155P:
+      case SocId::kTALOS_SA4155P:
+      case SocId::kTALOS_SA6155:
+      case SocId::kTALOS_QCS610:
+      case SocId::kTALOS_QCS410:
+      case SocId::kTALOS_QCS615:
+        return "talos";
 
       default:
         return {};

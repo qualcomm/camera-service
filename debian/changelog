@@ -1,3 +1,109 @@
+qcom-camera-server (1.8.1) noble; urgency=medium
+
+  [ Murali Krishna Bellamkonda ]
+  * le-service: start cam-server when camx KMD is up
+  * le-camera-server: fix undef platform-specific compile definitions
+  * le-services: fix non-deterministic CMake build failures
+  * le-services: Modify dlopen library search order
+
+  [ Bala Sai Kosuri ]
+  * Make absl linking optional
+
+  [ Linux Build Service Account ]
+  * Merge "cam-server: Move socket to /run and template the service" into le-services.lnx.1.0
+
+  [ Deepali Reddy Karra ]
+  * cam-server: Move socket to /run and template the service
+
+  [ Linux Build Service Account ]
+  * Merge "cam-server: create camera-metadata headers" into le-services.lnx.1.0
+  * Merge "le-services: Modify cmake to build for ALL" into le-services.lnx.1.0
+
+  [ Murali Krishna Bellamkonda ]
+  * le-services: Modify cmake to build for ALL
+
+  [ skomakul ]
+  * cam-server: create camera-metadata headers
+  * cam-server: adding copyright
+
+  [ Linux Build Service Account ]
+  * Merge changes from topic "MAINLINE_0.0_CAM-SERVER" into le-services.lnx.1.0
+  * Merge "le-services: Use pkg-config for common lib dependencies" into le-services.lnx.1.0
+
+  [ Murali Krishna Bellamkonda ]
+  * cam-server: Align service installation with Yocto systemd conventions
+  * le-services: add changes for bb recipe optimization
+
+  [ QCTECMDR Service ]
+  * Merge "le-services: Add pkgconfig for common libs"
+  * Merge "le-services: add common configuration"
+
+  [ shukulk ]
+  * le-camera-server : Remove #ifdef guards to fix compilation.
+
+  [ Murali Krishna Bellamkonda ]
+  * le-services: Use pkg-config for common lib dependencies
+  * le-services: Add pkgconfig for common libs
+  * le-services: add common configuration
+
+  [ QCTECMDR Service ]
+  * Merge "github: Add repo governance files, templates, and CI workflows"
+
+  [ Girish K ]
+  * github: Add repo governance files, templates, and CI workflows
+
+  [ Jai Shiv ]
+  * cam-server: add shared object versioning
+  * cam-server: segregate recorder service interface
+
+  [ Murali Krishna Bellamkonda ]
+  * le-services: Add target suffix to the libs
+  * le-services: move camera3 dependent code to adaptor
+
+  [ QCTECMDR Service ]
+  * Merge "cam-server: Remove use of GLib APIs and data strucutres"
+
+  [ Jai Shiv ]
+  * cam-server: load recorder service dynamically
+  * cam-server: add support to read soc id and load lib
+
+  [ Stilyan Uzunov ]
+  * cam-server: Remove use of GLib APIs and data strucutres
+
+  [ Jai Shiv ]
+  * cam-server: add support for camera device client interface
+
+  [ QCTECMDR Service ]
+  * Merge "cam-server: Align EventType enum with qmmf-sdk"
+  * Merge "le-camera-server: Add fallback to system heap"
+
+  [ Murali Krishna Bellamkonda ]
+  * le-camera-server: Add fallback to system heap
+  * le-services: add checks for camera client only compilation
+
+  [ QCTECMDR Service ]
+  * Merge "le-service: update for add JPEG size calculation interface"
+
+  [ Guangde ]
+  * le-service: update for add JPEG size calculation interface
+
+  [ Jai Shiv ]
+  * cam-server: fix library version issue
+
+  [ QCTECMDR Service ]
+  * Merge "cam-server: Fix FD leak"
+
+  [ skomakul ]
+  * cam-server: burst snapshot back to back failing
+
+  [ Bala Sai Kosuri ]
+  * cam-server: Fix FD leak
+
+  [ Deepali Reddy Karra ]
+  * cam-server: Align EventType enum with qmmf-sdk
+
+ -- Bala Sai Kosuri <bkosuri@qti.qualcomm.com>  Tue, 03 Mar 2026 16:36:19 +0530
+
 qcom-camera-server (1.8.0) noble; urgency=medium
 
   [ Hui Liu ]

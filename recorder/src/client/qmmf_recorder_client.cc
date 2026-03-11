@@ -1241,6 +1241,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   if (0 != ret) {
     QMMF_ERROR("%s Can't connect to (%s) service", __func__,
         QMMF_RECORDER_SERVICE_NAME);
+    return ret;
   }
 
 #endif // HAVE_BINDER

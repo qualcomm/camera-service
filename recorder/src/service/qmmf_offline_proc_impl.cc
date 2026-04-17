@@ -8,9 +8,7 @@
 #include "qmmf_offline_proc_impl.h"
 
 #include <dlfcn.h>
-
-#include <hardware/graphics.h>
-#include <hardware/native_handle.h>
+#include <cutils/native_handle.h>
 
 #include "common/utils/qmmf_log.h"
 #ifdef QCAMERA3_TAG_LOCAL_COPY
@@ -47,7 +45,7 @@ status_t OfflineProcess::Init(
   assert(remote_cb_handle != nullptr);
   remote_cb_handle_ = remote_cb_handle;
 
-  int32_t ret = 0;
+  int32_t ret = NO_ERROR;
 
   // This is required for proper working of the jpeg lib
   ret = CameraModule::getInstance(&camera_module_);
@@ -60,7 +58,7 @@ status_t OfflineProcess::Init(
   if (!offline_proc_lib_) {
     QMMF_ERROR("%s: No postproc lib, dlopen failed with: %s.",
             __func__, dlerror());
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   pCameraPostProcCreate   = (PFN_CameraPostProc_Create)
@@ -81,7 +79,7 @@ status_t OfflineProcess::Init(
             pCameraPostProcProcess,
             pCameraPostProcDestroy,
             pCameraPostProcRelease);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   QMMF_INFO("%s: Exit ", __func__);
@@ -119,7 +117,7 @@ status_t OfflineProcess::DeInit() {
   }
 
   QMMF_INFO("%s: Exit ", __func__);
-  return 0;
+  return NO_ERROR;
 }
 
 status_t OfflineProcess::RegisterClient(const uint32_t client_id) {
@@ -128,7 +126,7 @@ status_t OfflineProcess::RegisterClient(const uint32_t client_id) {
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
   if (IsClientFound(client_id)) {
     QMMF_INFO("%s: Client %d already registered.", __func__, client_id);
-    return -EEXIST;
+    return ALREADY_EXISTS;
   }
 
   clients_list_.push_back(client_id);
@@ -136,7 +134,7 @@ status_t OfflineProcess::RegisterClient(const uint32_t client_id) {
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
 
-  return 0;
+  return NO_ERROR;
 }
 
 status_t OfflineProcess::DeRegisterClient(const uint32_t client_id) {
@@ -145,7 +143,7 @@ status_t OfflineProcess::DeRegisterClient(const uint32_t client_id) {
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
   if (!IsClientFound(client_id)) {
     QMMF_ERROR("%s: Client %d not found.", __func__, client_id);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   for (uint32_t i = 0; i < clients_list_.size(); i++) {
@@ -158,7 +156,7 @@ status_t OfflineProcess::DeRegisterClient(const uint32_t client_id) {
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
 
-  return 0;
+  return NO_ERROR;
 }
 
 bool OfflineProcess::IsClientFound(const uint32_t& client_id) {
@@ -230,7 +228,7 @@ status_t OfflineProcess::GetParams(const uint32_t client_id,
   if (ret > 0) {
     out_params.size = ret;
     QMMF_DEBUG("%s calculate blob size is %d", __func__, ret);
-    ret = 0;
+    ret = NO_ERROR;
   }
 
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
@@ -253,7 +251,7 @@ status_t OfflineProcess::Create(const uint32_t client_id,
 
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   OfflineCreateParams create_params;
@@ -281,12 +279,12 @@ status_t OfflineProcess::Create(const uint32_t client_id,
       GetUsageFromFormat(buffer_format);
 #endif
 
-  create_params.config.pResultCallBack = OfflineCb;
+  create_params.config.clientCb = OfflineCb;
   create_params.cb_data = new OfflineCbData;
   create_params.cb_data->offline_proc = this;
   create_params.cb_data->client_id = client_id;
 
-  create_params.config.pClientData =
+  create_params.config.clientData =
       reinterpret_cast<void*>(create_params.cb_data);
 
 #ifdef FEATURE_OFFLINE_IPE_ENABLE
@@ -311,13 +309,13 @@ status_t OfflineProcess::Create(const uint32_t client_id,
        (create_params.config.processMode == RAWToJPEGSBS))
     && (!offlineipe_enable)) {
     QMMF_INFO("%s offline IPE module not support.", __func__);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   create_params.pproc_instance = pCameraPostProcCreate(&create_params.config);
   if (!create_params.pproc_instance) {
     QMMF_ERROR("%s pproc_instance creation failed.", __func__);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   {
@@ -333,7 +331,7 @@ status_t OfflineProcess::Create(const uint32_t client_id,
   client_requests_map_.emplace(client_id, OfflineRequests());
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return 0;
+  return NO_ERROR;
 }
 
 status_t OfflineProcess::Process(const uint32_t client_id,
@@ -346,7 +344,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   std::unique_lock<std::mutex> client_lock(client_pproc_lock_);
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   native_handle_t *input_nh0;
@@ -359,29 +357,54 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   input_nh1 = native_handle_create(2, 8);
   output_nh = native_handle_create(2, 8);
 
+  //check if buf fd is present
   {
     std::lock_guard<std::mutex> l(client_fd_lock_);
-    auto& fd_map = client_fd_map_[client_id];
-
-    auto update_fd = [&](int32_t buffer_id, int32_t new_fd) {
-      if (new_fd == -1 || buffer_id == -1)
-        return;
-
-      auto it = fd_map.find(buffer_id);
-      if (it == fd_map.end()) {
-        fd_map.emplace(buffer_id, new_fd);
+    if (-1 != in_buf0.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf0.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf0.buffer_id, in_buf0.ion_fd);
       } else {
-        int32_t old_fd = it->second;
-        if (old_fd != new_fd && old_fd >= 0) {
-          close(old_fd);
-        }
-        it->second = new_fd;
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(in_buf0.buffer_id),
+                  in_buf0.ion_fd,
+                  in_buf0.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return BAD_VALUE;
       }
-    };
-
-    update_fd(in_buf0.buffer_id, in_buf0.ion_fd);
-    update_fd(in_buf1.buffer_id, in_buf1.ion_fd);
-    update_fd(out_buf.buffer_id, out_buf.ion_fd);
+    }
+    if (-1 != in_buf1.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf1.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf1.buffer_id, in_buf1.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(in_buf1.buffer_id),
+                  in_buf1.ion_fd,
+                  in_buf1.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return BAD_VALUE;
+      }
+    }
+    if (-1 != out_buf.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(out_buf.buffer_id)) {
+        client_fd_map_[client_id].emplace(out_buf.buffer_id, out_buf.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(out_buf.buffer_id),
+                  out_buf.ion_fd,
+                  out_buf.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return BAD_VALUE;
+      }
+    }
   }
 
   PostProcHandleParams in_handle_params0, in_handle_params1, out_handle_params;
@@ -404,7 +427,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
     native_handle_delete(input_nh1);
     native_handle_delete(output_nh);
     delete pproc_params;
-    return -ENOMEM;
+    return NO_MEMORY;
   }
 
   pproc_params->streamId = client_id;
@@ -418,7 +441,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
     QMMF_ERROR("%s: No jpeg encoder instance for client %d",
               __func__, client_id);
     ReleaseRequestData(pproc_params);
-    return -EINVAL;
+    return BAD_VALUE;
   }
   QMMF_INFO("pproc instance: %p", pproc_instance);
 
@@ -469,7 +492,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
     remote_cb_handle_(client_id)->NotifyOfflineProcData(out_buf.buffer_id, 0);
 
     ReleaseRequestData(pproc_params);
-    return 0;
+    return NO_ERROR;
   }
 
   requests_lock_.lock();
@@ -477,7 +500,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   requests_lock_.unlock();
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return 0;
+  return NO_ERROR;
 }
 
 status_t OfflineProcess::Destroy(const uint32_t client_id) {
@@ -486,7 +509,7 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
   std::unique_lock<std::mutex> client_lock(client_pproc_lock_);
   if(!IsClientFound(client_id)) {
     QMMF_ERROR("%s Error: Client %d not found.", __func__, client_id);
-    return -EINVAL;
+    return BAD_VALUE;
   }
 
   {
@@ -519,7 +542,7 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
   if (!pproc_instance) {
     QMMF_ERROR("%s: No jpeg encoder instance for client %d!",
                client_id, __func__);
-    return -EINVAL;
+    return BAD_VALUE;
   }
   QMMF_INFO("%s: pproc instance: %p", __func__, pproc_instance);
 
@@ -532,10 +555,11 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
   client_pproc_map_.erase(client_id);
 
   pCameraPostProcDestroy(pproc_instance);
+  pCameraPostProcRelease(pproc_instance);
   pproc_instance = nullptr;
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
-  return 0;
+  return NO_ERROR;
 }
 
 void OfflineProcess::ReleaseRequestData(PostProcSessionParams* params) {
@@ -580,14 +604,16 @@ void OfflineProcess::NotifyOfflineProc(const uint32_t& client_id,
   }
 }
 
-void OfflineCb(PostProcSessionParams* pproc_params,
+int32_t OfflineCb(PostProcSessionParams* pproc_params,
                uint32_t out_size,
                void* user_data) {
   if (!pproc_params) {
     QMMF_ERROR("%s: pproc_params is null", __func__);
+    return BAD_VALUE;
   }
   if (!user_data) {
     QMMF_ERROR("%s: user_data is null", __func__);
+    return BAD_VALUE;
   }
 
   OfflineCbData* cb_data = reinterpret_cast<OfflineCbData*>(user_data);
@@ -596,6 +622,7 @@ void OfflineCb(PostProcSessionParams* pproc_params,
   int32_t out_buf_fd = pproc_params->outHandle[0].phHandle->data[0];
   enc->NotifyOfflineProc(client, out_buf_fd, out_size, pproc_params);
 
+  return NO_ERROR;
 }
 
 };  // namespace qmmf.

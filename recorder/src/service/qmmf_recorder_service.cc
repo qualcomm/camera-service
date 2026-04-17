@@ -934,18 +934,16 @@ status_t RecorderService::SetupSocket() {
   return 0;
 }
 
-status_t RecorderService::ReadRequest(int socket, void *buffer, size_t size) {
-  struct msghdr msg = {0};
-  struct iovec io;
-  char cmsgbuf[CMSG_SPACE(1024)] = {0};
-  io.iov_base = buffer;
-  io.iov_len = size;
-  msg.msg_iov = &io;
-  msg.msg_iovlen = 1;
-  msg.msg_control = cmsgbuf;
-  msg.msg_controllen = sizeof(cmsgbuf);
+status_t RecorderService::ReadRequest (int socket, void *buffer, size_t size) {
 
-  ssize_t bytes_read = recvmsg(socket, &msg, 0);
+  ssize_t bytes_read = recv(socket, buffer, size, 0);
+
+  if (bytes_read > 0) {
+    QMMF_VERBOSE("%s: read %zd bytes from client socket: %d",
+        __func__, bytes_read, socket);
+    return static_cast<status_t>(bytes_read);
+  }
+
   if (bytes_read == -1) {
     QMMF_ERROR("%s: Receive failed: %s", __func__, strerror(errno));
     return -errno;
@@ -953,24 +951,6 @@ status_t RecorderService::ReadRequest(int socket, void *buffer, size_t size) {
     QMMF_ERROR("%s: connection closed: %d", __func__, socket);
     CheckClientDeath(client_sockets_[socket]);
     return 0;
-  }
-
-  // Extract file descriptors
-  for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr;
-       cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-    if (cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
-      int32_t *fds = reinterpret_cast<int32_t *>(CMSG_DATA(cmsg));
-      int fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int32_t);
-      for (int i = 0; i < fd_count; ++i) {
-        fds_.push_back(fds[i]);
-      }
-    }
-  }
-
-  if (bytes_read > 0) {
-    QMMF_VERBOSE("%s: read %zd bytes from client socket: %d", __func__,
-                 bytes_read, socket);
-    return static_cast<status_t>(bytes_read);
   }
 
   return -EINVAL;
@@ -1454,119 +1434,6 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
         add_vers(QMMF_CURRENT_INTERFACE_VER);
     break;
   }
-  case RECORDER_SERVICE_CMDS::RECORDER_GET_OFFLINE_CAMERA_PARAMS: {
-    const auto &msg = req_msg.get_offline_camera_params();
-    uint32_t client_id = msg.client_id();
-
-    OfflineCameraInputParams in_params{};
-
-    int n_cam = std::min<int>(2, msg.in_params().camera_id_size());
-    for (int i = 0; i < n_cam; ++i) {
-      in_params.camera_id[i] = msg.in_params().camera_id(i);
-    }
-    in_params.width = msg.in_params().width();
-    in_params.height = msg.in_params().height();
-
-    OfflineCameraOutputParams out_params{};
-
-    status_t st = GetOfflineParams(client_id, in_params, out_params);
-    resp_msg.set_command(
-        RECORDER_SERVICE_CMDS::RECORDER_GET_OFFLINE_CAMERA_PARAMS);
-    resp_msg.set_status(st);
-    if (st == 0) {
-      auto *out_msg = resp_msg.mutable_get_offline_camera_params_resp()
-                          ->mutable_out_params();
-      out_msg->set_size(out_params.size);
-    }
-    break;
-  }
-  case RECORDER_SERVICE_CMDS::RECORDER_CREATE_OFFLINE_CAMERA: {
-    const auto &msg = req_msg.create_offline_camera();
-    uint32_t client_id = msg.client_id();
-    const auto &p = msg.params();
-
-    OfflineCameraCreateParams params{};
-
-    int n_cam = std::min<int>(2, p.camera_id_size());
-    for (int i = 0; i < n_cam; ++i) {
-      params.camera_id[i] = p.camera_id(i);
-    }
-
-    params.in_buffer.width = p.in_buffer().width();
-    params.in_buffer.height = p.in_buffer().height();
-    params.in_buffer.format =
-        static_cast<qmmf::recorder::VideoFormat>(p.in_buffer().format());
-
-    params.out_buffer.width = p.out_buffer().width();
-    params.out_buffer.height = p.out_buffer().height();
-    params.out_buffer.format =
-        static_cast<qmmf::recorder::VideoFormat>(p.out_buffer().format());
-
-    params.process_mode = static_cast<uint32_t>(p.process_mode());
-
-    status_t st = CreateOfflineProcess(client_id, params);
-    resp_msg.set_command(RECORDER_SERVICE_CMDS::RECORDER_CREATE_OFFLINE_CAMERA);
-    resp_msg.set_status(st);
-    break;
-  }
-  case RECORDER_SERVICE_CMDS::RECORDER_PROCESS_OFFLINE_CAMERA: {
-    const auto &msg = req_msg.process_offline_camera();
-    uint32_t client_id = msg.client_id();
-    const auto &p = msg.process_params();
-
-    // Build BnBuffer wrappers for the input/output buffers.
-    BnBuffer in_buf0{};
-    BnBuffer in_buf1{};
-    BnBuffer out_buf{};
-
-    in_buf0.ion_fd = -1;
-    in_buf1.ion_fd = -1;
-    out_buf.ion_fd = -1;
-    in_buf0.buffer_id = -1;
-    in_buf1.buffer_id = -1;
-    out_buf.buffer_id = -1;
-
-    if (p.in_buf_fd_size() > 0) {
-      in_buf0.ion_fd = fds_[0];
-      in_buf0.buffer_id = p.in_buf_fd(0);
-    }
-
-    out_buf.ion_fd = fds_[1];
-    out_buf.buffer_id = p.out_buf_fd();
-
-    CameraMetadata meta;
-    const std::string &m = p.meta();
-    if (!m.empty()) {
-      uint8_t *raw_buf = new uint8_t[m.size()];
-      camera_metadata_t *meta_buf =
-          ::qmmf::CameraMetadata::copy_camera_metadata(
-              raw_buf, m.size(),
-              reinterpret_cast<const camera_metadata_t *>(m.data()));
-      if (meta_buf) {
-        meta.acquire(meta_buf);
-      } else {
-        delete[] raw_buf;
-      }
-    }
-
-    status_t st =
-        ProcOfflineProcess(client_id, in_buf0, in_buf1, out_buf, meta);
-    resp_msg.set_command(
-        RECORDER_SERVICE_CMDS::RECORDER_PROCESS_OFFLINE_CAMERA);
-    resp_msg.set_status(st);
-    break;
-  }
-
-  case RECORDER_SERVICE_CMDS::RECORDER_DESTROY_OFFLINE_CAMERA: {
-    const auto &msg = req_msg.destroy_offline_camera();
-    uint32_t client_id = msg.client_id();
-
-    status_t st = DestroyOfflineProcess(client_id);
-    resp_msg.set_command(
-        RECORDER_SERVICE_CMDS::RECORDER_DESTROY_OFFLINE_CAMERA);
-    resp_msg.set_status(st);
-    break;
-  }
 
   default:
     QMMF_WARN ("%s: cmd: %u, Not sending.", __func__, req_msg.command());
@@ -1658,7 +1525,6 @@ void RecorderService::MainLoop() {
         // Deserialize the received data using protobuf
         ParseRequest(client_socket, socket_recv_buf_, bytes_read);
         memset(socket_recv_buf_, 0, bytes_read);
-        fds_.clear();
       }
       ++it;
     }
@@ -2610,22 +2476,8 @@ void RecorderServiceCallbackProxy::NotifySnapshotData(uint32_t camera_id, uint32
       __func__, camera_id, imgcount);
 }
 
-void RecorderServiceCallbackProxy::NotifyOfflineProcData(int32_t buf_fd,
-                                                         uint32_t out_size) {
-  QMMF_DEBUG("%s: Enter", __func__);
+void RecorderServiceCallbackProxy::NotifyOfflineProcData(int32_t buf_fd, uint32_t out_size) {
 
-  RecorderClientCallbacksAsync async_msg;
-  async_msg.set_cmd(
-      RECORDER_SERVICE_CB_CMDS::RECORDER_NOTIFY_OFFLINE_CAMERA_DATA);
-
-  NotifyOfflineCameraDataMsg *data = async_msg.mutable_offline_camera_data();
-
-  data->set_buf_fd(buf_fd);
-  data->set_encoded_size(out_size);
-
-  SendCallbackData(async_msg);
-
-  QMMF_DEBUG("%s: Exit", __func__);
 }
 
 void RecorderServiceCallbackProxy::NotifyVideoTrackData(uint32_t track_id,

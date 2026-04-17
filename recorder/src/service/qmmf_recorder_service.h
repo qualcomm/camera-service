@@ -392,8 +392,6 @@ class RecorderService : public IRecorderService {
   bool run_;
   // Map of client sockets and their client_ids .
   std::map<int, uint32_t> client_sockets_;
-  // Vector of offline camera buffers fds
-  std::vector<int32_t> fds_;
 #endif // HAVE_BINDER
 
   std::mutex                   lock_;

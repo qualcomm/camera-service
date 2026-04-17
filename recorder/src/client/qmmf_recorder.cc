@@ -369,8 +369,8 @@ status_t Recorder::GetOfflineJpegParams(const OfflineJpegInputParams &in_params,
                                         OfflineJpegOutputParams &out_params) {
   QMMF_INFO("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
-  OfflineCameraInputParams offline_in_params{};
-  OfflineCameraOutputParams offline_out_params{};
+  OfflineCameraInputParams offline_in_params;
+  OfflineCameraOutputParams offline_out_params;
 
   offline_in_params.camera_id[0] = in_params.camera_id;
   offline_in_params.width = in_params.width;
@@ -394,7 +394,7 @@ status_t Recorder::CreateOfflineJPEG(
 
   QMMF_DEBUG("%s: Enter" ,__func__);
   assert(recorder_client_ != NULL);
-  OfflineCameraCreateParams offline_params{};
+  OfflineCameraCreateParams offline_params;
   offline_params.process_mode = params.process_mode;
   offline_params.camera_id[0] = params.camera_id;
   offline_params.in_buffer.width = params.in_buffer.width;

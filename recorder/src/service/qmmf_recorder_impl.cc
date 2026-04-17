@@ -121,7 +121,7 @@ status_t RecorderImpl::Init(const RemoteCallbackHandle& remote_cb_handle) {
   offline_process_ = new OfflineProcess;
   if (!offline_process_) {
     QMMF_ERROR("%s: Can't Create OfflineProcess Instance!", __func__);
-    return -ENOMEM;
+    return NO_MEMORY;
   }
 
   status_t ret = offline_process_->Init(remote_cb_handle);

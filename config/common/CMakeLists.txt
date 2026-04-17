@@ -22,7 +22,7 @@ set(COMMON_CXX_FLAGS "${COMMON_CXX_FLAGS} -DUSE_FPS_IDX")
 
 set(COMMON_CXX_FLAGS "${COMMON_CXX_FLAGS} -DDISABLE_RESCALER_COLORSPACE")
 
-set(JPEG_LIB chiofflinepostproclib.so.0)
+set(JPEG_LIB camera/components/com.qti.offline.jpeg.so.0)
 
 set(COMMON_CXX_FLAGS "${COMMON_CXX_FLAGS} -DJPEG_POSTPROC_LIB=\"\\\"${JPEG_LIB}\\\"\"")
 

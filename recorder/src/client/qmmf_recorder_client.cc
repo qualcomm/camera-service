@@ -3683,13 +3683,8 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       std::vector<BnBuffer> buffers;
       for (auto &&b_data : data.buffers()) {
         BnBuffer buffer;
-        if (fds_.size()) {
-          buffer.ion_fd = fds_[0];
-          buffer.ion_meta_fd = fds_[1];
-        } else {
-          buffer.ion_fd = -1;
-          buffer.ion_meta_fd = -1;
-        }
+        buffer.ion_fd = (fds_.size() >= 1) ? fds_[0] : -1;
+        buffer.ion_meta_fd = (fds_.size() >= 2) ? fds_[1] : -1;
         buffer.img_id = b_data.img_id();
         buffer.size = b_data.size();
         buffer.timestamp = b_data.timestamp();

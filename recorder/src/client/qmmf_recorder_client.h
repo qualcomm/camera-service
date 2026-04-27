@@ -135,11 +135,9 @@ class RecorderClient {
 
   status_t SetCameraSessionParam(const uint32_t camera_id, const CameraMetadata &meta);
 
-#ifdef VHDR_MODES_ENABLE
   status_t SetVHDR(const uint32_t camera_id, const int32_t mode);
-#else
+
   status_t SetSHDR(const uint32_t camera_id, const bool enable);
-#endif // VHDR_MODES_ENABLE
 
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
                                   CameraMetadata &meta);
@@ -148,6 +146,8 @@ class RecorderClient {
 
   status_t GetCameraCharacteristics(const uint32_t camera_id,
                                     CameraMetadata &meta);
+
+  status_t GetFeatureCapabilities(FeatureCapabilityMap& capabilities);
 
   status_t GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc);
 

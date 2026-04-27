@@ -143,6 +143,8 @@ CameraContext::CameraContext()
     camera_device_.reset();
   }
 
+  InitializeFeatureCapabilities();
+
   QMMF_INFO("%s: Exit", __func__);
 }
 
@@ -152,6 +154,481 @@ CameraContext::~CameraContext() {
   //TODO: check all active ports
   is_camera_dead_ = false;
   QMMF_INFO("%s: Exit", __func__);
+}
+
+void CameraContext::PopulateSWTNRCapability() {
+  // Try to detect SW_TNR support via vendor tag at runtime first.
+  // If the vendor tag is not registered on this platform, fall back to
+  // the compile-time flag.
+  uint32_t tag_id = 0;
+  const std::shared_ptr<VendorTagDescriptor> vtags =
+      VendorTagDescriptor::getGlobalVendorTagDescriptor();
+  if (vtags.get() != NULL)
+    CameraMetadata::getTagFromName(
+        "org.quic.camera.swcapabilities.SWMCTFEnable", vtags.get(), &tag_id);
+
+  if (tag_id == 0) {
+    // Vendor tag not found — fall back to compile-time flag
+#ifdef SW_TNR_ENABLE
+    feature_capabilities_[CAMERA_FEATURE_SW_TNR] = CameraFeatureCapability(true);
+    QMMF_INFO("%s: SW_TNR supported = true (compile-time)", __func__);
+#else
+    feature_capabilities_[CAMERA_FEATURE_SW_TNR] = CameraFeatureCapability(false);
+    QMMF_INFO("%s: SW_TNR supported = false (compile-time)", __func__);
+#endif
+  } else {
+    // Vendor tag found — feature is supported at runtime
+    feature_capabilities_[CAMERA_FEATURE_SW_TNR] = CameraFeatureCapability(true);
+    QMMF_INFO("%s: SW_TNR supported = true (vendor tag=%u)", __func__, tag_id);
+  }
+}
+
+void CameraContext::PopulateEISModesCapability() {
+#ifdef EIS_MODES_ENABLE
+  feature_capabilities_[CAMERA_FEATURE_EIS_MODES] = CameraFeatureCapability(true);
+  QMMF_INFO("%s: EIS_MODES supported = true", __func__);
+#else
+  feature_capabilities_[CAMERA_FEATURE_EIS_MODES] = CameraFeatureCapability(false);
+  QMMF_INFO("%s: EIS_MODES supported = false", __func__);
+#endif
+}
+
+void CameraContext::PopulateVHDRModesCapability() {
+#ifdef VHDR_MODES_ENABLE
+  feature_capabilities_[CAMERA_FEATURE_VHDR_MODES] = CameraFeatureCapability(true);
+  QMMF_INFO("%s: VHDR_MODES supported = true", __func__);
+#else
+  feature_capabilities_[CAMERA_FEATURE_VHDR_MODES] = CameraFeatureCapability(false);
+  QMMF_INFO("%s: VHDR_MODES supported = false", __func__);
+#endif
+}
+
+void CameraContext::PopulateOfflineIFECapability() {
+  //For QLI , this feature need not to be checked
+#ifdef OFFLINE_IFE_ENABLE
+  feature_capabilities_[CAMERA_FEATURE_OFFLINE_IFE] = CameraFeatureCapability(true);
+  QMMF_INFO("%s: OFFLINE_IFE supported = true", __func__);
+#else
+  feature_capabilities_[CAMERA_FEATURE_OFFLINE_IFE] = CameraFeatureCapability(false);
+  QMMF_INFO("%s: OFFLINE_IFE supported = false", __func__);
+#endif
+}
+
+void CameraContext::PopulateLogicalCamSwitchCapability() {
+  //For QLI , this feature need not to be checked
+#ifdef LOGICAL_CAMERA_SENSOR_SWITCH
+  feature_capabilities_[CAMERA_FEATURE_LOGICAL_CAMERA_SENSOR_SWITCH] =
+      CameraFeatureCapability(true);
+  QMMF_INFO("%s: LOGICAL_CAMERA_SENSOR_SWITCH supported = true", __func__);
+#else
+  feature_capabilities_[CAMERA_FEATURE_LOGICAL_CAMERA_SENSOR_SWITCH] =
+      CameraFeatureCapability(false);
+  QMMF_INFO("%s: LOGICAL_CAMERA_SENSOR_SWITCH supported = false", __func__);
+#endif
+}
+
+void CameraContext::InitializeFeatureCapabilities() {
+  QMMF_INFO("%s: Enter", __func__);
+
+  PopulateStaticCapabilities();
+
+  // Camera server API version
+  feature_capabilities_[CAMERA_FEATURE_SERVER_MAJOR_VERSION] =
+      CameraFeatureCapability(static_cast<int32_t>(1));
+  feature_capabilities_[CAMERA_FEATURE_SERVER_MINOR_VERSION] =
+      CameraFeatureCapability(static_cast<int32_t>(0));
+  feature_capabilities_[CAMERA_FEATURE_SERVER_PATCH_VERSION] =
+      CameraFeatureCapability(static_cast<int32_t>(0));
+  QMMF_INFO("%s: Camera server version = 1.0.0", __func__);
+
+  QMMF_INFO("%s: Exit - %zu feature capabilities initialized",
+            __func__, feature_capabilities_.size());
+}
+
+void CameraContext::PopulateJpegResolutionCapabilities(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+  uint32_t min_width = UINT32_MAX;
+  uint32_t min_height = UINT32_MAX;
+
+  // Iterate through ALL cameras
+  for (const auto& meta : static_metas) {
+
+    // Determine which config tag to use for MAX resolution
+    camera_metadata_tag max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS;
+
+#if defined(HAS_ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) && \
+    defined(HAS_ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION)
+    // Check if sensor supports ULTRA_HIGH_RESOLUTION
+    if (meta.exists(ANDROID_REQUEST_AVAILABLE_CAPABILITIES)) {
+      camera_metadata_ro_entry cap_entry = meta.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+      for (uint32_t i = 0; i < cap_entry.count; i++) {
+        if (cap_entry.data.u8[i] ==
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) {
+          max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION;
+          QMMF_INFO("%s: Using MAXIMUM_RESOLUTION for JPEG max", __func__);
+          break;
+        }
+      }
+    }
+#endif
+
+    // Get MAX resolution from appropriate config
+    if (meta.exists(max_config_tag)) {
+      camera_metadata_ro_entry entry = meta.find(max_config_tag);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width > max_width) max_width = width;
+            if (height > max_height) max_height = height;
+          }
+        }
+      }
+    }
+
+    // Always get MIN resolution from standard STREAM_CONFIGURATIONS
+    if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
+      camera_metadata_ro_entry entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        if (HAL_PIXEL_FORMAT_BLOB == entry.data.i32[i]) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width < min_width) min_width = width;
+            if (height < min_height) min_height = height;
+          }
+        }
+      }
+    }
+  }
+
+  // Store in feature map
+  feature_capabilities_[CAMERA_FEATURE_JPEG_MAX_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(max_width));
+  feature_capabilities_[CAMERA_FEATURE_JPEG_MAX_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(max_height));
+  feature_capabilities_[CAMERA_FEATURE_JPEG_MIN_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(min_width));
+  feature_capabilities_[CAMERA_FEATURE_JPEG_MIN_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(min_height));
+
+  QMMF_INFO("%s: JPEG range: %ux%u to %ux%u", __func__,
+            min_width, min_height, max_width, max_height);
+}
+
+void CameraContext::PopulateBayerResolutionCapabilities(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+  uint32_t min_width = UINT32_MAX;
+  uint32_t min_height = UINT32_MAX;
+
+  for (const auto& meta : static_metas) {
+    camera_metadata_tag max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS;
+
+#if defined(HAS_ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) && \
+    defined(HAS_ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION)
+    if (meta.exists(ANDROID_REQUEST_AVAILABLE_CAPABILITIES)) {
+      camera_metadata_ro_entry cap_entry = meta.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+      for (uint32_t i = 0; i < cap_entry.count; i++) {
+        if (cap_entry.data.u8[i] ==
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) {
+          max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION;
+          break;
+        }
+      }
+    }
+#endif
+
+    // Get MAX resolution - check for RAW8/10/12/16
+    if (meta.exists(max_config_tag)) {
+      camera_metadata_ro_entry entry = meta.find(max_config_tag);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        int32_t format = entry.data.i32[i];
+
+        if (HAL_PIXEL_FORMAT_RAW8 == format ||
+            HAL_PIXEL_FORMAT_RAW10 == format ||
+            HAL_PIXEL_FORMAT_RAW12 == format ||
+            HAL_PIXEL_FORMAT_RAW16 == format) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width > max_width) max_width = width;
+            if (height > max_height) max_height = height;
+          }
+        }
+      }
+    }
+
+    // Get MIN resolution from standard config
+    if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
+      camera_metadata_ro_entry entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        int32_t format = entry.data.i32[i];
+
+        if (HAL_PIXEL_FORMAT_RAW8 == format ||
+            HAL_PIXEL_FORMAT_RAW10 == format ||
+            HAL_PIXEL_FORMAT_RAW12 == format ||
+            HAL_PIXEL_FORMAT_RAW16 == format) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width < min_width) min_width = width;
+            if (height < min_height) min_height = height;
+          }
+        }
+      }
+    }
+  }
+
+  feature_capabilities_[CAMERA_FEATURE_BAYER_MAX_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(max_width));
+  feature_capabilities_[CAMERA_FEATURE_BAYER_MAX_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(max_height));
+  feature_capabilities_[CAMERA_FEATURE_BAYER_MIN_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(min_width));
+  feature_capabilities_[CAMERA_FEATURE_BAYER_MIN_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(min_height));
+
+  QMMF_INFO("%s: Bayer range: %ux%u to %ux%u", __func__,
+            min_width, min_height, max_width, max_height);
+}
+
+void CameraContext::PopulateRawResolutionCapabilities(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+  uint32_t min_width = UINT32_MAX;
+  uint32_t min_height = UINT32_MAX;
+
+  for (const auto& meta : static_metas) {
+    camera_metadata_tag max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS;
+
+#if defined(HAS_ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) && \
+    defined(HAS_ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION)
+    if (meta.exists(ANDROID_REQUEST_AVAILABLE_CAPABILITIES)) {
+      camera_metadata_ro_entry cap_entry = meta.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+      for (uint32_t i = 0; i < cap_entry.count; i++) {
+        if (cap_entry.data.u8[i] ==
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR) {
+          max_config_tag = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION;
+          break;
+        }
+      }
+    }
+#endif
+
+    // Get MAX resolution for IMPLEMENTATION_DEFINED
+    if (meta.exists(max_config_tag)) {
+      camera_metadata_ro_entry entry = meta.find(max_config_tag);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width > max_width) max_width = width;
+            if (height > max_height) max_height = height;
+          }
+        }
+      }
+    }
+
+    // Get MIN resolution
+    if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
+      camera_metadata_ro_entry entry = meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        if (HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED == entry.data.i32[i]) {
+          if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+              entry.data.i32[i+3]) {
+            uint32_t width = entry.data.i32[i+1];
+            uint32_t height = entry.data.i32[i+2];
+
+            if (width < min_width) min_width = width;
+            if (height < min_height) min_height = height;
+          }
+        }
+      }
+    }
+  }
+
+  feature_capabilities_[CAMERA_FEATURE_RAW_MAX_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(max_width));
+  feature_capabilities_[CAMERA_FEATURE_RAW_MAX_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(max_height));
+  feature_capabilities_[CAMERA_FEATURE_RAW_MIN_WIDTH] =
+      CameraFeatureCapability(static_cast<int32_t>(min_width));
+  feature_capabilities_[CAMERA_FEATURE_RAW_MIN_HEIGHT] =
+      CameraFeatureCapability(static_cast<int32_t>(min_height));
+
+  QMMF_INFO("%s: RAW range: %ux%u to %ux%u", __func__,
+            min_width, min_height, max_width, max_height);
+}
+
+void CameraContext::PopulateFpsCapabilities(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  uint32_t max_fps = 0;
+  bool has_high_speed = false;
+
+  // Check for HIGH_SPEED_VIDEO_CONFIGURATIONS first
+  for (const auto& meta : static_metas) {
+    if (meta.exists(ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS)) {
+      has_high_speed = true;
+      camera_metadata_ro_entry entry =
+          meta.find(ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS);
+
+      // Each entry has 5 values: width, height, min_fps, max_fps, batch_size
+      for (uint32_t i = 0; i < entry.count; i += 5) {
+        uint32_t fps = entry.data.i32[i + 3];  // max_fps at index 3
+        if (fps > max_fps) max_fps = fps;
+      }
+    }
+  }
+
+  // Fallback to AVAILABLE_TARGET_FPS_RANGES if HIGH_SPEED not available
+  if (!has_high_speed) {
+    for (const auto& meta : static_metas) {
+      if (meta.exists(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)) {
+        camera_metadata_ro_entry entry =
+            meta.find(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+
+        // Each entry has 2 values: min_fps, max_fps
+        for (uint32_t i = 0; i < entry.count; i += 2) {
+          uint32_t fps = entry.data.i32[i + 1];  // max_fps at index 1
+          if (fps > max_fps) max_fps = fps;
+        }
+      }
+    }
+  }
+
+  feature_capabilities_[CAMERA_FEATURE_MAX_FPS] =
+      CameraFeatureCapability(static_cast<int32_t>(max_fps));
+
+  QMMF_INFO("%s: Max FPS: %u", __func__, max_fps);
+}
+
+void CameraContext::PopulateFormatCapabilities(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  // Collect all supported HAL formats from static metadata
+  std::set<int32_t> found_formats;
+
+  for (const auto& meta : static_metas) {
+    if (meta.exists(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)) {
+      camera_metadata_ro_entry entry =
+          meta.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+      for (uint32_t i = 0; i < entry.count; i += 4) {
+        if (ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT ==
+            entry.data.i32[i + 3]) {
+          found_formats.insert(entry.data.i32[i]);
+        }
+      }
+    }
+  }
+
+  // Add to feature_capabilities_ map - only formats found in metadata
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_IMPLDEFINED] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) > 0);
+
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_BLOB] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_BLOB) > 0);
+
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_RAW8] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_RAW8) > 0);
+
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_RAW10] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_RAW10) > 0);
+
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_RAW12] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_RAW12) > 0);
+
+  feature_capabilities_[CAMERA_FEATURE_FORMAT_RAW16] =
+      CameraFeatureCapability(found_formats.count(HAL_PIXEL_FORMAT_RAW16) > 0);
+
+  QMMF_INFO("%s: Format capabilities populated", __func__);
+}
+
+void CameraContext::PopulateLogicalCameraCapability(
+    const std::vector<CameraMetadata>& static_metas) {
+
+  bool has_logical_camera = false;
+
+  // Check all cameras for LOGICAL_MULTI_CAMERA capability
+  for (const auto& meta : static_metas) {
+    if (meta.exists(ANDROID_REQUEST_AVAILABLE_CAPABILITIES)) {
+      camera_metadata_ro_entry entry =
+          meta.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+
+      for (uint32_t i = 0; i < entry.count; i++) {
+        if (entry.data.u8[i] ==
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA) {
+          has_logical_camera = true;
+          QMMF_INFO("%s: Found LOGICAL_MULTI_CAMERA capability", __func__);
+          break;
+        }
+      }
+
+      if (has_logical_camera) break;
+    }
+  }
+
+  feature_capabilities_[CAMERA_FEATURE_LOGICAL_CAMERA_SUPPORT] =
+      CameraFeatureCapability(has_logical_camera);
+
+  QMMF_INFO("%s: Logical camera support: %s", __func__,
+            has_logical_camera ? "YES" : "NO");
+}
+
+void CameraContext::PopulateStaticCapabilities() {
+
+  QMMF_INFO("%s: Enter", __func__);
+
+  // Software feature capabilities.
+  PopulateSWTNRCapability();
+  PopulateEISModesCapability();
+  PopulateVHDRModesCapability();
+  PopulateOfflineIFECapability();
+  PopulateLogicalCamSwitchCapability();
+
+  std::vector<CameraMetadata> static_metas;
+  auto ret = GetCamStaticInfo(static_metas);
+  if (ret != 0 || static_metas.empty()) {
+    QMMF_WARN("%s: Failed to get static metadata, using defaults", __func__);
+    return;
+  }
+
+  PopulateJpegResolutionCapabilities(static_metas);
+  PopulateBayerResolutionCapabilities(static_metas);
+  PopulateRawResolutionCapabilities(static_metas);
+  PopulateFpsCapabilities(static_metas);
+  PopulateFormatCapabilities(static_metas);
+  PopulateLogicalCameraCapability(static_metas);
+
+  QMMF_INFO("%s: Exit - All capabilities populated", __func__);
+}
+
+int32_t CameraContext::GetFeatureCapabilities(FeatureCapabilityMap& caps) {
+  QMMF_DEBUG("%s: Enter", __func__);
+  caps = feature_capabilities_;
+  QMMF_INFO("%s: Returning %zu feature capability entries", __func__, caps.size());
+  QMMF_DEBUG("%s: Exit", __func__);
+  return 0;
 }
 
 void CameraContext::InitSupportedFPS() {
@@ -1702,7 +2179,6 @@ std::vector<int32_t>& CameraContext::GetSupportedFps() {
   return supported_fps_;
 }
 
-#ifdef VHDR_MODES_ENABLE
 status_t CameraContext::SetVHDR(const int32_t mode) {
 
   QMMF_DEBUG("%s: Enter", __func__);
@@ -1804,7 +2280,7 @@ status_t CameraContext::SetVHDR(const int32_t mode) {
   QMMF_DEBUG("%s: Exit", __func__);
   return 0;
 }
-#else
+
 status_t CameraContext::SetSHDR(const bool enable) {
 
   QMMF_DEBUG("%s: Enter", __func__);
@@ -1844,7 +2320,6 @@ status_t CameraContext::SetSHDR(const bool enable) {
   QMMF_DEBUG("%s: Exit", __func__);
   return 0;
 }
-#endif // VHDR_MODES_ENABLE
 
 bool CameraContext::IsRawOnly(const int32_t format) {
   switch(format) {

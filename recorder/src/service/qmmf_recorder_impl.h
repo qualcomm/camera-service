@@ -174,15 +174,13 @@ class RecorderImpl {
                                  const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
-#ifdef VHDR_MODES_ENABLE
   status_t SetVHDR(const uint32_t client_id,
                    const uint32_t camera_id,
                    const int32_t mode);
-#else
+
   status_t SetSHDR(const uint32_t client_id,
                    const uint32_t camera_id,
                    const bool enable);
-#endif // VHDR_MODES_ENABLE
 
   /// Get default Capture parameters
   status_t GetDefaultCaptureParam(const uint32_t client_id,
@@ -200,6 +198,9 @@ class RecorderImpl {
   status_t GetOfflineParams(const uint32_t client_id,
                             const OfflineCameraInputParams &in_params,
                             OfflineCameraOutputParams &out_params);
+
+  status_t GetFeatureCapabilities(const uint32_t client_id,
+                                  FeatureCapabilityMap& capabilities);
 
   status_t CreateOfflineProcess(const uint32_t client_id,
                                 const OfflineCameraCreateParams& params);

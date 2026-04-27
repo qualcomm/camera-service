@@ -261,13 +261,11 @@ class Recorder {
                                  const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
-#ifdef VHDR_MODES_ENABLE
   status_t SetVHDR(const uint32_t camera_id,
                    const int32_t mode);
-#else
+
   status_t SetSHDR(const uint32_t camera_id,
                    const bool enable);
-#endif // VHDR_MODES_ENABLE
 
   /// Complementary API of CaptureImage. Clients generally calls
   /// GetDefaultCaptureParam to get default capture params. this API is
@@ -289,6 +287,14 @@ class Recorder {
   /// @param meta: this is passed as reference to get the metadata filled
   /// for each camera.
   status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta);
+
+  /// @brief Get feature capabilities supported by the camera server.
+  ///
+  /// Returns a map of feature keys to their capability values (bool, int or
+  /// float). This API can be called after Connect() and before StartCamera().
+  ///
+  /// @param capabilities: map populated with feature capability entries.
+  status_t GetFeatureCapabilities(FeatureCapabilityMap& capabilities);
 
   /// @brief Get Offline jpeg params
   ///

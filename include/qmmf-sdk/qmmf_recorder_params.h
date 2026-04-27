@@ -39,6 +39,7 @@
 #include <sys/types.h>
 
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <iomanip>
 #include <functional>
@@ -353,5 +354,110 @@ typedef std::function<void(int32_t buf_fd, uint32_t encoded_size)>
 
 typedef std::function<void(int32_t buf_fd, uint32_t out_size)>
     OfflineCameraCb;
+
+// Identifies which camera feature is being described.
+enum CameraFeatureKey {
+  CAMERA_FEATURE_SW_TNR = 0,
+  CAMERA_FEATURE_EIS_MODES,
+  CAMERA_FEATURE_VHDR_MODES,
+  CAMERA_FEATURE_OFFLINE_IFE,
+  CAMERA_FEATURE_LOGICAL_CAMERA_SUPPORT,
+  CAMERA_FEATURE_LOGICAL_CAMERA_SENSOR_SWITCH,
+
+  // Supported output formats (bool: true = present in ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS)
+  CAMERA_FEATURE_FORMAT_IMPLDEFINED,    // HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED
+  CAMERA_FEATURE_FORMAT_BLOB,           // HAL_PIXEL_FORMAT_BLOB (JPEG)
+  CAMERA_FEATURE_FORMAT_RAW8,           // HAL_PIXEL_FORMAT_RAW8
+  CAMERA_FEATURE_FORMAT_RAW10,          // HAL_PIXEL_FORMAT_RAW10
+  CAMERA_FEATURE_FORMAT_RAW12,          // HAL_PIXEL_FORMAT_RAW12
+  CAMERA_FEATURE_FORMAT_RAW16,          // HAL_PIXEL_FORMAT_RAW16
+
+  // JPEG/BLOB format resolution range
+  CAMERA_FEATURE_JPEG_MAX_WIDTH,
+  CAMERA_FEATURE_JPEG_MAX_HEIGHT,
+  CAMERA_FEATURE_JPEG_MIN_WIDTH,
+  CAMERA_FEATURE_JPEG_MIN_HEIGHT,
+
+  // RAW/Bayer format resolution range (RAW8/10/12/16)
+  CAMERA_FEATURE_BAYER_MAX_WIDTH,
+  CAMERA_FEATURE_BAYER_MAX_HEIGHT,
+  CAMERA_FEATURE_BAYER_MIN_WIDTH,
+  CAMERA_FEATURE_BAYER_MIN_HEIGHT,
+
+  // YUV/IMPLEMENTATION_DEFINED format resolution range
+  CAMERA_FEATURE_RAW_MAX_WIDTH,
+  CAMERA_FEATURE_RAW_MAX_HEIGHT,
+  CAMERA_FEATURE_RAW_MIN_WIDTH,
+  CAMERA_FEATURE_RAW_MIN_HEIGHT,
+
+  // Maximum FPS
+  CAMERA_FEATURE_MAX_FPS,
+
+  // Camera server capability API version components (int: major.minor.patch)
+  CAMERA_FEATURE_SERVER_MAJOR_VERSION,
+  CAMERA_FEATURE_SERVER_MINOR_VERSION,
+  CAMERA_FEATURE_SERVER_PATCH_VERSION,
+};
+
+// Identifies which field of the union is valid.
+enum FeatureValueType {
+  TYPE_INT32,
+  TYPE_BOOL,
+  TYPE_FLOAT,
+  TYPE_CHAR,
+  TYPE_INT_ARRAY,
+};
+
+// Tagged union holding one capability value.
+struct CameraFeatureCapability {
+  FeatureValueType type;
+  union {
+    int32_t  int_value;
+    bool     bool_value;
+    float    float_value;
+    uint8_t  reserved[16];  // reserved for future types
+  };
+
+  // Default constructor
+  CameraFeatureCapability()
+      : type(TYPE_BOOL), bool_value(false) {}
+
+  // Typed constructors
+  explicit CameraFeatureCapability(bool v)
+      : type(TYPE_BOOL), bool_value(v) {}
+  explicit CameraFeatureCapability(int32_t v)
+      : type(TYPE_INT32), int_value(v) {}
+  explicit CameraFeatureCapability(float v)
+      : type(TYPE_FLOAT), float_value(v) {}
+};
+
+// Map from feature key to its capability value.
+using FeatureCapabilityMap =
+    std::map<CameraFeatureKey, CameraFeatureCapability>;
+
+// Safe accessor: returns true and sets out if key exists with TYPE_BOOL.
+inline bool GetBoolValue(const FeatureCapabilityMap& caps,
+                         CameraFeatureKey key,
+                         bool& out) {
+  auto it = caps.find(key);
+  if (it != caps.end() && it->second.type == TYPE_BOOL) {
+    out = it->second.bool_value;
+    return true;
+  }
+  return false;
+}
+
+// Safe accessor: returns true and sets out if key exists with TYPE_INT32.
+inline bool GetInt32Value(const FeatureCapabilityMap& caps,
+                          CameraFeatureKey key,
+                          int32_t& out) {
+  auto it = caps.find(key);
+  if (it != caps.end() && it->second.type == TYPE_INT32) {
+    out = it->second.int_value;
+    return true;
+  }
+  return false;
+}
+
 };
 };  // namespace qmmf::recorder

@@ -1137,7 +1137,6 @@ status_t RecorderImpl::SetCameraSessionParam(const uint32_t client_id,
   return 0;
 }
 
-#ifdef VHDR_MODES_ENABLE
 status_t RecorderImpl::SetVHDR(const uint32_t client_id,
                                const uint32_t camera_id,
                                const int32_t mode) {
@@ -1167,7 +1166,7 @@ status_t RecorderImpl::SetVHDR(const uint32_t client_id,
       client_id, camera_id);
   return 0;
 }
-#else
+
 status_t RecorderImpl::SetSHDR(const uint32_t client_id,
                                const uint32_t camera_id,
                                const bool enable) {
@@ -1197,7 +1196,6 @@ status_t RecorderImpl::SetSHDR(const uint32_t client_id,
       client_id, camera_id);
   return 0;
 }
-#endif // VHDR_MODES_ENABLE
 
 status_t RecorderImpl::GetDefaultCaptureParam(const uint32_t client_id,
                                               const uint32_t camera_id,
@@ -1247,6 +1245,22 @@ status_t RecorderImpl::GetCamStaticInfo(const uint32_t client_id,
   QMMF_DEBUG("%s: Exit client_id(%u)", __func__,
       client_id);
   return 0;
+}
+
+status_t RecorderImpl::GetFeatureCapabilities(const uint32_t client_id,
+                                              FeatureCapabilityMap& capabilities) {
+  QMMF_DEBUG("%s: Enter client_id(%u)", __func__, client_id);
+
+  if (!IsClientValid(client_id)) {
+    QMMF_ERROR("%s: client_id(%u) is not valid!", __func__, client_id);
+    return -EINVAL;
+  }
+
+  auto ret = camera_source_->GetFeatureCapabilities(capabilities);
+  QMMF_INFO("%s: GetFeatureCapabilities returned %zu entries, ret(%d)",
+            __func__, capabilities.size(), ret);
+  QMMF_DEBUG("%s: Exit", __func__);
+  return ret;
 }
 
 status_t RecorderImpl::GetCameraCharacteristics(const uint32_t client_id,

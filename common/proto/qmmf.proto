@@ -437,6 +437,29 @@ enum RECORDER_SERVICE_CMDS {
   RECORDER_PROCESS_OFFLINE_CAMERA     = 27;
   RECORDER_DESTROY_OFFLINE_CAMERA     = 28;
   RECORDER_DYNAMIC_CAPTURE_IMAGE = 29;
+  RECORDER_GET_FEATURE_CAPABILITIES = 30;
+}
+
+// GetFeatureCapabilities — compile-time camera feature support query
+message GetFeatureCapabilitiesReqMsg {
+  uint32 client_id = 1;
+}
+
+// One entry in the FeatureCapabilityMap
+message FeatureCapabilityEntryMsg {
+  int32 key  = 1;
+  int32 type = 2;
+  oneof value {
+    bool  bool_value  = 3;
+    int32 int_value   = 4;
+    float float_value = 5;
+  }
+  bytes reserved = 6;
+}
+
+// Response carrying the full FeatureCapabilityMap
+message GetFeatureCapabilitiesRespMsg {
+  repeated FeatureCapabilityEntryMsg entries = 1;
 }
 
 message RecorderClientReqMsg {
@@ -469,6 +492,7 @@ message RecorderClientReqMsg {
     ProcessOfflineCameraReqMsg process_offline_camera = 26;
     DestroyOfflineCameraReqMsg destroy_offline_camera = 27;
     DynamicCaptureImageReqMsg dynamic_capture_image = 28;
+    GetFeatureCapabilitiesReqMsg get_feature_caps = 29;
   }
 }
 
@@ -485,6 +509,7 @@ message RecorderClientRespMsg {
     GetCamStaticInfoRespMsg get_cam_static_info_resp = 9;
     GetSupportedInterfaceVerRespMsg get_supported_interface_ver_resp = 10;
     GetOfflineCameraParamsRespMsg get_offline_camera_params_resp = 11;
+    GetFeatureCapabilitiesRespMsg get_feature_caps_resp = 12;
   }
 }
 

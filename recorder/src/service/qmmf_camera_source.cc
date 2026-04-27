@@ -737,7 +737,6 @@ status_t CameraSource::SetCameraSessionParam(const uint32_t camera_id,
   return camera->SetCameraSessionParam(meta);
 }
 
-#ifdef VHDR_MODES_ENABLE
 status_t CameraSource::SetVHDR(const uint32_t camera_id,
                                const int32_t mode) {
 
@@ -753,7 +752,7 @@ status_t CameraSource::SetVHDR(const uint32_t camera_id,
 
   return camera->SetVHDR(mode);
 }
-#else
+
 status_t CameraSource::SetSHDR(const uint32_t camera_id,
                                const bool enable) {
 
@@ -769,7 +768,6 @@ status_t CameraSource::SetSHDR(const uint32_t camera_id,
 
   return camera->SetSHDR(enable);
 }
-#endif // VHDR_MODES_ENABLE
 
 status_t CameraSource::GetDefaultCaptureParam(const uint32_t camera_id,
                                               CameraMetadata &meta) {
@@ -813,6 +811,29 @@ status_t CameraSource::GetCameraCharacteristics(const uint32_t camera_id,
   active_cameras_lock_.unlock();
 
   return camera->GetCameraCharacteristics(meta);
+}
+
+status_t CameraSource::GetFeatureCapabilities(FeatureCapabilityMap& capabilities) {
+  QMMF_DEBUG("%s: Enter", __func__);
+  int32_t ret = 0;
+
+  if (preloaded_cameras_.empty()) {
+    std::shared_ptr<CameraInterface> camera;
+
+    camera = std::make_shared<CameraContext>();
+    if (!camera) {
+      QMMF_ERROR("%s: Can't Instantiate Camera Context!", __func__);
+      return -ENOMEM;
+    }
+    ret = camera->GetFeatureCapabilities(capabilities);
+  } else {
+    ret = preloaded_cameras_.front()->GetFeatureCapabilities(capabilities);
+  }
+
+  QMMF_INFO("%s: GetFeatureCapabilities returned %zu entries, ret(%d)",
+            __func__, capabilities.size(), ret);
+  QMMF_DEBUG("%s: Exit", __func__);
+  return ret;
 }
 
 status_t CameraSource::UpdateTrackFrameRate(const uint32_t track_id,

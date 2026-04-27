@@ -262,15 +262,13 @@ class IRecorderService {
                                          const uint32_t camera_id,
                                          const CameraMetadata &meta) = 0;
 
-#ifdef VHDR_MODES_ENABLE
   virtual status_t SetVHDR(const uint32_t client_id,
                            const uint32_t camera_id,
                            const int32_t mode) = 0;
-#else
+
   virtual status_t SetSHDR(const uint32_t client_id,
                            const uint32_t camera_id,
                            const bool enable) = 0;
-#endif // VHDR_MODES_ENABLE
 
   virtual status_t GetDefaultCaptureParam(const uint32_t client_id,
                                           const uint32_t camera_id,
@@ -300,6 +298,10 @@ class IRecorderService {
                                      const CameraMetadata& meta) = 0;
 
   virtual status_t DestroyOfflineProcess(const uint32_t client_id) = 0;
+
+  virtual status_t GetFeatureCapabilities(
+      const uint32_t client_id,
+      FeatureCapabilityMap& capabilities) = 0;
 };
 
 #ifdef HAVE_BINDER

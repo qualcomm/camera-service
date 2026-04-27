@@ -105,7 +105,6 @@ enum class CamOpMode {
   kFastSwitch,
 };
 
-#ifdef VHDR_MODES_ENABLE
 enum class VHDRMode {
   /**< VDHR is disabled */
   kVHDROff,
@@ -122,7 +121,6 @@ enum class VHDRMode {
   /**< QBC HDR snapshot mode */
   kQBCHDRSnapshot,
 };
-#endif // VHDR_MODES_ENABLE
 
 enum class RecorderStreamUsecase {
   /**< this is invalid usage */
@@ -172,17 +170,13 @@ struct SnapshotZslSetup : DataTagBase {
 };
 
 struct VideoHDRMode : DataTagBase {
-#ifdef VHDR_MODES_ENABLE
   VHDRMode mode;  // Default: disable HDR
-  VideoHDRMode()
-    : DataTagBase(QMMF_VIDEO_HDR_MODE),
-      mode(VHDRMode::kVHDROff) {}
-#else
   bool enable;  // Default: false to disable HDR
   VideoHDRMode()
     : DataTagBase(QMMF_VIDEO_HDR_MODE),
+      mode(VHDRMode::kVHDROff),
       enable(false) {}
-#endif // VHDR_MODES_ENABLE
+
 };
 
 struct TrackCrop : DataTagBase {

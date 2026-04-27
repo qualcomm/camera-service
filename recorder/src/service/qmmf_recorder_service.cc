@@ -1568,6 +1568,35 @@ void RecorderService::ProcessRequest(int client_socket, RecorderClientReqMsg req
     break;
   }
 
+  case RECORDER_SERVICE_CMDS::RECORDER_GET_FEATURE_CAPABILITIES: {
+    QMMF_DEBUG("%s: RECORDER_GET_FEATURE_CAPABILITIES", __func__);
+
+    uint32_t client_id = req_msg.get_feature_caps().client_id();
+
+    FeatureCapabilityMap caps;
+    auto ret = GetFeatureCapabilities(client_id, caps);
+
+    resp_msg.set_command(
+        RECORDER_SERVICE_CMDS::RECORDER_GET_FEATURE_CAPABILITIES);
+    resp_msg.set_status(ret);
+
+    if (ret == 0) {
+      for (auto& [key, cap] : caps) {
+        auto* entry = resp_msg.mutable_get_feature_caps_resp()->add_entries();
+        entry->set_key(static_cast<int32_t>(key));
+        entry->set_type(static_cast<int32_t>(cap.type));
+        switch (cap.type) {
+          case TYPE_BOOL:  entry->set_bool_value(cap.bool_value);   break;
+          case TYPE_INT32: entry->set_int_value(cap.int_value);     break;
+          case TYPE_FLOAT: entry->set_float_value(cap.float_value); break;
+          default: break;
+        }
+      }
+      QMMF_INFO("%s: Serialized %zu feature capability entries",
+                __func__, caps.size());
+    }
+    break;
+  }
   default:
     QMMF_WARN ("%s: cmd: %u, Not sending.", __func__, req_msg.command());
     break;
@@ -2157,7 +2186,6 @@ status_t RecorderService::SetCameraSessionParam(const uint32_t client_id,
   return 0;
 }
 
-#ifdef VHDR_MODES_ENABLE
 status_t RecorderService::SetVHDR(const uint32_t client_id,
                                      const uint32_t camera_id,
                                      const int32_t mode) {
@@ -2177,7 +2205,7 @@ status_t RecorderService::SetVHDR(const uint32_t client_id,
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
-#else
+
 status_t RecorderService::SetSHDR(const uint32_t client_id,
                                      const uint32_t camera_id,
                                      const bool enable) {
@@ -2197,7 +2225,6 @@ status_t RecorderService::SetSHDR(const uint32_t client_id,
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
-#endif // VHDR_MODES_ENABLE
 
 status_t RecorderService::GetDefaultCaptureParam(const uint32_t client_id,
                                                  const uint32_t camera_id,
@@ -2395,6 +2422,25 @@ status_t RecorderService::DisconnectInternal(const uint32_t client_id) {
   QMMF_INFO("%s: Exit client_id(%d)", __func__, client_id);
   return 0;
 }
+
+#ifndef HAVE_BINDER
+status_t RecorderService::GetFeatureCapabilities(const uint32_t client_id,
+                                                 FeatureCapabilityMap& capabilities) {
+  QMMF_DEBUG("%s: Enter client_id(%u)", __func__, client_id);
+
+  if (!IsRecorderInitialized()) {
+    QMMF_ERROR("%s: Recorder not initialized!", __func__);
+    return -ENODEV;
+  }
+
+  auto ret = recorder_->GetFeatureCapabilities(client_id, capabilities);
+  if (ret != 0) {
+    QMMF_ERROR("%s: GetFeatureCapabilities failed!", __func__);
+  }
+  QMMF_DEBUG("%s: Exit client_id(%u)", __func__, client_id);
+  return ret;
+}
+#endif  // !HAVE_BINDER
 
 status_t RecorderService::GetVendorTagDescriptor(std::shared_ptr<VendorTagDescriptor> &desc) {
 

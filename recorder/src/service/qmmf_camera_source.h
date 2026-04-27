@@ -153,11 +153,10 @@ class CameraSource {
   status_t SetCameraSessionParam(const uint32_t camera_id, const CameraMetadata &meta);
 
   /// Set Camera SHDR mode
-#ifdef VHDR_MODES_ENABLE
   status_t SetVHDR(const uint32_t camera_id, const int32_t mode);
-#else
+
   status_t SetSHDR(const uint32_t camera_id, const bool enable);
-#endif // VHDR_MODES_ENABLE
+
   /// Return default settings for Image Capture
   status_t GetDefaultCaptureParam(const uint32_t camera_id,
                                   CameraMetadata &meta);
@@ -168,6 +167,8 @@ class CameraSource {
 
   /// Return static metadata of all the camera's connected without opening the camera
   status_t GetCamStaticInfo(std::vector<CameraMetadata> &meta);
+
+  status_t GetFeatureCapabilities(FeatureCapabilityMap& capabilities);
 
   /// UpdateTrackFrameRate
   status_t UpdateTrackFrameRate(const uint32_t track_id,

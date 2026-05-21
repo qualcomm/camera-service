@@ -1007,17 +1007,15 @@ status_t CameraMetadata::getTagFromName(const char *name,
 
     // First, find the section by the longest string match
     const char *section = NULL;
-    size_t sectionIndex = 0;
+    size_t sectionIndex = VENDOR_SECTION;
     size_t sectionLength = 0;
-    size_t totalSectionCount = ANDROID_SECTION_COUNT + vendorSectionCount;
-    for (size_t i = 0; i < totalSectionCount; ++i) {
 
-        const char *str = (i < ANDROID_SECTION_COUNT) ?
-                CameraMetadata::camera_metadata_section_names[i] :
-                vendorSections[i - ANDROID_SECTION_COUNT].c_str();
+    // First check vendor sections
+    for (size_t i = 0; i < vendorSectionCount; ++i) {
 
+        const char *str = vendorSections[i].c_str();
         if (str == nullptr) {
-          continue;
+            continue;
         }
 
         if (strstr(name, str) == name) { // name begins with the section name
@@ -1028,10 +1026,36 @@ status_t CameraMetadata::getTagFromName(const char *name,
             // section name is the longest we've found so far
             if (section == NULL || sectionLength < strLength) {
                 section = str;
-                sectionIndex = i;
                 sectionLength = strLength;
 
                 QMMF_VERBOSE("%s: Found new best section (%s)", __FUNCTION__, section);
+            }
+        }
+    }
+
+    // Next check system sections, if vendor section is not found
+    if (NULL == section) {
+        for (size_t i = 0; i < VENDOR_SECTION; ++i) {
+
+            const char *str = CameraMetadata::get_camera_metadata_section_name(i << 16);
+            if (str == nullptr) {
+                // No section name for current iteration, so last system section is reached
+                break;
+            }
+
+            if (strstr(name, str) == name) { // name begins with the section name
+                size_t strLength = strlen(str);
+
+                QMMF_VERBOSE("%s: Name begins with section name", __FUNCTION__);
+
+                // section name is the longest we've found so far
+                if (section == NULL || sectionLength < strLength) {
+                    section = str;
+                    sectionLength = strLength;
+                    sectionIndex = i;
+
+                    QMMF_VERBOSE("%s: Found new best section (%s)", __FUNCTION__, section);
+                }
             }
         }
     }
@@ -1042,7 +1066,7 @@ status_t CameraMetadata::getTagFromName(const char *name,
         return -ENOENT;
     } else {
         QMMF_VERBOSE("%s: Found matched section '%s' (%zu)",
-              __FUNCTION__, section, sectionIndex);
+                __FUNCTION__, section, sectionIndex);
     }
 
     // Get the tag name component of the name
@@ -1053,7 +1077,8 @@ status_t CameraMetadata::getTagFromName(const char *name,
 
     // Match rest of name against the tag names in that section only
     uint32_t candidateTag = 0;
-    if (sectionIndex < ANDROID_SECTION_COUNT) {
+    // Check whether system section index is valid
+    if (sectionIndex < VENDOR_SECTION) {
         // Match built-in tags (typically android.*)
         uint32_t tagBegin, tagEnd; // [tagBegin, tagEnd)
         tagBegin = CameraMetadata::camera_metadata_section_bounds[sectionIndex][0];
@@ -1086,6 +1111,5 @@ status_t CameraMetadata::getTagFromName(const char *name,
     *tag = candidateTag;
     return 0;
 }
-
 
 }; // namespace qmmf

@@ -90,13 +90,21 @@ enum class SocId {
   kMONACO_SRV1L = 607,
   kLEMANS_IVI_ADAS_L = 619,
   kMONACO_SRV1L_FC = 620,
-  KLEMANS_QRB = 656,
+  kPURWA_SCP = 635,
+  kLEMANS_QRB = 656,
+  kGLYMUR_SIP = 662,
   kQCS9100_IOT = 667,
   kQCS8300 = 674,
   kQCS8275 = 675,
   kQCS9075 = 676,
   kTALOS_QCS615 = 680,
   kMONACO_FLEX = 695,
+  kGLYMUR_COB = 698,
+  kGLYMUR_MAHUA = 699,
+  kHAMOA = 709,
+  kHAMOA_10CORE = 710,
+  kPURWA = 711,
+  kGLYMUR_KALAMBO = 719
 };
 
 struct StreamBuffer {
@@ -413,7 +421,7 @@ class Target {
       case SocId::kLEMANS_IVI_ADAS:
       case SocId::kLEMANS_ADAS:
       case SocId::kLEMANS_IVI_ADAS_L:
-      case SocId::KLEMANS_QRB:
+      case SocId::kLEMANS_QRB:
       case SocId::kQCS8300:
       case SocId::kQCS8275:
       case SocId::kMONACO_IVI:
@@ -432,6 +440,16 @@ class Target {
       case SocId::kTALOS_QCS410:
       case SocId::kTALOS_QCS615:
         return "talos";
+
+      case SocId::kHAMOA_10CORE:
+      case SocId::kHAMOA:
+      case SocId::kPURWA:
+      case SocId::kPURWA_SCP:
+      case SocId::kGLYMUR_SIP:
+      case SocId::kGLYMUR_COB:
+      case SocId::kGLYMUR_MAHUA:
+      case SocId::kGLYMUR_KALAMBO:
+        return "hamoa";
 
       default:
         return {};

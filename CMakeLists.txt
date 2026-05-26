@@ -133,8 +133,8 @@ if(CAMERAADAPTOR_ENABLED AND RECORDER_SERVICE_ENABLED AND MEMORY_ENABLED)
     # Mainline build
     # Camx include paths are defined in common config
     build_target("_kodiak" "qcm6490" "${CAMX_KODIAK_INCLUDE_DIRS}")
-    # Using lemans config as common target
-    build_target("" "qcs9100" "${CAMX_TARGET_INCLUDE_DIRS}")
+    # Using qcs-common config
+    build_target("" "qcs-common" "${CAMX_TARGET_INCLUDE_DIRS}")
   endif()
 
 endif()

@@ -384,6 +384,8 @@ class RecorderService : public IRecorderService {
   std::map<uint32_t, std::shared_ptr<DeathNotifier>> death_notifier_list_;
   // Map of client ids and their callback handlers.
   std::map<uint32_t, std::shared_ptr<RemoteCallBack>> remote_cb_list_;
+  // Set of active client IDs reserved at Connect time.
+  std::set<uint32_t> active_client_ids_;
   int socket_;
   std::string socket_path_;
   char* socket_recv_buf_;

@@ -14,7 +14,7 @@ In general, contributors should develop on branches based off of `main` and pull
 1. [Fork](https://github.com/qualcomm/camera-service/fork) and clone the repository.
 
     ```bash
-    git clone https://github.com/<username>/camera-service.git
+    git clone https://github.com/qualcomm/camera-service.git
     ```
 
 1. Create a new branch based on `main`:

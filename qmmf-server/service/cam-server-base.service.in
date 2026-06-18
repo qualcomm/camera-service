@@ -43,7 +43,6 @@ ExecStartPre=/usr/bin/mkdir -p /run/cam_server
 ExecStartPre=+/bin/chmod 0775 /run/cam_server
 CacheDirectory=camera
 ExecCondition=/usr/bin/check-camx-overlay.sh
-EnvironmentFile=/etc/cam-server-env
 ExecStart=/usr/bin/cam-server
 
 [Install]

@@ -2225,6 +2225,9 @@ void RecorderClient::ImportBuffer(int32_t fd, int32_t metafd,
     case BufferFormat::kNV12HEIF:
       format = GBM_FORMAT_NV12_HEIF;
       break;
+    case BufferFormat::kP010HEIF:
+      format = GBM_FORMAT_YCbCr_420_P010_512;
+      break;
     default:
       format = GBM_FORMAT_NOT_DEFIEND;
   }

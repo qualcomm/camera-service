@@ -230,6 +230,7 @@ int32_t Common::FromQmmfToHalFormat(const BufferFormat &format) {
     case BufferFormat::kNV12UBWC:
     case BufferFormat::kNV12:
     case BufferFormat::kP010:
+    case BufferFormat::kP010HEIF:
     case BufferFormat::kTP10UBWC:
     case BufferFormat::kNV12UBWCFLEX:
     case BufferFormat::kNV12FLEX:
@@ -364,6 +365,9 @@ BufferFormat Common::FromImageToQmmfFormat(const ImageFormat& format) {
       break;
     case ImageFormat::kP010:
       return BufferFormat::kP010;
+      break;
+    case ImageFormat::kP010HEIF:
+      return BufferFormat::kP010HEIF;
       break;
     case ImageFormat::kTP10UBWC:
       return BufferFormat::kTP10UBWC;
@@ -1010,6 +1014,7 @@ bool Common::ValidateResolution(const CameraMetadata& meta,
     case BufferFormat::kYUY2:
     case BufferFormat::kUYVY:
     case BufferFormat::kP010:
+    case BufferFormat::kP010HEIF:
     case BufferFormat::kTP10UBWC:
     case BufferFormat::kRGB:
       is_supported = ValidateResFromProcessedSizes(meta, width, height);

@@ -58,6 +58,7 @@ enum class BufferFormat : uint32_t {
   kUYVY,
   kP010,
   kP010FLEX,
+  kP010HEIF,
   kTP10UBWC,
   kTP10UBWCFLEX,
   kBLOB,

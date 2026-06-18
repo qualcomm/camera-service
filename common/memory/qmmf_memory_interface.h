@@ -123,6 +123,7 @@
 #include <unordered_map>
 
 // todo: add and move to platform specific header
+#define HAL_PIXEL_FORMAT_YCBCR_P010              0x36
 #define HAL_PIXEL_FORMAT_RAW8                    0x123
 #define HAL_PIXEL_FORMAT_NV12_ENCODEABLE         0x102
 #define HAL_PIXEL_FORMAT_NV21_ZSL                0x113

@@ -1299,6 +1299,11 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
         // TODO: update below flags once subsystem has supported
         stream_param.allocFlags.flags |= IMemAllocUsage::kPrivateAllocP010;
         break;
+      case BufferFormat::kP010HEIF:
+        stream_param.allocFlags.flags = (IMemAllocUsage::kPrivateAllocP010HEIF |
+                                         IMemAllocUsage::kHwRender |
+                                         IMemAllocUsage::kHwTexture);
+        break;
       case BufferFormat::kTP10UBWC:
         stream_param.allocFlags.flags = (IMemAllocUsage::kPrivateAllocTP10 |
                                          IMemAllocUsage::kPrivateAllocUbwc |

@@ -8,35 +8,51 @@ The camera-service provides client APIs for communication with the service. Appl
 
 ## Compilation Instructions
 
+### Download and install the toolchain
+
 Follow the steps below to obtain the cross-compilation toolchain required to build this project.
 
-1. Open the latest nightly build for the **wrynose** branch using the following link:
+1. Get the latest Nightly Build (**wrynose**) from the below link:
 
     [https://github.com/qualcomm-linux/meta-qcom/actions/workflows/nightly-build.yml](https://github.com/qualcomm-linux/meta-qcom/actions/workflows/nightly-build.yml)
 
-1. Within the workflow run results, locate the **"build-nightly / publish_summary summary"** section.
+1. Locate the **"build-nightly / publish_summary summary"** section within the workflow results.
 
 1. Expand the **"Download URLs Details"** section to reveal the available build artifacts.
 
-1. Under the **qcom-distro** distribution for the **qcom-armv8a** target, click on the **"Files"** link.
+1. Under the **qcom-distro-sdk** distribution for the **qcom-armv8a** target, click on the **"Files"** link.
 
 1. In the file list, use the **"Type"** filter to select `.sh` files, then download the following toolchain installer:
-
    ```
    qcom-distro-x86_64-qcom-multimedia-proprietary-image-armv8a-qcom-armv8a-toolchain-2.0.sh
    ```
 
-1. Clone the source code from Github:
+1. Extract and install the toolchain.
     ```
-    git clone https://github.com/qualcomm/camera-service.git
-    cd camera-service
+    bash qcom-distro-x86_64-qcom-multimedia-proprietary-image-armv8a-qcom-armv8a-toolchain-2.0.sh -d <path_to_install_toolchain> -y
+    ```
+1. Source the cross-compilation toolchain environment.
+    ```
+    source <path_to_install_toolchain>/environment-setup-armv8a-qcom-linux
     ```
 
-1. Run CMake to generate the Makefile and build
+    > **Note:** This environment must be sourced for every new shell session before building the project.
 
-    ```
-    cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
-    ```
+### Download source code
+
+Clone the source code from Github:
+
+```
+git clone https://github.com/qualcomm/camera-service.git
+cd camera-service
+```
+
+### Build the source code
+Run CMake to generate the Makefile and build
+
+```
+cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
+```
 
 ## Resources
 

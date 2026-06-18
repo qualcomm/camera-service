@@ -112,6 +112,7 @@ class IMemAllocUsage {
   static const int kFlex8Batch;
   static const int kFlexBatch;
   static const int kPrivateSnapshot;
+  static const int kPrivateAllocP010HEIF;
 
   /** IMemAllocUsage::ToLocal
   *

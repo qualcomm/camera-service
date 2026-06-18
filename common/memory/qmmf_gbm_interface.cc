@@ -72,6 +72,11 @@ const std::unordered_map<int32_t, int32_t> GBMUsage::usage_flag_map_ = {
 #else
   {IMemAllocUsage::kPrivateAllocHEIF,     0},
 #endif
+#ifdef GBM_BO_USAGE_PRIVATE_HEIF_P010
+  {IMemAllocUsage::kPrivateAllocP010HEIF, GBM_BO_USAGE_PRIVATE_HEIF_P010},
+#else
+  {IMemAllocUsage::kPrivateAllocP010HEIF, 0},
+#endif
   {IMemAllocUsage::kFlex2Batch,           0},
   {IMemAllocUsage::kFlex4Batch,           0},
   {IMemAllocUsage::kFlex8Batch,           0},
@@ -267,6 +272,7 @@ const std::unordered_map<int32_t, int32_t> GBMBuffer::from_gbm_ = {
 
   {GBM_FORMAT_NV21_ZSL,                 HAL_PIXEL_FORMAT_NV21_ZSL},
   {GBM_FORMAT_NV12_HEIF,                HAL_PIXEL_FORMAT_NV12_HEIF},
+  {GBM_FORMAT_YCbCr_420_P010_512,       HAL_PIXEL_FORMAT_YCBCR_P010},
 };
 
 GBMBuffer::~GBMBuffer() {
@@ -565,6 +571,13 @@ GBMFormatTranslateEntry GBMDevice::gbm_format_translate_table_[] = {
       GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC
     },
 
+    // P010 HEIF
+    {
+      IMemAllocUsage::kPrivateAllocP010HEIF,
+      GBM_FORMAT_IMPLEMENTATION_DEFINED,
+      GBM_FORMAT_YCbCr_420_P010_512,
+    },
+
     // P010
     {
       IMemAllocUsage::kPrivateAllocP010,
@@ -572,7 +585,7 @@ GBMFormatTranslateEntry GBMDevice::gbm_format_translate_table_[] = {
       GBM_FORMAT_YCbCr_420_P010_VENUS
     },
 
-    // HEIF
+    // NV12 HEIF
     {
       IMemAllocUsage::kPrivateAllocHEIF,
       GBM_FORMAT_YCbCr_420_888,

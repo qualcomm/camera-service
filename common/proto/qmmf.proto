@@ -454,7 +454,6 @@ message FeatureCapabilityEntryMsg {
     int32 int_value   = 4;
     float float_value = 5;
   }
-  bytes reserved = 6;
 }
 
 // Response carrying the full FeatureCapabilityMap

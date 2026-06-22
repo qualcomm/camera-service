@@ -12,7 +12,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAEC_WAIT_TIMEOUT=500000000")
 set(CAM_SERVER_SYSTEMD_DIR lib/systemd/system)
 set(CAM_SERVER_USER "root" CACHE STRING "User for camera server service")
-set(CAM_SERVER_GROUP "root" CACHE STRING "Group for camera server service")
+set(CAM_SERVER_GROUP "video" CACHE STRING "Group for camera server service")
 set(CAM_SERVER_SUPP_GROUP "" CACHE STRING "Supplementary groups")
 
 configure_file(

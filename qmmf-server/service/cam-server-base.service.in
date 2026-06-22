@@ -41,6 +41,7 @@ SupplementaryGroups=@CAM_SERVER_SUPP_GROUP@
 Restart=always
 RuntimeDirectory=cam_server
 RuntimeDirectoryMode=0775
+RuntimeDirectoryPreserve=yes
 CacheDirectory=camera
 ExecCondition=/usr/bin/check-camx-overlay.sh
 ExecStart=/usr/bin/cam-server

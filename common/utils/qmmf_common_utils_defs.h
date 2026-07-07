@@ -35,6 +35,7 @@
 
 #include <sstream>
 #include <iomanip>
+#include <vector>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -50,7 +51,7 @@ namespace qmmf {
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
 
-inline const char* kCameraMetaDataLibName = "libcamera_metadata";
+inline const char* kCameraMetaDataLibName = "libcamx_metadata";
 
 #define FORCE_SENSOR_MODE_MASK (0x00F00000)
 #define FORCE_SENSOR_MODE_DATA(idx) ((idx + 1) << 20)
@@ -58,6 +59,9 @@ inline const char* kCameraMetaDataLibName = "libcamera_metadata";
 #define SOC_DEV_PATH_PRIMARY "/sys/devices/soc0/soc_id"
 #define SOC_DEV_PATH_SECONDARY "/sys/devices/system/soc/soc0/id"
 #define CHIPSET_BUFFER_SIZE 32
+
+#define LIB_SEARCH_PATH_DEFAULT   "/usr/lib"
+#define LIB_SEARCH_PATH_MULTIARCH "/usr/lib/aarch64-linux-gnu"
 
 enum class SocId {
   kInvalid = 0,
@@ -365,8 +369,18 @@ class Target {
   // @brief  Return true/false if file exist
   // @return bool
   static bool FileExists(const std::string &name, const std::string &version) {
-    std::string full_path = "/usr/lib/" + name + ".so." + version;
-    return access(full_path.c_str(), F_OK) == 0;
+    static const std::vector<std::string> search_paths = {
+        LIB_SEARCH_PATH_DEFAULT,
+        LIB_SEARCH_PATH_MULTIARCH,
+    };
+
+    for (const auto &path : search_paths) {
+      std::string full_path = path + "/" + name + ".so." + version;
+      if (access(full_path.c_str(), F_OK) == 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // GetLibName

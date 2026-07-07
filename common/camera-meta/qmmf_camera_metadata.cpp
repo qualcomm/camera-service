@@ -108,7 +108,7 @@ void CameraMetadata_libCameraMetadataClose() __attribute__ ((destructor (101)));
 void CameraMetadata_libCameraMetadataOpen() {
   if (NULL == CameraMetadata::libcamera_metadata_handle) {
     std::string lib_name =
-        Target::GetLibName(std::string(kCameraMetaDataLibName), "0");
+        Target::GetLibName(std::string(kCameraMetaDataLibName), "1");
 
     CameraMetadata::libcamera_metadata_handle =
         dlopen(lib_name.c_str(), RTLD_LAZY);

@@ -87,7 +87,7 @@ CameraModule::CameraModule() : status_(-1) {}
 
 int32_t CameraModule::LoadHwGetModule(HwGetModuleFn *out_fn) {
   std::string lib_name =
-      Target::GetLibName(std::string(kCameraHardwareLibName), "0");
+      Target::GetLibName(std::string(kCameraHardwareLibName), "1");
 
   handle_ = dlopen(lib_name.c_str(), RTLD_NOW);
   if (!handle_) {

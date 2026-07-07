@@ -83,13 +83,13 @@ if(BUILD_CATEGORY STREQUAL "TARGET" OR BUILD_CATEGORY STREQUAL "ALL")
 
    # TODO: Find a better way to search for camx header presence
    find_path(CAMX_KODIAK_DIR
-     camx/kodiak/camx-api/camx/service/hardware/camera_common.h
+     camx-v1/camx-api/camx/service/hardware/camera_common.h
      PATHS "${SYSROOT_INCLUDE_DIR}"
      NO_DEFAULT_PATH
    )
 
    find_path(CAMX_DIR
-     camx-api/camx/service/hardware/camera_common.h
+     camx-v2/camx-api/camx/service/hardware/camera_common.h
      PATHS "${SYSROOT_INCLUDE_DIR}"
      NO_DEFAULT_PATH
    )
@@ -99,19 +99,20 @@ if(BUILD_CATEGORY STREQUAL "TARGET" OR BUILD_CATEGORY STREQUAL "ALL")
    # building for kodiak.
    if(CAMX_KODIAK_DIR)
      set(CAMX_KODIAK_INCLUDE_DIRS
-       "${SYSROOT_INCLUDE_DIR}/camx/kodiak"
-       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service"
-       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/hardware"
-       "${SYSROOT_INCLUDE_DIR}/camx/kodiak/camx-api/camx/service/system"
+       "${SYSROOT_INCLUDE_DIR}/camx-v1/"
+       "${SYSROOT_INCLUDE_DIR}/camx-v1/camx-api/camx/service"
+       "${SYSROOT_INCLUDE_DIR}/camx-v1/camx-api/camx/service/hardware"
+       "${SYSROOT_INCLUDE_DIR}/camx-v1/camx-api/camx/service/system"
         PARENT_SCOPE
      )
    endif()
 
    if(CAMX_DIR)
      set(CAMX_TARGET_INCLUDE_DIRS
-       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service"
-       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/hardware"
-       "${SYSROOT_INCLUDE_DIR}/camx-api/camx/service/system"
+       "${SYSROOT_INCLUDE_DIR}/camx-v2/"
+       "${SYSROOT_INCLUDE_DIR}/camx-v2/camx-api/camx/service"
+       "${SYSROOT_INCLUDE_DIR}/camx-v2/camx-api/camx/service/hardware"
+       "${SYSROOT_INCLUDE_DIR}/camx-v2/camx-api/camx/service/system"
        PARENT_SCOPE
      )
    endif()

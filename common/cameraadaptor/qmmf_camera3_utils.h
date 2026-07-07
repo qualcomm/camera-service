@@ -74,7 +74,7 @@
 
 namespace qmmf {
 
-inline const char* kCameraHardwareLibName = "libcamera_hardware";
+inline const char* kCameraHardwareLibName = "libcamx_hardware";
 using HwGetModuleFn = int (*)(const char* id, const struct hw_module_t** module_out);
 
 namespace cameraadaptor {

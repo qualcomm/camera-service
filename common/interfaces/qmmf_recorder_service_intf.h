@@ -383,6 +383,7 @@ class RecorderServiceCallbackStub : public IRecorderServiceCallback {
   std::thread callback_thread_;
   bool run_thread_;
   std::vector<int32_t> fds_;
+  size_t fds_idx_;
 };
 #endif // HAVE_BINDER
 

@@ -3780,6 +3780,7 @@ void RecorderServiceCallbackStub::ThreadLoop() {
     msg.msg_control = cmsgbuf;
     msg.msg_controllen = sizeof(cmsgbuf);
     fds_.clear();
+    fds_idx_ = 0;
     memset(socket_recv_buf_, 0, kMaxSocketBufSize);
 
     ssize_t bytes_read = recvmsg(client_socket_, &msg, 0);
@@ -3866,13 +3867,10 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       uint32_t camera_id = data.camera_id();
       uint32_t count = data.img_count();
       BnBuffer bn_buffer;
-      if (fds_.size()) {
-        bn_buffer.ion_fd = fds_[0];
-        bn_buffer.ion_meta_fd = fds_[1];
-      } else {
-        bn_buffer.ion_fd = -1;
-        bn_buffer.ion_meta_fd = -1;
-      }
+      bn_buffer.ion_fd = (data.buffer().ion_fd() != -1
+          && fds_idx_ < fds_.size()) ? fds_[fds_idx_++] : -1;
+      bn_buffer.ion_meta_fd = (data.buffer().ion_meta_fd() != -1
+          && fds_idx_ < fds_.size()) ? fds_[fds_idx_++] : -1;
       bn_buffer.img_id = data.buffer().img_id();
       bn_buffer.size = data.buffer().size();
       bn_buffer.timestamp = data.buffer().timestamp();
@@ -3906,8 +3904,10 @@ status_t RecorderServiceCallbackStub::ProcessCallbackMsg(
       std::vector<BnBuffer> buffers;
       for (auto &&b_data : data.buffers()) {
         BnBuffer buffer;
-        buffer.ion_fd = (fds_.size() >= 1) ? fds_[0] : -1;
-        buffer.ion_meta_fd = (fds_.size() >= 2) ? fds_[1] : -1;
+        buffer.ion_fd = (b_data.ion_fd() != -1 && fds_idx_ < fds_.size())
+            ? fds_[fds_idx_++] : -1;
+        buffer.ion_meta_fd = (b_data.ion_meta_fd() != -1 &&
+            fds_idx_ < fds_.size()) ? fds_[fds_idx_++] : -1;
         buffer.img_id = b_data.img_id();
         buffer.size = b_data.size();
         buffer.timestamp = b_data.timestamp();

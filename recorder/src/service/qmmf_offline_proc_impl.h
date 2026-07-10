@@ -108,8 +108,14 @@ struct OfflineCbData {
   uint32_t client_id;
 };
 
+#ifdef HAVE_ANDROID_UTILS
+int32_t OfflineCb(PostProcSessionParams* pproc_params,
+                  uint32_t out_size,
+                  void* user_data);
+#else
 void OfflineCb(PostProcSessionParams* pproc_params,
                   uint32_t out_size,
                   void* user_data);
+#endif
 
 };  // namespace qmmf.

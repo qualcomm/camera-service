@@ -8,9 +8,12 @@
 #include "qmmf_offline_proc_impl.h"
 
 #include <dlfcn.h>
-
+#ifdef HAVE_ANDROID_UTILS
+#include <cutils/native_handle.h>
+#else
 #include <hardware/graphics.h>
 #include <hardware/native_handle.h>
+#endif
 
 #include "common/utils/qmmf_log.h"
 #ifdef QCAMERA3_TAG_LOCAL_COPY
@@ -281,13 +284,22 @@ status_t OfflineProcess::Create(const uint32_t client_id,
       GetUsageFromFormat(buffer_format);
 #endif
 
+#ifdef HAVE_ANDROID_UTILS
+  create_params.config.clientCb = OfflineCb;
+#else
   create_params.config.pResultCallBack = OfflineCb;
+#endif
   create_params.cb_data = new OfflineCbData;
   create_params.cb_data->offline_proc = this;
   create_params.cb_data->client_id = client_id;
 
+#ifdef HAVE_ANDROID_UTILS
+  create_params.config.clientData =
+      reinterpret_cast<void*>(create_params.cb_data);
+#else
   create_params.config.pClientData =
       reinterpret_cast<void*>(create_params.cb_data);
+#endif
 
 #ifdef FEATURE_OFFLINE_IPE_ENABLE
   create_params.config.cameraId = params.camera_id[0];
@@ -359,6 +371,56 @@ status_t OfflineProcess::Process(const uint32_t client_id,
   input_nh1 = native_handle_create(2, 8);
   output_nh = native_handle_create(2, 8);
 
+#ifdef HAVE_ANDROID_UTILS
+  {
+    std::lock_guard<std::mutex> l(client_fd_lock_);
+    if (-1 != in_buf0.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf0.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf0.buffer_id, in_buf0.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(in_buf0.buffer_id),
+                  in_buf0.ion_fd,
+                  in_buf0.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return -EINVAL;
+      }
+    }
+    if (-1 != in_buf1.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(in_buf1.buffer_id)) {
+        client_fd_map_[client_id].emplace(in_buf1.buffer_id, in_buf1.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(in_buf1.buffer_id),
+                  in_buf1.ion_fd,
+                  in_buf1.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return -EINVAL;
+      }
+    }
+    if (-1 != out_buf.ion_fd) {
+      if (0 == client_fd_map_[client_id].count(out_buf.buffer_id)) {
+        client_fd_map_[client_id].emplace(out_buf.buffer_id, out_buf.ion_fd);
+      } else {
+        QMMF_ERROR("%s: Error: Expected buf fd %d, but got %d for buf id (%d)",
+                  __func__,
+                  client_fd_map_[client_id].at(out_buf.buffer_id),
+                  out_buf.ion_fd,
+                  out_buf.buffer_id);
+        native_handle_delete(input_nh0);
+        native_handle_delete(input_nh1);
+        native_handle_delete(output_nh);
+        return -EINVAL;
+      }
+    }
+  }
+#else
   {
     std::lock_guard<std::mutex> l(client_fd_lock_);
     auto& fd_map = client_fd_map_[client_id];
@@ -383,6 +445,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
     update_fd(in_buf1.buffer_id, in_buf1.ion_fd);
     update_fd(out_buf.buffer_id, out_buf.ion_fd);
   }
+#endif
 
   PostProcHandleParams in_handle_params0, in_handle_params1, out_handle_params;
 
@@ -532,6 +595,7 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
   client_pproc_map_.erase(client_id);
 
   pCameraPostProcDestroy(pproc_instance);
+  pCameraPostProcRelease(pproc_instance);
   pproc_instance = nullptr;
 
   QMMF_INFO("%s: Exit client_id %d", __func__, client_id);
@@ -580,14 +644,22 @@ void OfflineProcess::NotifyOfflineProc(const uint32_t& client_id,
   }
 }
 
+#ifdef HAVE_ANDROID_UTILS
+int32_t OfflineCb(PostProcSessionParams* pproc_params,
+               uint32_t out_size,
+               void* user_data) {
+#else
 void OfflineCb(PostProcSessionParams* pproc_params,
                uint32_t out_size,
                void* user_data) {
+#endif
   if (!pproc_params) {
     QMMF_ERROR("%s: pproc_params is null", __func__);
+    return -EINVAL;
   }
   if (!user_data) {
     QMMF_ERROR("%s: user_data is null", __func__);
+    return -EINVAL;
   }
 
   OfflineCbData* cb_data = reinterpret_cast<OfflineCbData*>(user_data);
@@ -595,7 +667,7 @@ void OfflineCb(PostProcSessionParams* pproc_params,
   uint32_t client = cb_data->client_id;
   int32_t out_buf_fd = pproc_params->outHandle[0].phHandle->data[0];
   enc->NotifyOfflineProc(client, out_buf_fd, out_size, pproc_params);
-
+  return 0;
 }
 
 };  // namespace qmmf.

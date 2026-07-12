@@ -21,7 +21,7 @@ set_target_properties(qmmf_utils PROPERTIES
 # Add destination of compiletime pkg-config file to PKG_CONFIG_PATH
 set(ENV{PKG_CONFIG_PATH} "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PKG_CONFIG_PATH}")
 
-install(TARGETS qmmf_utils DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_utils DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 
 # Configure and install pkg-config file
 configure_file(
@@ -32,7 +32,7 @@ configure_file(
 
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_utils.pc
-  DESTINATION lib/pkgconfig
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 target_link_libraries(qmmf_utils pthread)
 if(HAVE_ANDROID_UTILS)

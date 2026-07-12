@@ -10,7 +10,7 @@ target_include_directories(qmmf_common_resizer_c2d
 target_include_directories(qmmf_common_resizer_c2d
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
-install(TARGETS qmmf_common_resizer_c2d DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_common_resizer_c2d DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 target_link_libraries(qmmf_common_resizer_c2d pthread dl C2D2)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_common_resizer_c2d log utils cutils)

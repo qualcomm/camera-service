@@ -30,7 +30,7 @@ set_target_properties(qmmf_proto PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
   )
 
-install(TARGETS qmmf_proto DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_proto DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 
 # Configure and install pkg-config file
 configure_file(
@@ -41,7 +41,7 @@ configure_file(
 
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/qmmf_proto.pc
-  DESTINATION lib/pkgconfig
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 
 target_link_libraries(qmmf_proto

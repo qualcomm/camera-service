@@ -15,7 +15,7 @@ target_include_directories(qmmf_common_resizer_neon
 target_include_directories(qmmf_common_resizer_neon
  PRIVATE ${TOP_DIRECTORY}/common/memory)
 
-install(TARGETS qmmf_common_resizer_neon DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_common_resizer_neon DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 target_link_libraries(qmmf_common_resizer_neon pthread qmmf_utils)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_common_resizer_neon log utils cutils)

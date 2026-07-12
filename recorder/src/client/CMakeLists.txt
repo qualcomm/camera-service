@@ -63,7 +63,7 @@ set_target_properties(qmmf_recorder_client PROPERTIES
  SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-install(TARGETS qmmf_recorder_client DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_recorder_client DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 target_link_libraries(qmmf_recorder_client dl qmmf_camera_metadata
   ${QMMF_UTILS_LIBRARIES} qmmf_recorder_service_interface
 )

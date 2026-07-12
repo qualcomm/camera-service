@@ -56,7 +56,7 @@ set_target_properties(qmmf_camera_adaptor_${PLATFORM} PROPERTIES
   OUTPUT_NAME qmmf_camera_adaptor${TARGET_SUFFIX}
 )
 
-install(TARGETS qmmf_camera_adaptor_${PLATFORM} DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_camera_adaptor_${PLATFORM} DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 
 target_link_libraries(qmmf_camera_adaptor_${PLATFORM}
   pthread

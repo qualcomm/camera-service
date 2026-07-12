@@ -61,7 +61,7 @@ set_target_properties(qmmf_memory_interface_${PLATFORM} PROPERTIES
  OUTPUT_NAME qmmf_memory_interface${TARGET_SUFFIX}
 )
 
-install(TARGETS qmmf_memory_interface_${PLATFORM} DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_memory_interface_${PLATFORM} DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 target_link_libraries(qmmf_memory_interface_${PLATFORM} ${QMMF_UTILS_LIBRARIES} dl)
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_memory_interface_${PLATFORM} log utils cutils hardware)

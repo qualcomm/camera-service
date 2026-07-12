@@ -137,7 +137,7 @@ if(LOGICAL_CAMERA_SENSOR_SWITCH STREQUAL "TRUE")
   target_compile_definitions(qmmf_recorder_service_${PLATFORM} PRIVATE LOGICAL_CAMERA_SENSOR_SWITCH)
 endif()
 
-install(TARGETS qmmf_recorder_service_${PLATFORM} DESTINATION lib OPTIONAL)
+install(TARGETS qmmf_recorder_service_${PLATFORM} DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
 if (NOT CAMERA_HAL1_SUPPORT)
 target_link_libraries(qmmf_recorder_service_${PLATFORM} dl pthread
   ${QMMF_UTILS_LIBRARIES} qmmf_camera_adaptor_${PLATFORM} qmmf_camera_interface)

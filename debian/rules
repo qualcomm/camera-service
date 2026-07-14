@@ -18,7 +18,8 @@ CMAKE_COMMON_OPTS = \
   -DCMAKE_INSTALL_PREFIX=/usr \
   -DSYSROOT_INCDIR="/usr/include" \
   -DSYSROOT_LIBDIR="/usr/lib" \
-  -DCMAKE_CXX_FLAGS="$(CMAKE_CXX_FLAGS) -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -I/usr/include/log"
+  -DCMAKE_CXX_FLAGS="$(CMAKE_CXX_FLAGS) -I/usr/include/glib-2.0 -I/usr/lib/aarch64-linux-gnu/glib-2.0/include -I/usr/include/log" \
+  -DCMAKE_INSTALL_LIBDIR="lib"
 
 # Additional options for CLIENT and SERVER builds
 CMAKE_STAGED_OPTS = \

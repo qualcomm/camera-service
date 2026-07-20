@@ -74,7 +74,13 @@
 
 namespace qmmf {
 
+#ifdef HAVE_ANDROID_UTILS
+inline const char* kCameraHardwareLibName = "libhardware";
+inline const char* kCameraHardwareLibVersion = "0";
+#else
 inline const char* kCameraHardwareLibName = "libcamx_hardware";
+inline const char* kCameraHardwareLibVersion = "1";
+#endif
 using HwGetModuleFn = int (*)(const char* id, const struct hw_module_t** module_out);
 
 namespace cameraadaptor {

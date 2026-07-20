@@ -51,7 +51,14 @@ namespace qmmf {
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
 
+#ifdef HAVE_ANDROID_UTILS
+inline const char* kCameraMetaDataLibName = "libcamera_metadata";
+inline const char* kCameraMetaDataLibVersion = "0";
+#else
 inline const char* kCameraMetaDataLibName = "libcamx_metadata";
+inline const char* kCameraMetaDataLibVersion = "1";
+#endif
+
 
 #define FORCE_SENSOR_MODE_MASK (0x00F00000)
 #define FORCE_SENSOR_MODE_DATA(idx) ((idx + 1) << 20)

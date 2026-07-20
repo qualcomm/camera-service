@@ -73,7 +73,8 @@ void VendorTagDescriptor_libCameraMetadataClose() __attribute__ ((destructor (10
 void VendorTagDescriptor_libCameraMetadataOpen() {
   if (NULL == VendorTagDescriptor::libcamera_metadata_handle) {
     std::string lib_name =
-        Target::GetLibName(std::string(kCameraMetaDataLibName), "1");
+        Target::GetLibName(std::string(kCameraMetaDataLibName),
+                           std::string(kCameraMetaDataLibVersion));
 
     VendorTagDescriptor::libcamera_metadata_handle =
         dlopen(lib_name.c_str(), RTLD_LAZY);

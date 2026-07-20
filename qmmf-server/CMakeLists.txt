@@ -2,8 +2,10 @@ project(qti-cam-server)
 
 find_package(PkgConfig REQUIRED)
 
+if (NOT HAVE_ANDROID_UTILS)
 pkg_check_modules(QMMF_CONFIG
   REQUIRED qmmf_config)
+endif()
 
 if (NOT QMMF_SERVER_ENABLED)
   set(exclude EXCLUDE_FROM_ALL)
@@ -23,7 +25,7 @@ configure_file(
 
 add_executable(qti-cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
-add_dependencies(qti-cam-server qmmf_recorder_service)
+add_dependencies(qti-cam-server qmmf_recorder_service_${TARGET_BOARD_PLATFORM})
 else()
 add_dependencies(qti-cam-server qmmf_proto qmmf_config)
 endif()
@@ -51,6 +53,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl 
 target_link_libraries(qti-cam-server ${QMMF_CONFIG_LIBRARIES})
 endif()
 
+if(HAVE_BINDER_H)
+target_link_libraries(qti-cam-server qmmf_recorder_service_${TARGET_BOARD_PLATFORM})
+endif()
+
 if (QMMF_SERVER_ENABLED)
     if (CAM_SERVER_ENABLED)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-base.service
@@ -66,6 +72,8 @@ if (QMMF_SERVER_ENABLED)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs6490" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")
         install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "kalama")
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
+    elseif (TARGET_BOARD_PLATFORM STREQUAL "pebble")
         install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "pineapple")
         install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)

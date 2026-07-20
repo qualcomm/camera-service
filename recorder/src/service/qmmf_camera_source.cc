@@ -49,6 +49,7 @@
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
+#include "common/config/qmmf_config.h"
 
 #ifndef JPEG_BLOB_OFFSET
 #define JPEG_BLOB_OFFSET (1)
@@ -91,9 +92,11 @@ CameraSource::CameraSource()
   QMMF_KPI_DETAIL();
 
   QMMF_INFO("%s: Enter", __func__);
-
+#ifdef HAVE_BINDER
+  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
+#else
   int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 1);
-
+#endif
   // Preload camera interefaces.
   for (int32_t idx = 0; idx < n_preload; ++idx) {
     std::shared_ptr<CameraInterface> camera;

@@ -47,9 +47,7 @@
 #include <QCamera3VendorTags.h>
 #endif
 
-#ifndef HAVE_BINDER
 #include "common/config/qmmf_config.h"
-#endif // HAVE_BINDER
 #include "recorder/src/service/qmmf_camera_context.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
 

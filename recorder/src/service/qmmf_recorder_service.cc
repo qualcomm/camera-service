@@ -42,6 +42,7 @@ namespace qmmf {
 
 namespace recorder {
 
+#ifndef HAVE_BINDER
 extern "C" {
 
 int CreateRecorderServiceInstance(void) {
@@ -54,6 +55,7 @@ int CreateRecorderServiceInstance(void) {
   return 0;
 }
 }
+#endif
 
 #ifndef HAVE_BINDER
 ThreadPool::ThreadPool()
@@ -157,7 +159,7 @@ RecorderService::RecorderService() {
   } else {
 #ifdef HAVE_BINDER
     std::function< const sp<RemoteCallBack>& (uint32_t id)>
-      remote_cb_handle = [&] (uint32_t id) {
+      remote_cb_handle = [&] (uint32_t id) -> const sp<RemoteCallBack>& {
         QMMF_VERBOSE("%s: Client(%u): RemoteCallback request!", __func__, id);
         assert(remote_cb_list_.count(id) != 0);
         return remote_cb_list_[id];
@@ -1866,7 +1868,9 @@ status_t RecorderService::Disconnect(uint32_t client_id) {
 
   death_notifier_list_.erase(client_id);
   remote_cb_list_.erase(client_id);
+#ifndef HAVE_BINDER
   active_client_ids_.erase(client_id);
+#endif
 
   if (death_notifier_list_.empty() && remote_cb_list_.empty()) {
     if (recorder_) {
@@ -2453,7 +2457,9 @@ status_t RecorderService::DisconnectInternal(const uint32_t client_id) {
 #endif
   death_notifier_list_.erase(client_id);
   remote_cb_list_.erase(client_id);
+#ifndef HAVE_BINDER
   active_client_ids_.erase(client_id);
+#endif
 
   if (death_notifier_list_.empty() && remote_cb_list_.empty()) {
     if (recorder_) {

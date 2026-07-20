@@ -1188,7 +1188,12 @@ RecorderClient::RecorderClient()
   }
   assert(gbm_fd_ >= 0);
 
-  std::string libname = "libgbm.so." + std::string(GBM_VER);
+#ifdef HAVE_ANDROID_UTILS
+  std::string libname = "libgbm.so";
+#else
+  std::string libname = "libgbm.so. " + std::string(GBM_VER);
+#endif
+
   libgbm_handle_ = dlopen(libname.c_str(), RTLD_LAZY);
   char* err = dlerror();
 
@@ -1337,6 +1342,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   track_cb_list_.clear();
 
 #ifndef CAMERA_HAL1_SUPPORT
+#ifdef ENABLE_OFFLINE_JPEG
   if (vendor_tag_desc_ == nullptr) {
     vendor_tag_desc_ = std::make_shared<VendorTagDescriptor>();
     ret = GetVendorTagDescriptor(vendor_tag_desc_);
@@ -1354,6 +1360,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
       return ret;
     }
   }
+#endif
 #endif
 
   QMMF_DEBUG("%s Exit ", __func__);

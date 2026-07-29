@@ -459,12 +459,13 @@ class Target {
       case SocId::kHAMOA:
       case SocId::kPURWA:
       case SocId::kPURWA_SCP:
+        return "hamoa";
+
       case SocId::kGLYMUR_SIP:
       case SocId::kGLYMUR_COB:
       case SocId::kGLYMUR_MAHUA:
       case SocId::kGLYMUR_KALAMBO:
-        return "hamoa";
-
+        return "glymur";
       default:
         return {};
     }

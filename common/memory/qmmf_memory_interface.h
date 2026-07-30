@@ -109,6 +109,10 @@
 #define GBM_FORMAT_YCbCr_420_TP10_UBWC_FLEX_8_BATCH     GBM_FORMAT_NOT_DEFIEND
 #endif
 
+#ifndef GBM_FORMAT_YCbCr_420_P010_512
+#define GBM_FORMAT_YCbCr_420_P010_512                   GBM_FORMAT_NOT_DEFIEND
+#endif
+
 #ifdef __LIBGBM__
 #include <hardware/camera.h>
 #else

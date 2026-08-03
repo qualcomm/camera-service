@@ -11,7 +11,28 @@ on:
       - main
 
 jobs:
+  # Forked pull_request runs never receive repo secrets, so this job just
+  # records which commit to build. The actual build (which needs secrets to
+  # download the SDK and upload artifacts) runs from camera_service_compilation_pr.yml,
+  # triggered via workflow_run once this job finishes.
+  save-pr-context:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save PR number and head SHA
+        run: |
+          mkdir -p pr
+          echo "${{ github.event.pull_request.number }}" > pr/NR
+          echo "${{ github.event.pull_request.head.sha }}" > pr/SHA
+
+      - name: Upload PR context
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-context
+          path: pr/
+
   init:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       sdk-url: ${{ steps.urls.outputs.sdk-url }}
@@ -28,51 +49,12 @@ jobs:
           token: ${{ secrets.QUALCOMM_LINUX_PAT }}
           artifact-token: ${{ secrets.S3_WEBAPP_TOKEN }}
   build:
+    if: github.event_name != 'pull_request'
     needs: init
-    runs-on:
-      group: GHA-Framework-SelfHosted-RG
-      labels:
-        - self-hosted
-        - framework-prd-u2404-x64-od-ephem
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Run build
-        env:
-          S3_WEBAPP_TOKEN: ${{ secrets.S3_WEBAPP_TOKEN }}
-          SDK_OBJECT_URL: ${{ needs.init.outputs.sdk-url }}
-        run: |
-          chmod +x ci/build.sh
-          ./ci/build.sh
-      
-      - name: Prepare upload directory
-        run: |
-          mkdir -p upload_dir
-          mv cam-service-artifacts.tar.gz upload_dir/
-
-      - name: Generate build URLs JSON
-        env:
-          IMAGE_URLS: ${{ needs.init.outputs.image-urls }}
-        run: |
-          python3 - <<'EOF'
-          import json, os
-
-          flat = json.loads(os.environ["IMAGE_URLS"])
-          nested = {}
-          for key, url in flat.items():
-              target, image_type = key.split("/", 1)
-              nested.setdefault(target, {})[image_type] = url
-
-          with open("upload_dir/build-urls.json", "w") as f:
-              json.dump(nested, f, indent=4)
-          print(json.dumps(nested, indent=4))
-          EOF
-
-      - name: Upload artifacts to S3 bucket
-        uses: qualcomm-linux/upload-private-artifact-action@aws-v4
-        with:
-          path: ${{github.workspace}}/upload_dir
-          destination: ${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ github.run_id }}-${{ github.run_attempt }}/
-          s3_bucket: qli-prd-framework-gh-artifacts
+    uses: ./.github/workflows/camera-service-build.yml
+    with:
+      ref: ${{ github.sha }}
+      sdk-url: ${{ needs.init.outputs.sdk-url }}
+      image-urls: ${{ needs.init.outputs.image-urls }}
+    secrets:
+      s3-webapp-token: ${{ secrets.S3_WEBAPP_TOKEN }}

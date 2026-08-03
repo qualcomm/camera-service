@@ -138,8 +138,8 @@ runs:
           fi
         done
 
-        BASE="${FILESERVER}/qualcomm-linux/meta-qcom/${RUN_ID}-${LATEST_ATTEMPT}"
-        SDK_URL="${BASE}/qcom-distro-sdk/qcom-armv8a/${SDK_FILE}"
+        SDK_REL_PATH="qcom-distro-sdk/qcom-armv8a/${SDK_FILE}"
+        SDK_URL=$(resolve_artifact_url "$RUN_ID" "$LATEST_ATTEMPT" "$SDK_REL_PATH" "SDK toolchain")
 
         echo "sdk-url=${SDK_URL}" >> "$GITHUB_OUTPUT"
         echo "SDK URL: ${SDK_URL}"

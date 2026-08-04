@@ -46,6 +46,10 @@ install(PROGRAMS
         ${CMAKE_CURRENT_SOURCE_DIR}/check-camx-overlay.sh
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/qmmf-server)
 
+install(FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/service/99-camera.rules
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d/)
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qti-cam-server log cutils utils binder)
 else()

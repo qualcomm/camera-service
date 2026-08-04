@@ -1,0 +1,1 @@
+SUBSYSTEM=="video4linux", KERNEL=="video*", ACTION=="add", DRIVERS=="cam_req_mgr", TAG+="systemd", ENV{SYSTEMD_WANTS}="cam-server.service"

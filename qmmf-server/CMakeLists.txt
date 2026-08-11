@@ -42,7 +42,7 @@ install(FILES
 
 install(PROGRAMS
         ${CMAKE_CURRENT_SOURCE_DIR}/check-camx-overlay.sh
-        DESTINATION bin)
+        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/qmmf-server)
 
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(cam-server log cutils utils binder)

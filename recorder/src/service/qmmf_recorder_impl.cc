@@ -793,7 +793,7 @@ status_t RecorderImpl::StopVideoTracks(
   assert(camera_source_ != nullptr);
   uint32_t ret = camera_source_->StopTrackSources(service_track_ids);
   if (ret == 0) {
-    QMMF_INFO("%s: StopTrackSources Stoped Successfully!", __func__);
+    QMMF_INFO("%s: StopTrackSources Stopped Successfully!", __func__);
     for (auto service_track_id : service_track_ids) {
       uint32_t track_id = GetClientTrackId(client_id, service_track_id);
       ChangeTrackState(client_id, track_id, TrackState::kIdle);

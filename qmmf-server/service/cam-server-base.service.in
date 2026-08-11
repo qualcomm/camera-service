@@ -43,7 +43,7 @@ RuntimeDirectory=cam_server
 RuntimeDirectoryMode=0775
 RuntimeDirectoryPreserve=yes
 CacheDirectory=camera
-ExecCondition=/usr/bin/check-camx-overlay.sh
+ExecCondition=/usr/libexec/qmmf-server/check-camx-overlay.sh
 ExecStart=/usr/bin/cam-server
 
 [Install]

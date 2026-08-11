@@ -254,7 +254,7 @@ bool DMABufDevice::LoadFormatUtil() {
   format_util_handle_ = dlopen(lib_name.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!format_util_handle_) {
     QMMF_ERROR("%s: dlopen failed for format util lib: %s with error %s",
-               __func__, lib_name, dlerror());
+               __func__, lib_name.c_str(), dlerror());
     return false;
   }
 

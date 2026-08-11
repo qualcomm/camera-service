@@ -1250,7 +1250,7 @@ int32_t Camera3Stream::CloseLocked() {
     case STATUS_CONFIGURED:
       break;
     default:
-      QMMF_ERROR("%s: Stream %d is already closed!\n", __func__, id_);
+      QMMF_WARN("%s: Stream %d is already closed!\n", __func__, id_);
       return -ENOTCONN;
   }
 

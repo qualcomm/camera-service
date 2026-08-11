@@ -3040,7 +3040,7 @@ status_t CameraContext::UpdateRequest(bool cached) {
       }
     }
   }
-  QMMF_INFO("%s: SubmitRequest for Num streams(%ld) is successfull"
+  QMMF_INFO("%s: SubmitRequest for Num streams(%ld) is successful"
       " request_id(%d) batches: %ld",  __func__, size, streaming_request_id_,
       streaming_active_requests_.size());
 

@@ -1521,7 +1521,7 @@ camera3_buffer_request_status_t Camera3DeviceClient::RequestStreamBuffers(
           QMMF_ERROR("%s: Error: Ivalid state or input ", __func__);
           returned_buf_req->status = CAMERA3_PS_BUF_REQ_STREAM_DISCONNECTED;
         } else if (res == -ENOMEM) {
-          QMMF_ERROR("%s: Error: no availble memory ", __func__);
+          QMMF_ERROR("%s: Error: no available memory ", __func__);
           returned_buf_req->status = CAMERA3_PS_BUF_REQ_NO_BUFFER_AVAILABLE;
         } else {
           QMMF_ERROR("%s: Error: unknown ", __func__);

@@ -100,7 +100,7 @@ int32_t main(int32_t argc, char **argv) {
 
     void* handle = dlopen(lib_name.c_str(), RTLD_NOW);
     if (!handle) {
-      QMMF_ERROR("%s: Failed to dlopen %s: %s\n", __func__, lib_name,
+      QMMF_ERROR("%s: Failed to dlopen %s: %s\n", __func__, lib_name.c_str(),
                  dlerror());
       return EXIT_FAILURE;
     }

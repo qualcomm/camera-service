@@ -91,7 +91,7 @@ int32_t CameraModule::LoadHwGetModule(HwGetModuleFn *out_fn) {
 
   handle_ = dlopen(lib_name.c_str(), RTLD_NOW);
   if (!handle_) {
-    QMMF_ERROR("%s: dlopen(%s) failed: %s", __func__, lib_name, dlerror());
+    QMMF_ERROR("%s: dlopen(%s) failed: %s", __func__, lib_name.c_str(), dlerror());
     return -EINVAL;
   }
 
@@ -114,7 +114,7 @@ int32_t CameraModule::LoadHwGetModule(HwGetModuleFn *out_fn) {
   }
 
   QMMF_INFO("%s Successfully loaded hw_get_module from %s", __func__,
-            lib_name);
+            lib_name.c_str());
 
   *out_fn = get_module_fn_;
   return 0;

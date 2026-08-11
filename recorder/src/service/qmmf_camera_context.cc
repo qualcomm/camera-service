@@ -1235,7 +1235,7 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
             break;
           default:
             QMMF_WARN ("%s: Unknown stream usecase %d, treat as default.",
-                __func__, usecase_select.stream_usecase);
+                __func__, static_cast<int>(usecase_select.stream_usecase));
         }
       }
     }
@@ -1270,7 +1270,7 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
         break;
       default:
         QMMF_ERROR("%s: Invalid color space, colorimetry = %d",
-            __func__, param.colorimetry);
+            __func__, static_cast<int>(param.colorimetry));
         return -EINVAL;  // Return error instead of continuing
     }
 #endif // CAMX_ANDROID_API
@@ -1522,7 +1522,8 @@ status_t CameraContext::CaptureImage(
                                                         &last_frame_number);
 
     QMMF_INFO("%s: last_frame_number: current=%lld previous=%lld", __func__,
-              last_frame_number, last_frame_number_);
+              static_cast<long long>(last_frame_number),
+              static_cast<long long>(last_frame_number_));
 
     if (last_frame_number != NO_IN_FLIGHT_REPEATING_FRAMES) {
       last_frame_number_ = last_frame_number;
@@ -3840,7 +3841,7 @@ CameraPort::CameraPort(const StreamParam& param,
           break;
         default:
           QMMF_WARN ("%s: Unknown stream usecase %d, treat as default.", __func__,
-              usecase_select.stream_usecase);
+              static_cast<int>(usecase_select.stream_usecase));
       }
     }
   }
@@ -3998,7 +3999,7 @@ status_t CameraPort::Init() {
         break;
       default:
         QMMF_ERROR("%s: Invalid video color space, colorimetry = %d",
-            __func__, params_.colorimetry);
+            __func__, static_cast<int>(params_.colorimetry));
         break;
     }
   }

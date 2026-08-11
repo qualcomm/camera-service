@@ -3846,7 +3846,7 @@ void RecorderServiceCallbackStub::ThreadLoop() {
       QMMF_ERROR("%s: recv failure %s", __func__, strerror(errno));
       break;
     } else if (bytes_read == 0) {
-      QMMF_ERROR("%s: connection closed", __func__);
+      QMMF_WARN("%s: connection closed", __func__);
       NotifyServerDeath();
       break;
     }

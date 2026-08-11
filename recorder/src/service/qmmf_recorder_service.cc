@@ -994,7 +994,7 @@ status_t RecorderService::ReadRequest(int socket, void *buffer, size_t size) {
     QMMF_ERROR("%s: Receive failed: %s", __func__, strerror(errno));
     return -errno;
   } else if (bytes_read == 0) {
-    QMMF_ERROR("%s: connection closed: %d", __func__, socket);
+    QMMF_WARN("%s: connection closed: %d", __func__, socket);
     CheckClientDeath(client_sockets_[socket]);
     return 0;
   }

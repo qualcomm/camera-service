@@ -31,14 +31,14 @@
 
 [Unit]
 Description= Camera Server Service
-SourcePath=/usr/bin/cam-server
+SourcePath=/usr/bin/qti-cam-server
 Requires=servicemanager.service
 After=servicemanager.service
 
 [Service]
 Restart=always
-EnvironmentFile=/etc/cam-server-env
-ExecStart=/usr/bin/cam-server
+EnvironmentFile=/etc/qti-cam-server-env
+ExecStart=/usr/bin/qti-cam-server
 
 [Install]
 WantedBy=multi-user.target

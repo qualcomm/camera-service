@@ -31,12 +31,12 @@
 
 [Unit]
 Description= Camera Server Service
-SourcePath=/usr/bin/cam-server
+SourcePath=/usr/bin/qti-cam-server
 After=mm-qcamera-daemon.service
 
 [Service]
 Restart=always
-ExecStart=/usr/bin/cam-server
+ExecStart=/usr/bin/qti-cam-server
 
 [Install]
 WantedBy=multi-user.target

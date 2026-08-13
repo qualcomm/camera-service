@@ -1,4 +1,4 @@
-project(cam-server)
+project(qti-cam-server)
 
 find_package(PkgConfig REQUIRED)
 
@@ -16,28 +16,28 @@ set(CAM_SERVER_GROUP "video" CACHE STRING "Group for camera server service")
 set(CAM_SERVER_SUPP_GROUP "" CACHE STRING "Supplementary groups")
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/service/cam-server-base.service.in
-  ${CMAKE_CURRENT_BINARY_DIR}/cam-server-base.service
+  ${CMAKE_CURRENT_SOURCE_DIR}/service/qti-cam-server-base.service.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-base.service
   @ONLY
 )
 
-add_executable(cam-server ${exclude} qmmf_server_main.cc)
+add_executable(qti-cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
-add_dependencies(cam-server qmmf_recorder_service)
+add_dependencies(qti-cam-server qmmf_recorder_service)
 else()
-add_dependencies(cam-server qmmf_proto qmmf_config)
+add_dependencies(qti-cam-server qmmf_proto qmmf_config)
 endif()
 
-target_include_directories(cam-server
+target_include_directories(qti-cam-server
  PRIVATE ${TOP_DIRECTORY}
  PRIVATE ${TOP_DIRECTORY}/common/memory
  )
 
-install(TARGETS cam-server DESTINATION bin OPTIONAL)
+install(TARGETS qti-cam-server DESTINATION bin OPTIONAL)
 
 install(FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/cam-server.ini
-        ${CMAKE_CURRENT_SOURCE_DIR}/cam-server-env
+        ${CMAKE_CURRENT_SOURCE_DIR}/qti-cam-server.ini
+        ${CMAKE_CURRENT_SOURCE_DIR}/qti-cam-server-env
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
 install(PROGRAMS
@@ -45,33 +45,33 @@ install(PROGRAMS
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/qmmf-server)
 
 if(HAVE_ANDROID_UTILS)
-target_link_libraries(cam-server log cutils utils binder)
+target_link_libraries(qti-cam-server log cutils utils binder)
 else()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lpthread -lrt -lm -lglib-2.0 -ldl -latomic")
-target_link_libraries(cam-server ${QMMF_CONFIG_LIBRARIES})
+target_link_libraries(qti-cam-server ${QMMF_CONFIG_LIBRARIES})
 endif()
 
 if (QMMF_SERVER_ENABLED)
     if (CAM_SERVER_ENABLED)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cam-server-base.service
-               DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-base.service
+               DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs605")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qrb5165" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-xdg.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-xdg.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qrb5165")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qrbx210")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs6490" AND TARGET_PRODUCT_PLATFORM STREQUAL "ubuntu")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "kalama")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "pineapple")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcm2290-mtp")
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-cam-arch-v2-usrgrp.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     else()
-        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-base.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME cam-server.service)
+        install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/service/qmmf-server-base.service DESTINATION ${QMMF_SYSTEMD_DIR} RENAME qti-cam-server.service)
     endif()
 endif()

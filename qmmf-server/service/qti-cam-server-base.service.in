@@ -32,7 +32,7 @@
 [Unit]
 Description= Camera Server Service
 Documentation=https://github.com/qualcomm/camera-service
-SourcePath=/usr/bin/cam-server
+SourcePath=/usr/bin/qti-cam-server
 After=var-volatile-lib.service
 
 [Service]
@@ -45,7 +45,7 @@ RuntimeDirectoryMode=0775
 RuntimeDirectoryPreserve=yes
 CacheDirectory=camera
 ExecCondition=/usr/libexec/qmmf-server/check-camx-overlay.sh
-ExecStart=/usr/bin/cam-server
+ExecStart=/usr/bin/qti-cam-server
 
 [Install]
 WantedBy=multi-user.target

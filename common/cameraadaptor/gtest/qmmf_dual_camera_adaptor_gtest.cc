@@ -195,6 +195,7 @@ int32_t DualCamera3Gtest::StartStreaming(CameraContext &ctx, uint32_t width,
     }
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = BUFFER_COUNT;
     streamParams.format = format;
     streamParams.width = width;

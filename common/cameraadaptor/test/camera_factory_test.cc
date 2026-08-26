@@ -124,6 +124,7 @@ int32_t Camera::PowerOn() {
   }
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;

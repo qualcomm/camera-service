@@ -1246,8 +1246,9 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
     // Image color space hdrmode && data_space setting
     switch (param.colorimetry) {
       case Colorimetry::kBT601:
-        stream_param.hdrmode = 0;
-        stream_param.color_space = 0;
+        stream_param.hdrmode =
+            ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
+        stream_param.color_space = -1;
         break;
       case Colorimetry::kBT2100HLGFULL:
         stream_param.hdrmode =
@@ -3974,7 +3975,8 @@ status_t CameraPort::Init() {
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
   if (params_.colorimetry == Colorimetry::kBT601) {
-    cam_stream_params_.hdrmode = 0;
+    cam_stream_params_.hdrmode =
+        ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     cam_stream_params_.data_space = HAL_DATASPACE_UNKNOWN;
   } else {
     switch (params_.colorimetry) {

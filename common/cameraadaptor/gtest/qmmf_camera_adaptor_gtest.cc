@@ -369,6 +369,7 @@ int32_t Camera3Gtest::StartSreaming(MemAllocFlags usage, uint32_t width,
   }
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = width;
@@ -659,6 +660,7 @@ TEST_F(Camera3Gtest, Video1080pManualExposure) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -787,6 +789,7 @@ TEST_F(Camera3Gtest, Video1080pSceneControl) {
     ASSERT_EQ(0, ret);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = STREAM_BUFFER_COUNT;
     streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
     streamParams.width = 1920;
@@ -870,6 +873,7 @@ TEST_F(Camera3Gtest, Video1080pEVcontrol) {
     ASSERT_EQ(0, ret);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = STREAM_BUFFER_COUNT;
     streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
     streamParams.width = 1920;
@@ -959,6 +963,7 @@ TEST_F(Camera3Gtest, Video1080pExposureModes) {
     ASSERT_EQ(0, ret);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = STREAM_BUFFER_COUNT;
     streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
     streamParams.width = 1920;
@@ -1038,6 +1043,7 @@ TEST_F(Camera3Gtest, Video1080pExposureMeteringModes) {
     ASSERT_EQ(0, ret);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = STREAM_BUFFER_COUNT;
     streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
     streamParams.width = 1920;
@@ -1119,6 +1125,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshotHDR) {
     ASSERT_EQ(0, ret);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = STREAM_BUFFER_COUNT;
     streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
     streamParams.width = 1920;
@@ -1132,6 +1139,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshotHDR) {
     previewRequest.streamIds.push_back(previewStreamId);
 
     memset(&streamParams, 0, sizeof(streamParams));
+    streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
     streamParams.bufferCount = 3;
     streamParams.format = HAL_PIXEL_FORMAT_BLOB;
     streamParams.width = 4000;
@@ -1208,6 +1216,7 @@ TEST_F(Camera3Gtest, ZSLStream12Mp) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 4;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 4000;
@@ -1265,6 +1274,7 @@ TEST_F(Camera3Gtest, FlushZSL) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 4;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 4000;
@@ -1310,6 +1320,7 @@ TEST_F(Camera3Gtest, Preview1080pSnapshot12Mp) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -1322,6 +1333,7 @@ TEST_F(Camera3Gtest, Preview1080pSnapshot12Mp) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = 4000;
@@ -1390,6 +1402,7 @@ TEST_F(Camera3Gtest, UpdateExposureDuringPreviewVGA) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 640;
@@ -1457,7 +1470,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kSaturation) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
-
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -1471,6 +1484,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kSaturation) {
   videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = 3840;
@@ -1546,7 +1560,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kISO) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
-
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -1560,6 +1574,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kISO) {
   videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = 3840;
@@ -1649,7 +1664,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kWNR) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
-
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -1663,6 +1678,7 @@ TEST_F(Camera3Gtest, Video1080pSnapshot4kWNR) {
   videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = 3840;
@@ -1743,6 +1759,7 @@ TEST_F(Camera3Gtest, Video4KLiveSnapshot4K) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 3840;
@@ -1756,6 +1773,7 @@ TEST_F(Camera3Gtest, Video4KLiveSnapshot4K) {
   videoRequest.streamIds.push_back(videoStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = 3840;
@@ -1815,6 +1833,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
 
   // 4K video stream
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 3840;
@@ -1850,6 +1869,7 @@ TEST_F(Camera3Gtest, Video4KPlus180pLiveSnapshot4KYUVPreview1080p) {
 
   // 4K YUV snapshot
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 3840;
@@ -1939,6 +1959,7 @@ TEST_F(Camera3Gtest, Video1080pAFR) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2013,6 +2034,7 @@ TEST_F(Camera3Gtest, Video1080pSharpness) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2059,6 +2081,7 @@ TEST_F(Camera3Gtest, Video1080pSharpness) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2121,6 +2144,7 @@ TEST_F(Camera3Gtest, Video1080pZoom) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2186,6 +2210,7 @@ TEST_F(Camera3Gtest, Video1080pThreeStreams) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2246,6 +2271,7 @@ TEST_F(Camera3Gtest, ThreeVideo1080Plus180pPreview1080pLiveSnapshot4KYUV) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2288,6 +2314,7 @@ TEST_F(Camera3Gtest, ThreeVideo1080Plus180pPreview1080pLiveSnapshot4KYUV) {
 
   // 4K YUV snapshot
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 3840;
@@ -2356,6 +2383,7 @@ TEST_F(Camera3Gtest, DynamicDeleteVideo1080p) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2434,6 +2462,7 @@ TEST_F(Camera3Gtest, DynamicReconfigureVideo1080p) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 1920;
@@ -2539,6 +2568,7 @@ TEST_F(Camera3Gtest, InvalidRequest) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -2573,6 +2603,7 @@ TEST_F(Camera3Gtest, PrepareTeardownPreview) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -2667,6 +2698,7 @@ TEST_F(Camera3Gtest, HFRVideo1080p60FPS) {
   ASSERT_EQ(0, ret);
 
   memset(&stream_params, 0, sizeof(stream_params));
+  stream_params.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   stream_params.bufferCount = HFR_BUFFER_COUNT;
   stream_params.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   stream_params.width = stream_width;
@@ -2779,6 +2811,7 @@ TEST_F(Camera3Gtest, HFRVideo720p120FPS) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = HFR_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = streamWidth;
@@ -2851,6 +2884,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -2863,6 +2897,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = yuvSize[0];
@@ -2889,6 +2924,7 @@ TEST_F(Camera3Gtest, ReprocessYUVToYUV) {
   reprocessRequest.streamIds.push_back(inputStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_YCbCr_420_888;
   streamParams.width = yuvSize[0];
@@ -2973,6 +3009,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -2985,6 +3022,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_RAW10;
   streamParams.width = rawSize[0];
@@ -3011,6 +3049,7 @@ TEST_F(Camera3Gtest, ReprocessRAWToYUV1080p) {
   reprocessRequest.streamIds.push_back(inputStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_YCbCr_420_888;
   streamParams.width = 1920;
@@ -3097,6 +3136,7 @@ TEST_F(Camera3Gtest, ReprocessZSL12MpToYUV4K) {
   ASSERT_EQ(0, ret);
 
   memset(&stream_params, 0, sizeof(stream_params));
+  stream_params.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   stream_params.bufferCount = STREAM_BUFFER_COUNT;
   stream_params.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   stream_params.width = zsl_width;
@@ -3124,6 +3164,7 @@ TEST_F(Camera3Gtest, ReprocessZSL12MpToYUV4K) {
   reprocess_request.streamIds.push_back(input_stream_id);
 
   memset(&stream_params, 0, sizeof(stream_params));
+  stream_params.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   stream_params.bufferCount = 1;
   stream_params.format = HAL_PIXEL_FORMAT_YCbCr_420_888;
   stream_params.width = yuv_width;
@@ -3210,6 +3251,7 @@ TEST_F(Camera3Gtest, RAW16Bit) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -3222,6 +3264,7 @@ TEST_F(Camera3Gtest, RAW16Bit) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_RAW16;
   streamParams.width = rawSize[0];
@@ -3284,6 +3327,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -3296,6 +3340,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = PREVIEW_WIDTH;
@@ -3380,6 +3425,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = PREVIEW_WIDTH;
@@ -3392,6 +3438,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
   previewRequest.streamIds.push_back(previewStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_RAW16;
   streamParams.width = rawSize[0];
@@ -3404,6 +3451,7 @@ TEST_F(Camera3Gtest, SnapshotAndRAW16Bit) {
   rawRequest.streamIds.push_back(rawStreamId);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = 1;
   streamParams.format = HAL_PIXEL_FORMAT_BLOB;
   streamParams.width = PREVIEW_WIDTH;
@@ -3465,6 +3513,7 @@ TEST_F(Camera3Gtest, ExposureLockVGA) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 640;
@@ -3531,6 +3580,7 @@ TEST_F(Camera3Gtest, AwbLockVGA) {
   ASSERT_EQ(0, ret);
 
   memset(&streamParams, 0, sizeof(streamParams));
+  streamParams.hdrmode = ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD;
   streamParams.bufferCount = STREAM_BUFFER_COUNT;
   streamParams.format = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
   streamParams.width = 640;

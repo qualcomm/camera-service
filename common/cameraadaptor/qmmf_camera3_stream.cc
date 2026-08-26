@@ -1116,7 +1116,9 @@ int32_t Camera3Stream::GetBufferLocked(camera3_stream_buffer *streamBuffer) {
     Colorimetry colorimetry = Colorimetry::kBT601;
 
 #if defined(CAMX_ANDROID_API) && (CAMX_ANDROID_API >= 31)
-    if (hdrmode_ == 0) {
+    if (hdrmode_ == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD &&
+        data_space_ == HAL_DATASPACE_UNKNOWN &&
+        color_space_ == -1) {
       colorimetry = Colorimetry::kBT601;
     } else if (hdrmode_ == ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_HLG10) {
       colorimetry = Colorimetry::kBT2100HLGFULL;

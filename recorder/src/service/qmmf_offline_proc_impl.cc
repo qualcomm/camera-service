@@ -16,6 +16,7 @@
 #endif
 
 #include "common/utils/qmmf_log.h"
+#include "common/utils/qmmf_common_utils_defs.h"
 #ifdef QCAMERA3_TAG_LOCAL_COPY
 #include "common/cameraadaptor/qmmf_camera3_utils.h"
 #else
@@ -59,11 +60,21 @@ status_t OfflineProcess::Init(
     return ret;
   }
 
-  offline_proc_lib_ = dlopen(JPEG_POSTPROC_LIB, RTLD_NOW | RTLD_LOCAL);
+  std::string jpeg_lib_path = JPEG_POSTPROC_LIB;
+  for (const auto& search_path : {LIB_SEARCH_PATH_DEFAULT,
+                                   LIB_SEARCH_PATH_MULTIARCH}) {
+    std::string full = std::string(search_path) + "/" + JPEG_POSTPROC_LIB;
+    if (access(full.c_str(), F_OK) == 0) {
+      jpeg_lib_path = full;
+      break;
+    }
+  }
+
+  offline_proc_lib_ = dlopen(jpeg_lib_path.c_str(), RTLD_NOW | RTLD_LOCAL);
   if (!offline_proc_lib_) {
     QMMF_ERROR("%s: No postproc lib, dlopen failed with: %s.",
-            __func__, dlerror());
-    return -EINVAL;
+              __func__, dlerror());
+    return 0;
   }
 
   pCameraPostProcCreate   = (PFN_CameraPostProc_Create)
@@ -246,6 +257,12 @@ status_t OfflineProcess::Create(const uint32_t client_id,
 
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
 
+  if (!offline_proc_lib_) {
+    QMMF_ERROR("%s: Offline JPEG lib not loaded, cannot create postproc instance.",
+               __func__);
+    return -EINVAL;
+  }
+
   std::lock_guard<std::mutex> client_lock(client_pproc_lock_);
 
   // get_number_of_cameras() must be called once prior using jpeg lib
@@ -354,6 +371,12 @@ status_t OfflineProcess::Process(const uint32_t client_id,
                                      const BnBuffer& out_buf,
                                      const CameraMetadata& meta) {
   QMMF_INFO("%s: Enter client_id %d", __func__, client_id);
+
+  if (!offline_proc_lib_) {
+    QMMF_ERROR("%s: Offline JPEG lib not loaded, cannot process.",
+               __func__);
+    return -EINVAL;
+  }
 
   std::unique_lock<std::mutex> client_lock(client_pproc_lock_);
   if(!IsClientFound(client_id)) {

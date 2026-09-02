@@ -648,11 +648,6 @@ void OfflineProcess::NotifyOfflineProc(const uint32_t& client_id,
 int32_t OfflineCb(PostProcSessionParams* pproc_params,
                uint32_t out_size,
                void* user_data) {
-#else
-void OfflineCb(PostProcSessionParams* pproc_params,
-               uint32_t out_size,
-               void* user_data) {
-#endif
   if (!pproc_params) {
     QMMF_ERROR("%s: pproc_params is null", __func__);
     return -EINVAL;
@@ -669,5 +664,22 @@ void OfflineCb(PostProcSessionParams* pproc_params,
   enc->NotifyOfflineProc(client, out_buf_fd, out_size, pproc_params);
   return 0;
 }
+#else
+void OfflineCb(PostProcSessionParams* pproc_params,
+               uint32_t out_size,
+               void* user_data) {
+  if (!pproc_params) {
+    QMMF_ERROR("%s: pproc_params is null", __func__);
+  }
+  if (!user_data) {
+    QMMF_ERROR("%s: user_data is null", __func__);
+  }
 
+  OfflineCbData* cb_data = reinterpret_cast<OfflineCbData*>(user_data);
+  OfflineProcess* enc = cb_data->offline_proc;
+  uint32_t client = cb_data->client_id;
+  int32_t out_buf_fd = pproc_params->outHandle[0].phHandle->data[0];
+  enc->NotifyOfflineProc(client, out_buf_fd, out_size, pproc_params);
+}
+#endif
 };  // namespace qmmf.

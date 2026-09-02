@@ -115,7 +115,10 @@ enum class SocId {
   kHAMOA = 709,
   kHAMOA_10CORE = 710,
   kPURWA = 711,
-  kGLYMUR_KALAMBO = 719
+  kGLYMUR_KALAMBO = 719,
+  kSHIKRA_CQM = 756,
+  kSHIKRA_CQS = 758,
+  kSHIKRA_IQS = 759
 };
 
 struct StreamBuffer {
@@ -476,6 +479,12 @@ class Target {
       case SocId::kGLYMUR_MAHUA:
       case SocId::kGLYMUR_KALAMBO:
         return "glymur";
+
+      case SocId::kSHIKRA_CQM:
+      case SocId::kSHIKRA_CQS:
+      case SocId::kSHIKRA_IQS:
+        return "shikra";
+
       default:
         return {};
     }

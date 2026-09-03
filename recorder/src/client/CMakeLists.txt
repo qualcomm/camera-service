@@ -2,10 +2,15 @@ project(qmmf_recorder_client VERSION 1.0)
 
 find_package(PkgConfig)
 
+if (NOT HAVE_BINDER_H)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
+endif()
+if (NOT HAVE_ANDROID_UTILS)
 pkg_check_modules(QMMF_CONFIG
   REQUIRED qmmf_config)
+endif()
+
 pkg_check_modules(QMMF_UTILS
   REQUIRED qmmf_utils)
 
@@ -29,11 +34,13 @@ ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder.cc
 ${CMAKE_CURRENT_SOURCE_DIR}/qmmf_recorder_client.cc
 )
 
-add_dependencies(qmmf_recorder_client
-  qmmf_proto
-  qmmf_utils
-  qmmf_config
-)
+add_dependencies(qmmf_recorder_client qmmf_utils)
+if (NOT HAVE_BINDER_H)
+add_dependencies(qmmf_recorder_client qmmf_proto)
+endif()
+if (NOT HAVE_ANDROID_UTILS)
+add_dependencies(qmmf_recorder_client qmmf_config)
+endif()
 
 pkg_check_modules(GBM gbm)
 
@@ -44,9 +51,8 @@ if(GBM_FOUND AND USE_LIBGBM)
   )
 
   target_link_libraries(qmmf_recorder_client
-    PRIVATE
-      ${CMAKE_DL_LIBS}
-      gbm
+    ${CMAKE_DL_LIBS}
+    gbm
   )
 endif()
 

@@ -302,6 +302,7 @@ class Camera3DeviceClient : public ICameraDeviceClient,
   bool is_hfr_supported_;
   bool is_raw_only_;
   bool hfr_mode_enabled_;
+  bool enableProviderExtension_;
   int8_t super_frames_;
   uint32_t cam_feature_flags_;
   uint32_t fps_sensormode_index_;

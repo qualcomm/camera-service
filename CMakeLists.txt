@@ -11,6 +11,7 @@ set(BUILD_CATEGORY "ALL" CACHE STRING "Build Category")
 set(TOP_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
 
 include_directories(${TOP_DIRECTORY}/include)
+include_directories(${TOP_DIRECTORY}/common/memory)
 
 # Check whether MMM color format header is present.
 include(CheckIncludeFile)
@@ -79,6 +80,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLE_CAMERA")
 endif()
 
 include_directories(${TOP_DIRECTORY}/include)
+include_directories(${TOP_DIRECTORY}/common/memory)
 
 # === Common libs ===
 if (NOT HAVE_BINDER_H)

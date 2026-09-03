@@ -53,6 +53,9 @@
 
 #include "common/utils/qmmf_log.h"
 #include "common/utils/qmmf_common_utils_defs.h"
+#ifdef HAVE_BINDER
+#include "recorder/src/service/qmmf_recorder_service.h"
+#endif
 
 /**
  * Property to indicate completion of QMMF services initialization.

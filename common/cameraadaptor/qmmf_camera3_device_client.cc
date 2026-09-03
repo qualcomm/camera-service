@@ -137,6 +137,7 @@ Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
       vendor_tag_ops_{},
       is_camera_device_available_ (true),
       cam_opmode_ (0),
+      enableProviderExtension_(false),
       session_metadata_ (CameraMetadata(128, 128)) {
   QMMF_GET_LOG_LEVEL();
   camera3_callback_ops::notify = &notifyFromHal;
@@ -317,6 +318,30 @@ int32_t Camera3DeviceClient::OpenCamera(uint32_t idx) {
   if (0 != res) {
     QMMF_ERROR("Could not initialize camera: %s (%d) \n", strerror(-res), res);
     goto exit;
+  }
+
+  // check the status of EnableProviderExtension
+  {
+    uint32_t tag_enable = 0;
+    QMMF_DEBUG("%s: Enter EnableProviderExtension", __func__);
+    std::shared_ptr<VendorTagDescriptor> vTags =
+        VendorTagDescriptor::getGlobalVendorTagDescriptor();
+
+    if (vTags.get() != NULL) {
+      CameraMetadata::getTagFromName(
+          "org.quic.camera.extensionProvider.EnableProviderExtension",
+          vTags.get(), &tag_enable);
+
+      if (tag_enable > 0) {
+        camera_metadata_entry_t entry = device_info_.find(tag_enable);
+        if (entry.count > 0) {
+          enableProviderExtension_ = entry.data.u8[0];
+          QMMF_DEBUG("%s: EnableProviderExtension = %d",
+              __func__, enableProviderExtension_);
+        }
+      }
+    }
+    QMMF_DEBUG("%s: Exit EnableProviderExtension", __func__);
   }
 
   {
@@ -1582,7 +1607,7 @@ void Camera3DeviceClient::SendCaptureResult(
   // pickframe node will be held on EISv3 module for several seconds at most
   // so frame sequence passed by camx will be out of order,
 
-  if (!CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+  if (!CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_) && !enableProviderExtension_) {
     if (resultExtras.input) {
       if (frameNumber < next_result_input_frame_number_) {
         SET_ERR(
@@ -2383,9 +2408,15 @@ void Camera3DeviceClient::deviceStatusChange(
   if (new_status == CAMERA_DEVICE_STATUS_NOT_PRESENT) {
     ctx->UpdateCameraStatus(false);
     QMMF_WARN ("%s: Camera with id (%d) is not present", __func__, camera_id);
+    if (nullptr != ctx->client_cb_.deviceStatusCb) {
+      ctx->client_cb_.deviceStatusCb(camera_id, false);
+    }
   } else if (new_status == CAMERA_DEVICE_STATUS_PRESENT) {
     ctx->UpdateCameraStatus(true);
     QMMF_DEBUG ("%s: Camera with id (%d) is present", __func__, camera_id);
+    if (nullptr != ctx->client_cb_.deviceStatusCb) {
+      ctx->client_cb_.deviceStatusCb(camera_id, true);
+    }
   }
 }
 

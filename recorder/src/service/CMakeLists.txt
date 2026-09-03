@@ -1,6 +1,15 @@
 project(qmmf_recorder_service_${PLATFORM} VERSION 1.0)
 
 find_package(PkgConfig REQUIRED)
+
+if (NOT HAVE_BINDER_H)
+pkg_check_modules(QMMF_PROTO
+  REQUIRED qmmf_proto)
+endif()
+if (NOT HAVE_ANDROID_UTILS)
+pkg_check_modules(QMMF_CONFIG
+  REQUIRED qmmf_config)
+endif()
 include(CheckCXXSourceCompiles)
 
 # Check whether ANDROID_REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR is supported
@@ -32,10 +41,6 @@ check_cxx_source_compiles("${SRC_MAX_RES_CONFIG}"
   HAS_ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_MAXIMUM_RESOLUTION)
 
 
-pkg_check_modules(QMMF_PROTO
-  REQUIRED qmmf_proto)
-pkg_check_modules(QMMF_CONFIG
-  REQUIRED qmmf_config)
 pkg_check_modules(QMMF_UTILS
   REQUIRED qmmf_utils)
 
@@ -76,10 +81,14 @@ if (NOT CAMERA_HAL1_SUPPORT)
 add_dependencies(
   qmmf_recorder_service_${PLATFORM}
   qmmf_camera_adaptor_${PLATFORM}
-  qmmf_proto
-  qmmf_config
   qmmf_utils
 )
+if (NOT HAVE_BINDER_H)
+add_dependencies(qmmf_recorder_service_${PLATFORM} qmmf_proto)
+endif()
+if (NOT HAVE_ANDROID_UTILS)
+add_dependencies(qmmf_recorder_service_${PLATFORM} qmmf_config)
+endif()
 if (RESIZER_C2D_ENABLED)
 add_dependencies(
   qmmf_recorder_service_${PLATFORM}
@@ -177,6 +186,10 @@ target_link_libraries(qmmf_recorder_service_${PLATFORM} dl log utils cutils bind
 endif()
 
 # TODO remove this hack when camx issue with propagating c and cpp glags is solved
+if(HAVE_BINDER_H)
+target_link_libraries(qmmf_recorder_service_${PLATFORM} qmmf_recorder_client)
+endif()
+
 if(HAVE_ANDROID_UTILS)
 target_link_libraries(qmmf_recorder_service_${PLATFORM} ion qmmf_camera_metadata)
 else()

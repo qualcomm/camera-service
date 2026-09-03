@@ -44,9 +44,7 @@
 #include "recorder/src/service/qmmf_camera_rescaler.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
 
-#ifndef HAVE_BINDER
 #include "common/config/qmmf_config.h"
-#endif
 #include "common/resizer-neon/qmmf_resizer_neon.h"
 #include "common/resizer-c2d/qmmf_resizer_c2d.h"
 #ifndef CAMERA_HAL1_SUPPORT

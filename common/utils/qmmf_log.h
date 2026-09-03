@@ -75,11 +75,14 @@ int qmmf_property_set(const char *key, const char *value);
 #ifdef HAVE_ANDROID_UTILS
 #define QMMF_GET_LOG_LEVEL()                               \
   ({                                                       \
-    char prop[QMMF_PROP_VAL_MAX];                         \
+    char prop[PROPERTY_VALUE_MAX];                         \
     property_get("persist.qmmf.sdk.log.level", prop, "0"); \
     qmmf_log_level = atoi(prop);                           \
   })
 
+#define QMMF_INFO(fmt, args...)  ALOGI(fmt, ##args)
+#define QMMF_WARN(fmt, args...)  ALOGW(fmt, ##args)
+#define QMMF_ERROR(fmt, args...) ALOGE(fmt, ##args)
 #define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
 #define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 #else

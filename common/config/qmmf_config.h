@@ -35,12 +35,20 @@ class Property {
   template <typename T>
   static T Get(std::string property, T default_value)  {
     T value = default_value;
+#ifdef HAVE_ANDROID_UTILS
+    char prop_val[PROPERTY_VALUE_MAX];
+#else
     char prop_val[QMMF_PROP_VAL_MAX];
+#endif
 
     std::stringstream s;
     s << default_value;
 
+#ifdef HAVE_ANDROID_UTILS
+    property_get(property.c_str(), prop_val, s.str().c_str());
+#else
     qmmf_property_get(property.c_str(), prop_val, s.str().c_str());
+#endif
 
     std::stringstream output(prop_val);
     output >> value;
@@ -60,6 +68,10 @@ class Property {
     std::stringstream s;
     s << value;
 
+#ifdef HAVE_ANDROID_UTILS
+    property_set(property.c_str(), s.str().c_str());
+#else
     qmmf_property_set(property.c_str(), s.str().c_str());
+#endif
   }
 };

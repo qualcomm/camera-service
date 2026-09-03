@@ -2,10 +2,15 @@ project(qmmf_camera_adaptor_${PLATFORM} VERSION 1.0)
 
 find_package(PkgConfig REQUIRED)
 
+if (NOT HAVE_BINDER_H)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
+endif()
+if (NOT HAVE_ANDROID_UTILS)
 pkg_check_modules(QMMF_CONFIG
   REQUIRED qmmf_config)
+endif()
+
 pkg_check_modules(QMMF_UTILS
   REQUIRED qmmf_utils)
 

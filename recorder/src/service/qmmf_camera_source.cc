@@ -49,6 +49,7 @@
 #include "recorder/src/service/qmmf_camera_source.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_recorder_utils.h"
+#include "common/config/qmmf_config.h"
 
 #ifndef JPEG_BLOB_OFFSET
 #define JPEG_BLOB_OFFSET (1)
@@ -91,9 +92,11 @@ CameraSource::CameraSource()
   QMMF_KPI_DETAIL();
 
   QMMF_INFO("%s: Enter", __func__);
-
+#ifdef HAVE_BINDER
+  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
+#else
   int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 1);
-
+#endif
   // Preload camera interefaces.
   for (int32_t idx = 0; idx < n_preload; ++idx) {
     std::shared_ptr<CameraInterface> camera;
@@ -121,7 +124,8 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
                                    const CameraExtraParam& extra_param,
                                    const ResultCb &cb,
                                    const ErrorCb &errcb,
-                                   const SystemCb &syscb) {
+                                   const SystemCb &syscb,
+                                   const DeviceStatusCb &devicestatus) {
 
   QMMF_INFO("%s: Camera Id(%u) to open!", __func__, camera_id);
   QMMF_KPI_DETAIL();
@@ -131,7 +135,7 @@ status_t CameraSource::StartCamera(const uint32_t camera_id,
     camera = preloaded_cameras_.front();
     preloaded_cameras_.pop_front();
   } else {
-    camera = std::make_shared<CameraContext>();
+    camera = std::make_shared<CameraContext>(devicestatus);
   }
 
   if (!camera) {

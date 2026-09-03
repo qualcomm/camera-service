@@ -4,10 +4,12 @@ find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(QMMF_CAMERA_METADATA
   REQUIRED qmmf_camera_metadata)
-pkg_check_modules(QMMF_PROTO
-  REQUIRED qmmf_proto)
 pkg_check_modules(QMMF_UTILS
   REQUIRED qmmf_utils)
+if (NOT HAVE_ANDROID_UTILS)
+pkg_check_modules(QMMF_CONFIG
+  REQUIRED qmmf_config)
+endif()
 
 if (NOT MEMORY_ENABLED)
 set(exclude EXCLUDE_FROM_ALL)
@@ -37,10 +39,10 @@ qmmf_memory_interface.cc
 qmmf_gralloc_interface.cc)
 endif()
 
-add_dependencies(qmmf_memory_interface_${PLATFORM}
-  qmmf_utils
-  qmmf_config
-)
+add_dependencies(qmmf_memory_interface_${PLATFORM} qmmf_utils)
+if (NOT HAVE_ANDROID_UTILS)
+add_dependencies(qmmf_memory_interface_${PLATFORM} qmmf_config)
+endif()
 
 target_include_directories(qmmf_memory_interface_${PLATFORM}
  PRIVATE ${TOP_DIRECTORY}

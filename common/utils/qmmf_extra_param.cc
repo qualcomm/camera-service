@@ -37,11 +37,7 @@
 
 #include "qmmf-sdk/qmmf_recorder_extra_param.h"
 
-#ifdef HAVE_ANDROID_UTILS
-#include <utils/Log.h>
-#else
 #include <common/utils/qmmf_log.h>
-#endif
 
 namespace qmmf {
 

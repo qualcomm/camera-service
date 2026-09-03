@@ -47,6 +47,7 @@
 #ifdef USE_LIBGBM
 #include <gbm.h>
 #include <gbm_priv.h>
+#include "common/memory/qmmf_memory_interface.h"
 #endif // USE_LIBGBM
 
 #include "common/utils/qmmf_common_utils_defs.h"

@@ -51,7 +51,14 @@ namespace qmmf {
 const int64_t kWaitDelay = 2000000000;  // 2 sec
 const uint32_t kMaxSocketBufSize = 300000;
 
+#ifdef HAVE_ANDROID_UTILS
+inline const char* kCameraMetaDataLibName = "libcamera_metadata";
+inline const char* kCameraMetaDataLibVersion = "0";
+#else
 inline const char* kCameraMetaDataLibName = "libcamx_metadata";
+inline const char* kCameraMetaDataLibVersion = "1";
+#endif
+
 
 #define FORCE_SENSOR_MODE_MASK (0x00F00000)
 #define FORCE_SENSOR_MODE_DATA(idx) ((idx + 1) << 20)
@@ -306,6 +313,8 @@ typedef std::function<void(const CaptureResult &result)> ResultCallback;
 // Notifies about all sorts of system messages that can happen during camera
 // operation
 typedef std::function<void(uint32_t errorCode)> SystemCallback;
+// Notifies about camera device status changes (present/not present)
+typedef std::function<void(int camera_id, bool is_present)> DeviceStatusCallback;
 
 // Please note that these callbacks shouldn't get blocked for long durations.
 // Also very important is to not to try and call "Camera3DeviceClient" API
@@ -318,6 +327,7 @@ typedef struct {
   PreparedCallback peparedCb;
   ResultCallback resultCb;
   SystemCallback systemCb;
+  DeviceStatusCallback deviceStatusCb;
 } CameraClientCallbacks;
 
 // Please note that this callbacks need to return as fast as possible

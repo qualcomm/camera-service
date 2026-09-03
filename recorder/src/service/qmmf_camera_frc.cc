@@ -40,12 +40,7 @@
 #include <cstdlib>
 #include <cmath>
 
-#ifdef HAVE_ANDROID_UTILS
-#include <cutils/properties.h>
-#else
 #include "common/config/qmmf_config.h"
-#endif
-
 #include "common/utils/qmmf_log.h"
 
 namespace qmmf {

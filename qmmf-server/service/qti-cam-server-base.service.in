@@ -39,13 +39,10 @@ After=var-volatile-lib.service
 User=@CAM_SERVER_USER@
 Group=@CAM_SERVER_GROUP@
 SupplementaryGroups=@CAM_SERVER_SUPP_GROUP@
-Restart=always
+Restart=on-failure
 RuntimeDirectory=cam_server
 RuntimeDirectoryMode=0775
 RuntimeDirectoryPreserve=yes
 CacheDirectory=camera
 ExecCondition=/usr/libexec/qmmf-server/check-camx-overlay.sh
 ExecStart=/usr/bin/qti-cam-server
-
-[Install]
-WantedBy=multi-user.target

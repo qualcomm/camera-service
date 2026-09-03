@@ -1188,7 +1188,12 @@ RecorderClient::RecorderClient()
   }
   assert(gbm_fd_ >= 0);
 
-  std::string libname = "libgbm.so." + std::string(GBM_VER);
+#ifdef HAVE_ANDROID_UTILS
+  std::string libname = "libgbm.so";
+#else
+  std::string libname = "libgbm.so. " + std::string(GBM_VER);
+#endif
+
   libgbm_handle_ = dlopen(libname.c_str(), RTLD_LAZY);
   char* err = dlerror();
 
@@ -1337,6 +1342,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
   track_cb_list_.clear();
 
 #ifndef CAMERA_HAL1_SUPPORT
+#ifdef ENABLE_OFFLINE_JPEG
   if (vendor_tag_desc_ == nullptr) {
     vendor_tag_desc_ = std::make_shared<VendorTagDescriptor>();
     ret = GetVendorTagDescriptor(vendor_tag_desc_);
@@ -1354,6 +1360,7 @@ status_t RecorderClient::Connect(const RecorderCb& cb) {
       return ret;
     }
   }
+#endif
 #endif
 
   QMMF_DEBUG("%s Exit ", __func__);
@@ -1779,6 +1786,23 @@ status_t RecorderClient::CancelCaptureImage(const uint32_t camera_id,
   if(0 != ret) {
     QMMF_ERROR("%s CancelCaptureImage failed!", __func__);
   }
+
+  {
+    std::lock_guard<std::mutex> l(snapshot_buffers_lock_);
+    if (snapshot_buffers_.size() != 0) {
+      for (auto& pair : snapshot_buffers_) {
+        auto& buffer_info = pair.second;
+
+        QMMF_INFO("%s Snapshot BufInfo: ion_fd(%d), vaddr(%p), size(%lu)",
+                  __func__, buffer_info.ion_fd, buffer_info.vaddr,
+                  buffer_info.size);
+
+        UnmapBuffer(buffer_info);
+      }
+      snapshot_buffers_.clear();
+    }
+  }
+
   QMMF_DEBUG("%s Exit ", __func__);
   return ret;
 }

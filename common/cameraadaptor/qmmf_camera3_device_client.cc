@@ -513,8 +513,9 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
 
   if (super_frames_ > 1) {
     uint32_t tag = 0;
-    uint8_t val = 1;
     int32_t res;
+    int tagType = -1;
+
     const std::shared_ptr<VendorTagDescriptor> vTags =
         ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
 
@@ -525,14 +526,22 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
         vTags.get(), &tag);
 
     if (tag > 0) {
-      res = session_metadata_.update(tag, &val, 1);
+      tagType = CameraMetadata::get_camera_metadata_tag_type(tag);
+
+      if (tagType == ::TYPE_INT32) {
+        int32_t val = 1;
+        res = session_metadata_.update(tag, &val, 1);
+      } else if (tagType == ::TYPE_BYTE) {
+        uint8_t val = 1;
+        res = session_metadata_.update(tag, &val, 1);
+      } else {
+        QMMF_ERROR("%s: super buffer enable tag type: %d not support", __func__,tagType);
+      }
       if (res != 0) {
         QMMF_ERROR("%s: super buffer enable tag update failed", __func__);
-        return -EINVAL;
       }
     } else {
       QMMF_ERROR("%s: super buffer enable tag not found", __func__);
-      return -EINVAL;
     }
   }
 

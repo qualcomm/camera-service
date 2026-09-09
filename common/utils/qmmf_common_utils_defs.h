@@ -237,7 +237,7 @@ struct CameraStreamParameters {
         data_space(0x0),
         color_space(-1),
         usecase(0),
-        hdrmode(ANDROID_REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES_MAP_STANDARD),
+        hdrmode(0x01),
         rotation(0),
         allocFlags(),
         bufferCount(0),

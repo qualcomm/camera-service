@@ -497,9 +497,25 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
 
     QMMF_VERBOSE("%s: enable fastswitch with session metadata", __func__);
 
-    ::camera::CameraMetadata::getTagFromName(
-        "org.codeaurora.qcamera3.sessionParameters.enableFastSwitch",
-        vTags.get(), &tag);
+    //Different handling for HFR mode
+    //because camera use different pipeline for HFR and normal mode
+    if (hfr_mode_enabled_ == false) {
+      ::camera::CameraMetadata::getTagFromName(
+          "org.codeaurora.qcamera3.sessionParameters.EnableAutoFastSwitchSensorMode",
+          vTags.get(), &tag);
+    }
+    //camera update the vendor tag name to EnableFastSwitch on maili
+    if (tag == 0) {
+        ::camera::CameraMetadata::getTagFromName(
+            "org.codeaurora.qcamera3.sessionParameters.EnableFastSwitch",
+            vTags.get(), &tag);
+    }
+    //fallback to legacy vendor tag name for backward compatible
+    if (tag == 0) {
+        ::camera::CameraMetadata::getTagFromName(
+            "org.codeaurora.qcamera3.sessionParameters.enableFastSwitch",
+            vTags.get(), &tag);
+    }
 
     if (tag > 0) {
       res = session_metadata_.update(tag, &val, 1);

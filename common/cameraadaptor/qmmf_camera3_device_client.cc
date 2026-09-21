@@ -527,6 +527,31 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(
     }
   }
 
+  if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_)) {
+    uint32_t tag = 0;
+    uint8_t val = 1;
+    int32_t res;
+    const std::shared_ptr<VendorTagDescriptor> vTags =
+        ::camera::VendorTagDescriptor::getGlobalVendorTagDescriptor();
+
+    QMMF_VERBOSE("%s: enable FrameSelection with session metadata", __func__);
+
+    if (vTags.get() != nullptr) {
+      ::camera::CameraMetadata::getTagFromName(
+          "org.codeaurora.qcamera3.sessionParameters.EnableFrameSelection",
+          vTags.get(), &tag);
+
+      if (tag > 0) {
+        res = session_metadata_.update(tag, &val, 1);
+        if (res != 0) {
+          QMMF_ERROR("%s: FrameSelection enable tag update failed", __func__);
+        }
+      } else {
+        QMMF_ERROR("%s: FrameSelection enable tag not found", __func__);
+      }
+    }
+  }
+
   if (super_frames_ > 1) {
     uint32_t tag = 0;
     int32_t res;
@@ -1282,31 +1307,36 @@ void Camera3DeviceClient::HandleCaptureResult(
 
     if (CAM_OPMODE_IS_FRAMESELECTION(cam_opmode_) &&
         (result->partial_result == 1)) {
-      uint32_t tag = 0;
-      camera_metadata_ro_entry entry;
-      int32_t res;
+      static const char* tag_names[] = {
+        "com.qualcomm.qti.frameselection.updatedPickedFrames",
+        "org.quic.camera.frameselection.updatedPickedFrames"
+      };
 
       std::shared_ptr<VendorTagDescriptor> vTags =
           VendorTagDescriptor::getGlobalVendorTagDescriptor();
 
-      CameraMetadata::getTagFromName(
-          "org.quic.camera.frameselection.updatedPickedFrames",
-          vTags.get(), &tag);
+      for (const char* name : tag_names) {
+        uint32_t tag = 0;
+        CameraMetadata::getTagFromName(name, vTags.get(), &tag);
+        if (tag > 0) {
+          camera_metadata_ro_entry_t entry;
+          int32_t res = CameraMetadata::find_camera_metadata_ro_entry(result->result,
+                                                                      tag,
+                                                                      &entry);
+          if (res == 0 && entry.count > 0) {
+            CamReqModeInputParams params;
 
-      if (tag > 0) {
-        res = CameraMetadata::find_camera_metadata_ro_entry(result->result, tag, &entry);
-        if (res == 0 && entry.count > 0) {
-          CamReqModeInputParams params;
-
-          params.frame_selection.total_selected_frames = entry.data.i32[0];
-          params.frame_selection.cap_frame_num = frameNumber;
-          request_handler_.UpdateRequestedStreams(params);
+            params.frame_selection.total_selected_frames = entry.data.i32[0];
+            params.frame_selection.cap_frame_num = frameNumber;
+            request_handler_.UpdateRequestedStreams(params);
+            break;
+          } else {
+            QMMF_VERBOSE("%s:FrameSel:tag %s found but no entry",
+                __func__, name);
+          }
         } else {
-          QMMF_VERBOSE("%s:FrameSel:tag updatedPickedFrames found but no entry",
-              __func__);
+          QMMF_VERBOSE("%s:FrameSel:tag %s not found", __func__, name);
         }
-      } else {
-        QMMF_VERBOSE("%s:FrameSel:tag updatedPickedFrames not found", __func__);
       }
     }
   }

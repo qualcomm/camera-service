@@ -69,6 +69,7 @@ inline const char* kCameraMetaDataLibVersion = "1";
 
 #define LIB_SEARCH_PATH_DEFAULT   "/usr/lib"
 #define LIB_SEARCH_PATH_MULTIARCH "/usr/lib/aarch64-linux-gnu"
+#define LIB_SEARCH_PATH_LIB64     "/usr/lib64"
 
 enum class SocId {
   kInvalid = 0,
@@ -385,6 +386,7 @@ class Target {
     static const std::vector<std::string> search_paths = {
         LIB_SEARCH_PATH_DEFAULT,
         LIB_SEARCH_PATH_MULTIARCH,
+        LIB_SEARCH_PATH_LIB64,
     };
 
     for (const auto &path : search_paths) {

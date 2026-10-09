@@ -103,6 +103,7 @@ enum class SocId {
   kLEMANS_IVI_ADAS_L = 619,
   kMONACO_SRV1L_FC = 620,
   kPURWA_SCP = 635,
+  kNORD_SMP = 648,
   kLEMANS_QRB = 656,
   kGLYMUR_SIP = 662,
   kQCS9100_IOT = 667,
@@ -110,6 +111,9 @@ enum class SocId {
   kQCS8275 = 675,
   kQCS9075 = 676,
   kTALOS_QCS615 = 680,
+  kNORD_QAM = 690,
+  kNORD_QAIMH = 691,
+  kNORD_QAIML = 692,
   kMONACO_FLEX = 695,
   kGLYMUR_COB = 698,
   kGLYMUR_MAHUA = 699,
@@ -486,6 +490,12 @@ class Target {
       case SocId::kSHIKRA_CQS:
       case SocId::kSHIKRA_IQS:
         return "shikra";
+
+      case SocId::kNORD_QAM:
+      case SocId::kNORD_QAIMH:
+      case SocId::kNORD_QAIML:
+      case SocId::kNORD_SMP:
+        return "nord";
 
       default:
         return {};

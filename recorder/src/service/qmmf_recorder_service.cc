@@ -33,9 +33,7 @@
 
 #define LOG_TAG "RecorderService"
 
-#ifndef HAVE_BINDER
 #include "common/config/qmmf_config.h"
-#endif
 #include "recorder/src/service/qmmf_recorder_service.h"
 
 namespace qmmf {
@@ -152,6 +150,10 @@ RecorderService::RecorderService() {
   QMMF_GET_LOG_LEVEL();
   QMMF_KPI_GET_MASK();
 
+#ifdef HAVE_BINDER
+  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
+  if (n_preload != 0) {
+#endif
   // Preload the recorder at bootup.
   recorder_.reset(RecorderImpl::CreateRecorder());
   if (!recorder_) {
@@ -190,6 +192,9 @@ RecorderService::RecorderService() {
       throw ret;
     }
   }
+#ifdef HAVE_BINDER
+  }
+#endif
 
   QMMF_INFO("%s: RecorderService Instantiated! ", __func__);
   QMMF_KPI_DETAIL();

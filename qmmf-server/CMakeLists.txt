@@ -23,6 +23,12 @@ configure_file(
   @ONLY
 )
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/service/qti-cam-server-pebble-bootup-optmization.service.in
+  ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-pebble-bootup-optmization.service
+  @ONLY
+)
+
 add_executable(qti-cam-server ${exclude} qmmf_server_main.cc)
 if (HAVE_BINDER_H)
 add_dependencies(qti-cam-server qmmf_recorder_service_${TARGET_BOARD_PLATFORM})
@@ -62,7 +68,10 @@ target_link_libraries(qti-cam-server qmmf_recorder_service_${TARGET_BOARD_PLATFO
 endif()
 
 if (QMMF_SERVER_ENABLED)
-    if (CAM_SERVER_ENABLED)
+    if (CAM_SERVER_ENABLED AND HAVE_BINDER_H AND TARGET_BOARD_PLATFORM STREQUAL "pebble")
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-pebble-bootup-optmization.service
+               DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME qti-cam-server.service)
+    elseif (CAM_SERVER_ENABLED)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qti-cam-server-base.service
                DESTINATION ${CAM_SERVER_SYSTEMD_DIR} RENAME qti-cam-server.service)
     elseif (TARGET_BOARD_PLATFORM STREQUAL "qcs605")

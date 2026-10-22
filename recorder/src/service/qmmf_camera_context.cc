@@ -1281,32 +1281,52 @@ status_t CameraContext::ConfigImageCapture(const uint32_t image_id,
 #ifdef ENABLE_IMAGE_NV12
       case BufferFormat::kNV12:
         stream_param.allocFlags.flags |= IMemAllocUsage::kHwCameraWrite;
+#ifdef HAVE_ANDROID_UTILS
         stream_param.data_space =
             static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         break;
       case BufferFormat::kNV12HEIF:
         stream_param.allocFlags.flags = (IMemAllocUsage::kHwRender |
                                          IMemAllocUsage::kPrivateAllocHEIF |
                                          IMemAllocUsage::kHwTexture);
+#ifdef HAVE_ANDROID_UTILS
         stream_param.data_space =
             static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         break;
       case BufferFormat::kNV12UBWC:
         // TODO: update below flags once subsystem has supported
+#ifdef HAVE_ANDROID_UTILS
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         stream_param.allocFlags.flags |=
             IMemAllocUsage::kPrivateAllocUbwc;
         break;
 #endif // ENABLE_IMAGE_NV12
       case BufferFormat::kP010:
         // TODO: update below flags once subsystem has supported
+#ifdef HAVE_ANDROID_UTILS
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         stream_param.allocFlags.flags |= IMemAllocUsage::kPrivateAllocP010;
         break;
       case BufferFormat::kP010HEIF:
+#ifdef HAVE_ANDROID_UTILS
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         stream_param.allocFlags.flags = (IMemAllocUsage::kPrivateAllocP010HEIF |
                                          IMemAllocUsage::kHwRender |
                                          IMemAllocUsage::kHwTexture);
         break;
       case BufferFormat::kTP10UBWC:
+#ifdef HAVE_ANDROID_UTILS
+        stream_param.data_space =
+            static_cast<android_dataspace_t>(HAL_DATASPACE_HEIF);
+#endif // HAVE_ANDROID_UTILS
         stream_param.allocFlags.flags = (IMemAllocUsage::kPrivateAllocTP10 |
                                          IMemAllocUsage::kPrivateAllocUbwc |
                                          IMemAllocUsage::kHwComposer |

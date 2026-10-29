@@ -92,11 +92,7 @@ CameraSource::CameraSource()
   QMMF_KPI_DETAIL();
 
   QMMF_INFO("%s: Enter", __func__);
-#ifdef HAVE_BINDER
   int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
-#else
-  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 1);
-#endif
   // Preload camera interefaces.
   for (int32_t idx = 0; idx < n_preload; ++idx) {
     std::shared_ptr<CameraInterface> camera;

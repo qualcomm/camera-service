@@ -34,6 +34,7 @@
 #define LOG_TAG "RecorderService"
 
 #ifndef HAVE_BINDER
+#include <systemd/sd-daemon.h>
 #include "common/config/qmmf_config.h"
 #endif
 #include "recorder/src/service/qmmf_recorder_service.h"
@@ -49,6 +50,12 @@ int CreateRecorderServiceInstance(void) {
   QMMF_INFO("%s: Starting RecorderService main loop", __func__);
 
   qmmf::recorder::RecorderService server;
+  // The constructor completes socket setup and recorder initialization.
+  int ret = sd_notify(0, "READY=1");
+  if (ret < 0) {
+    QMMF_ERROR("%s: Failed to notify systemd: %s", __func__, strerror(-ret));
+    return ret;
+  }
   server.MainLoop();
 
   QMMF_INFO("%s: RecorderService main loop exited", __func__);

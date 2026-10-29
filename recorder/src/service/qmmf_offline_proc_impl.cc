@@ -335,10 +335,13 @@ status_t OfflineProcess::Create(const uint32_t client_id,
   create_params.config.pMetadataAux = session_meta1.getbuffer();
 #endif
 
-  if (((create_params.config.processMode == YUVToYUV) ||
-      (create_params.config.processMode == RAWToYUV) ||
-       (create_params.config.processMode == RAWToJPEGSBS))
-    && (!offlineipe_enable)) {
+  OfflinePostProcMode mode =
+    static_cast<OfflinePostProcMode>(create_params.config.processMode);
+
+  if (((mode == YUVToYUV) ||
+     (mode == RAWToYUV) ||
+     (mode == RAWToJPEGSBS)) &&
+     (!offlineipe_enable)) {
     QMMF_INFO("%s offline IPE module not support.", __func__);
     return -EINVAL;
   }
@@ -549,7 +552,7 @@ status_t OfflineProcess::Process(const uint32_t client_id,
                   __func__,
                   pproc_params->frameNum,
                   client_id,
-                  res);
+                  res.result);
 
     // In case of failure notify client with encoded size 0
     remote_cb_handle_(client_id)->NotifyOfflineProcData(out_buf.buffer_id, 0);
@@ -603,7 +606,7 @@ status_t OfflineProcess::Destroy(const uint32_t client_id) {
 
   auto pproc_instance = client_pproc_map_.at(client_id).pproc_instance;
   if (!pproc_instance) {
-    QMMF_ERROR("%s: No jpeg encoder instance for client %d!",
+    QMMF_ERROR("%d: No jpeg encoder instance for client %s!",
                client_id, __func__);
     return -EINVAL;
   }

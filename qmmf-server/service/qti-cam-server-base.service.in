@@ -36,6 +36,7 @@ SourcePath=/usr/bin/qti-cam-server
 After=var-volatile-lib.service
 
 [Service]
+Type=notify
 User=@CAM_SERVER_USER@
 Group=@CAM_SERVER_GROUP@
 SupplementaryGroups=@CAM_SERVER_SUPP_GROUP@

@@ -152,6 +152,25 @@ RecorderService::RecorderService() {
   QMMF_GET_LOG_LEVEL();
   QMMF_KPI_GET_MASK();
 
+#ifndef HAVE_BINDER
+  run_ = false;
+  socket_recv_buf_ = nullptr;
+  socket_ = -1;
+
+  if (SetupSocket() != 0) {
+    QMMF_ERROR("%s: Socket Setup failed!", __func__);
+    throw errno;
+  }
+
+  // Otherwise, initialize the recorder on the first client connection.
+  int32_t n_preload = Property::Get("persist.qmmf.preload.cameras", 0);
+  if (n_preload == 0) {
+    QMMF_INFO("%s: RecorderService Instantiated! ", __func__);
+    QMMF_KPI_DETAIL();
+    return;
+  }
+#endif // !HAVE_BINDER
+
   // Preload the recorder at bootup.
   recorder_.reset(RecorderImpl::CreateRecorder());
   if (!recorder_) {
@@ -172,16 +191,6 @@ RecorderService::RecorderService() {
         assert(remote_cb_list_.count(id) != 0);
         return remote_cb_list_[id];
     };
-
-    run_ = false;
-    socket_recv_buf_ = nullptr;
-    socket_ = -1;
-
-    if (SetupSocket() != 0) {
-      QMMF_ERROR("%s: Socket Setup failed!", __func__);
-      throw errno;
-    }
-
 #endif // HAVE_BINDER
     auto ret = recorder_->Init(remote_cb_handle);
     if (ret != 0) {

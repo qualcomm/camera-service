@@ -94,7 +94,7 @@ int qmmf_property_set(const char *key, const char *value);
   })
 #define QMMF_INFO(fmt, args...)  syslog (LOG_INFO, "[INFO]: %s : " fmt, LOG_TAG, ##args)
 #define QMMF_WARN(fmt, args...)  syslog (LOG_WARNING, "[WARN]: %s : " fmt, LOG_TAG, ##args)
-#define QMMF_ERROR(fmt, args...) syslog (LOG_PERROR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
+#define QMMF_ERROR(fmt, args...) syslog (LOG_ERR, "[ERROR]: %s : " fmt, LOG_TAG, ##args)
 
 #define QMMF_DEBUG(fmt, args...)                \
   ({                                            \

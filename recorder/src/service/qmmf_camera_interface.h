@@ -51,7 +51,7 @@ struct StreamParam {
   Colorimetry       colorimetry;
   float             framerate;
   Rotation          rotation;
-  uint32_t          xtrabufs;
+  int32_t           xtrabufs;
   VideoFlags        flags;
 
   StreamParam()

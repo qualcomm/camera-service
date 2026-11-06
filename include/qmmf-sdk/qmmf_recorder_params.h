@@ -257,15 +257,15 @@ struct VideoTrackParam {
   Colorimetry colorimetry;
   /// Video Track rotation angle
   Rotation    rotation;
-  /// Additional buffers allocated for the track
-  uint32_t    xtrabufs;
+  /// Buffer count adjustment; negative values reduce allocated buffers.
+  int32_t    xtrabufs;
   /// Video Track addtional flags
   VideoFlags  flags;
 
   VideoTrackParam(uint32_t cam_id = 0, uint32_t w = 3840, uint32_t h = 2160,
                   float fps = 30, VideoFormat fmt = VideoFormat::kNV12,
                   Colorimetry color = Colorimetry::kBT601,
-                  Rotation rotate = Rotation::kNone, uint32_t extrabufs = 0,
+                  Rotation rotate = Rotation::kNone, int32_t extrabufs = 0,
                   VideoFlags flgs = VideoFlags::kNone)
       : camera_id(cam_id), width(w), height(h), framerate(fps), format(fmt),
         colorimetry(color), rotation(rotate), xtrabufs(extrabufs),

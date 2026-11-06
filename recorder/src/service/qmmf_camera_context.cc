@@ -4141,15 +4141,20 @@ status_t CameraPort::Init() {
         static_cast<bool>(params_.flags & VideoFlags::kUncashed) ?
             IMemAllocUsage::kPrivateUncached : 0;
 
-    // round extra buffer count to batch size
-    params_.xtrabufs =
-        ((params_.xtrabufs + camera_parameters_.batch_size - 1) /
-          camera_parameters_.batch_size) * camera_parameters_.batch_size;
+    // Round extra buffers away from zero to preserve existing positive-value
+    // behavior and make negative values reduce the requested buffer count.
+    const int64_t xtrabufs = params_.xtrabufs;
+    const int64_t batch_size = camera_parameters_.batch_size;
+    const int64_t rounded_xtrabufs = xtrabufs >= 0 ?
+      ((xtrabufs + batch_size - 1) / batch_size) * batch_size :
+      -(((-xtrabufs + batch_size - 1) / batch_size) * batch_size);
 
-    cam_stream_params_.bufferCount = STREAM_BUFFER_COUNT +
-        GetExtraBufferCount() + params_.xtrabufs;
+    cam_stream_params_.bufferCount = std::max<int64_t>(MIN_STREAM_BUFFER_COUNT,
+      STREAM_BUFFER_COUNT +
+      static_cast<int64_t>(GetExtraBufferCount()) +
+      rounded_xtrabufs);
 
-    QMMF_INFO ("%s: track_id(0%x) total buffer count(%d)", __func__,
+    QMMF_INFO ("%s: track_id(0%x) total buffer count(%u)", __func__,
         params_.id, cam_stream_params_.bufferCount);
   }
 

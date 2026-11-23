@@ -97,14 +97,14 @@ jobs:
             });
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           allow-unsafe-pr-checkout: true
 
       - name: Resolve SDK URL from latest wrynose nightly
         id: urls
-        uses: qualcomm/gst-plugins-imsdk/.github/actions/resolve-nightly-download-url@main
+        uses: qualcomm/qimsdk/.github/actions/resolve-nightly-download-url@main
         with:
           token: ${{ secrets.QUALCOMM_LINUX_PAT }}
           artifact-token: ${{ secrets.S3_WEBAPP_TOKEN }}
@@ -151,7 +151,7 @@ jobs:
     steps:
       - name: Post check run
         id: post-check-run
-        uses: qualcomm/gst-plugins-imsdk/.github/actions/check-run@main
+        uses: qualcomm/qimsdk/.github/actions/check-run@main
         with:
           sha: ${{ needs.init.outputs.pr-sha }}
           repo: ${{ github.repository }}

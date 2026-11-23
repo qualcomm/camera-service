@@ -19,16 +19,37 @@ on:
         required: true
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.gen.outputs.matrix }}
+    steps:
+      - name: Build SDK matrix from branch-keyed URLs
+        id: gen
+        env:
+          SDK_URLS: ${{ inputs.sdk-url }}
+        run: |
+          matrix=$(jq -c 'to_entries | map({branch: .key, sdk_url: .value})' <<< "$SDK_URLS")
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          echo "Build matrix:"
+          jq . <<< "$matrix"
+
   build:
+    needs: setup
     runs-on:
       group: GHA-Framework-SelfHosted-RG
       labels:
         - self-hosted
         - framework-prd-u2404-x64-od-ephem
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    name: Build ${{ matrix.branch }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref }}
           allow-unsafe-pr-checkout: true
@@ -36,28 +57,50 @@ jobs:
       - name: Run build
         env:
           S3_WEBAPP_TOKEN: ${{ secrets.s3-webapp-token }}
-          SDK_OBJECT_URL: ${{ inputs.sdk-url }}
+          BRANCH: ${{ matrix.branch }}
+          SDK_OBJECT_URL: ${{ matrix.sdk_url }}
         run: |
           chmod +x ci/build.sh
           ./ci/build.sh
 
       - name: Prepare upload directory
+        env:
+          BRANCH: ${{ matrix.branch }}
         run: |
           mkdir -p upload_dir
-          mv cam-service-artifacts.tar.gz upload_dir/
+          mv "cam-service-artifacts-${BRANCH}.tar.gz" upload_dir/
 
+      - name: Upload artifacts to S3 bucket
+        uses: qualcomm-linux/upload-private-artifact-action@aws-v4
+        with:
+          path: ${{ github.workspace }}/upload_dir
+          destination: ${{ github.repository_owner }}/${{ github.event.repository.name }}/${{ github.run_id }}-${{ github.run_attempt }}/
+          s3_bucket: qli-prd-framework-gh-artifacts
+
+  generate_and_upload_build_urls:
+    needs: build
+    runs-on:
+      group: GHA-Framework-SelfHosted-RG
+      labels:
+        - self-hosted
+        - framework-prd-u2404-x64-od-ephem
+    steps:
       - name: Generate build URLs JSON
         env:
           IMAGE_URLS: ${{ inputs.image-urls }}
         run: |
+          if [ ! -d upload_dir ]; then
+            mkdir upload_dir
+          fi
           python3 - <<'EOF'
           import json, os
 
-          flat = json.loads(os.environ["IMAGE_URLS"])
+          by_branch = json.loads(os.environ["IMAGE_URLS"])
           nested = {}
-          for key, url in flat.items():
-              target, image_type = key.split("/", 1)
-              nested.setdefault(target, {})[image_type] = url
+          for branch, flat in by_branch.items():
+              for key, url in flat.items():
+                  target, image_type = key.split("/", 1)
+                  nested.setdefault(branch, {}).setdefault(target, {})[image_type] = url
 
           with open("upload_dir/build-urls.json", "w") as f:
               json.dump(nested, f, indent=4)

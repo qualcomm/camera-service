@@ -102,7 +102,7 @@ message VideoTrackParamMsg {
   float framerate = 4;
   VideoFormatMsg format = 5;
   RotationMsg rotation = 6;
-  uint32 xtrabufs = 7;
+  int32 xtrabufs = 7;
   VideoFlagsMsg flags = 8;
 }
 

@@ -55,6 +55,7 @@ using namespace cameraadaptor;
 #define EXTRA_DCVS_BUFFERS            2
 #define EXTRA_HFR_BUFFERS             4
 #define MAX_SNAPSHOT_BUFFER_COUNT    15
+#define MIN_STREAM_BUFFER_COUNT       2
 
 namespace recorder {
 

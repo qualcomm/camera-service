@@ -5,6 +5,7 @@ find_package(PkgConfig REQUIRED)
 if (NOT HAVE_BINDER_H)
 pkg_check_modules(QMMF_PROTO
   REQUIRED qmmf_proto)
+pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
 endif()
 if (NOT HAVE_ANDROID_UTILS)
 pkg_check_modules(QMMF_CONFIG
@@ -197,7 +198,8 @@ target_link_libraries(qmmf_recorder_service_${PLATFORM} qmmf_camera_metadata)
 endif()
 
 if (NOT HAVE_BINDER_H)
-target_link_libraries(qmmf_recorder_service_${PLATFORM} ${QMMF_CONFIG_LIBRARIES})
+target_link_libraries(qmmf_recorder_service_${PLATFORM}
+  ${QMMF_CONFIG_LIBRARIES} PkgConfig::SYSTEMD)
 
 target_compile_definitions(qmmf_recorder_service_${PLATFORM} PRIVATE
   "-DQMMF_CURRENT_INTERFACE_VER=\"${QMMF_CURRENT_INTERFACE_VER}\"")

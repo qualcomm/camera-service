@@ -89,3 +89,7 @@ target_compile_definitions(qmmf_recorder_client PRIVATE
   "-DQMMF_CURRENT_INTERFACE_VER=\"${QMMF_CURRENT_INTERFACE_VER}\"")
 
 endif()
+
+if (HAVE_CHI_OFFLINE_POST_PROC_INTF_H)
+target_compile_definitions(qmmf_recorder_client PRIVATE ENABLE_OFFLINE_JPEG)
+endif()

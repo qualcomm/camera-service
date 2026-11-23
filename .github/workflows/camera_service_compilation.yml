@@ -40,11 +40,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Resolve SDK URL from latest wrynose nightly
         id: urls
-        uses: qualcomm/gst-plugins-imsdk/.github/actions/resolve-nightly-download-url@main
+        uses: qualcomm/qimsdk/.github/actions/resolve-nightly-download-url@main
         with:
           token: ${{ secrets.QUALCOMM_LINUX_PAT }}
           artifact-token: ${{ secrets.S3_WEBAPP_TOKEN }}
